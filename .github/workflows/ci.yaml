@@ -1,7 +1,7 @@
 # Push sur main uniquement : construit chaque dossier modifié qui contient un Dockerfile
 # (backend/, frontend/, ...), pousse l'image dans ECR via OIDC, puis écrit son sha
 # dans helm.yaml (tag.dev) -> ArgoCD redéploie dev.
-# Image : <registre ECR>/<dépôt>/<dossier>:<sha>
+# Image : <registre ECR>/<dépôt>/<dossier>:<sha court (7 caractères)>
 name: ci
 
 on:
@@ -13,6 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       components: ${{ steps.detect.outputs.components }}
+      sha: ${{ steps.detect.outputs.sha }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -29,6 +30,7 @@ jobs:
             CHANGED=$ALL   # premier push : tout construire
           fi
           echo "components=$(jq -cn '$ARGS.positional' --args $CHANGED)" >> "$GITHUB_OUTPUT"
+          echo "sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"   # tag des images et de helm.yaml
 
   build:
     needs: changes
@@ -53,7 +55,7 @@ jobs:
           context: ${{ matrix.component }}
           push: true
           provenance: false
-          tags: ${{ steps.ecr.outputs.registry }}/${{ github.event.repository.name }}/${{ matrix.component }}:${{ github.sha }}
+          tags: ${{ steps.ecr.outputs.registry }}/${{ github.event.repository.name }}/${{ matrix.component }}:${{ needs.changes.outputs.sha }}
 
   # Écrit le sha des images construites dans helm.yaml (tag.dev uniquement).
   # qualif/prod : promotion manuelle par PR.
@@ -66,11 +68,12 @@ jobs:
       - uses: actions/checkout@v4
       - env:
           COMPONENTS: ${{ needs.changes.outputs.components }}
+          SHA: ${{ needs.changes.outputs.sha }}
         run: |
           for c in $(jq -r '.[]' <<<"$COMPONENTS"); do
-            yq -i "(.applications[] | select(.name == \"$c\")).tag.dev = \"$GITHUB_SHA\"" helm.yaml
+            yq -i "(.applications[] | select(.name == \"$c\")).tag.dev = \"$SHA\"" helm.yaml
           done
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -am "deploy(dev): ${GITHUB_SHA::7} ($(jq -r 'join(", ")' <<<"$COMPONENTS"))"
+          git commit -am "deploy(dev): $SHA ($(jq -r 'join(", ")' <<<"$COMPONENTS"))"
           git pull --rebase && git push
