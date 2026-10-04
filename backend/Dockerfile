@@ -24,3 +24,4 @@ USER nonroot
 EXPOSE 8080
 # ENTRYPOINT de l'image : ["java", "-jar"]
 CMD ["/app/app.jar"]
+# Image construite par la CI (.github/workflows/ci.yaml), taguée avec le sha court du commit

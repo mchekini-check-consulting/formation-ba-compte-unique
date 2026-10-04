@@ -16,3 +16,4 @@ COPY nginx.conf /etc/nginx/conf.d/nginx.default.conf
 COPY --from=build /app/dist/app/browser /usr/share/nginx/app
 USER 65532
 EXPOSE 8080
+# Image construite par la CI (.github/workflows/ci.yaml), taguée avec le sha court du commit
