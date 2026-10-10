@@ -1,0 +1,72 @@
+# Pull request vers main : lint, secrets, tests unitaires + quality gate SonarQube,
+# tests d'intégration, sur tous les dossiers avec Dockerfile (commandes : Makefile du dossier).
+# Les étapes viennent de formation-ba-gitops/ci-template.
+name: pr
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  components:
+    runs-on: ubuntu-latest
+    outputs:
+      components: ${{ steps.list.outputs.components }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: list
+        uses: mchekini-check-consulting/formation-ba-gitops/ci-template/detect-changes@main
+        with:
+          all: true
+
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: mchekini-check-consulting/formation-ba-gitops/ci-template/gitleaks@main
+
+  lint:
+    needs: components
+    strategy:
+      matrix:
+        component: ${{ fromJSON(needs.components.outputs.components) }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mchekini-check-consulting/formation-ba-gitops/ci-template/lint@main
+        with:
+          component: ${{ matrix.component }}
+
+  # Tests unitaires puis SonarQube dans le même job : la couverture reste sur place.
+  unit-test:
+    needs: components
+    strategy:
+      matrix:
+        component: ${{ fromJSON(needs.components.outputs.components) }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0       # SonarQube : blame / nouveau code
+      - uses: mchekini-check-consulting/formation-ba-gitops/ci-template/unit-test@main
+        with:
+          component: ${{ matrix.component }}
+      - uses: mchekini-check-consulting/formation-ba-gitops/ci-template/sonarqube@main
+        with:
+          component: ${{ matrix.component }}
+          token: ${{ secrets.SONAR_TOKEN }}
+
+  integration-test:
+    needs: components
+    strategy:
+      matrix:
+        component: ${{ fromJSON(needs.components.outputs.components) }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mchekini-check-consulting/formation-ba-gitops/ci-template/integration-test@main
+        with:
+          component: ${{ matrix.component }}
+
