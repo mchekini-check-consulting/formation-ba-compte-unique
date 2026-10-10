@@ -1,5 +1,5 @@
-# Pull request vers main : lint, secrets, tests unitaires + quality gate SonarQube,
-# tests d'intégration, sur tous les dossiers avec Dockerfile (commandes : Makefile du dossier).
+# Pull request vers main, sur tous les dossiers avec Dockerfile (commandes : Makefile du dossier) :
+#   lint + gitleaks  ->  tests unitaires + quality gate SonarQube  ->  tests d'intégration
 # Les étapes viennent de formation-ba-gitops/ci-template.
 name: pr
 
@@ -41,7 +41,7 @@ jobs:
 
   # Tests unitaires puis SonarQube dans le même job : la couverture reste sur place.
   unit-test:
-    needs: components
+    needs: [components, lint, gitleaks]   # pas de tests si le lint ou gitleaks échoue
     strategy:
       matrix:
         component: ${{ fromJSON(needs.components.outputs.components) }}
@@ -59,7 +59,7 @@ jobs:
           token: ${{ secrets.SONAR_TOKEN }}
 
   integration-test:
-    needs: components
+    needs: [components, unit-test]        # après les tests unitaires (+ quality gate)
     strategy:
       matrix:
         component: ${{ fromJSON(needs.components.outputs.components) }}
