@@ -1,7 +1,7 @@
 # Microservices de ce dépôt, déployés par formation-ba-gitops sur chaque environnement.
 # Valeurs littérales uniquement. replicas, tag et envList[].value acceptent
 # une valeur unique ou une map par environnement : { dev: ..., qualif: ..., prod: ... }
-# URL : http://<env>-formation-ba-compte-unique.check-consulting.net
+# URL : https://<application>.formation-ba-compte-unique.<env>.check-consulting.net (ex. backend.formation-ba-compte-unique.dev.check-consulting.net)
 applications:
   - name: backend
     type: backend
@@ -13,8 +13,8 @@ applications:
       port: 80
     ingress:
       enabled: true
-      path: /api
-      stripPrefix: true # le pod reçoit /hello pour /api/hello
+      path: /
+      stripPrefix: false
     envList:
       - key: LOG_LEVEL
         value: {dev: debug, qualif: info, prod: warn}
@@ -29,3 +29,4 @@ applications:
     ingress:
       enabled: true
       path: /
+      stripPrefix: false
