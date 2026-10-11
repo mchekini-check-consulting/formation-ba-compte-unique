@@ -6,7 +6,7 @@ applications:
   - name: backend
     type: backend
     image: 205493924920.dkr.ecr.eu-west-3.amazonaws.com/formation-ba-compte-unique/backend
-    tag: {dev: "d673cfd", qualif: "", prod: ""} # dev : écrit par la CI ; qualif/prod : promotion manuelle (PR)
+    tag: {dev: "c4b1ca5", qualif: "", prod: ""} # dev : écrit par la CI ; qualif/prod : promotion manuelle (PR)
     containerPort: 8080
     replicas: {dev: 1, qualif: 2, prod: 3}
     service:
@@ -21,7 +21,7 @@ applications:
   - name: frontend
     type: frontend
     image: 205493924920.dkr.ecr.eu-west-3.amazonaws.com/formation-ba-compte-unique/frontend
-    tag: {dev: "d673cfd", qualif: "", prod: ""} # dev : écrit par la CI ; qualif/prod : promotion manuelle (PR)
+    tag: {dev: "c4b1ca5", qualif: "", prod: ""} # dev : écrit par la CI ; qualif/prod : promotion manuelle (PR)
     containerPort: 8080
     replicas: {dev: 1, qualif: 2, prod: 3}
     service:
