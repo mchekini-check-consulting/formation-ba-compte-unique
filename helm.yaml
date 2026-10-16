@@ -1,14 +1,21 @@
 # Microservices de ce dépôt, déployés par formation-ba-gitops sur chaque environnement.
 # Valeurs littérales uniquement. replicas, tag et envList[].value acceptent
-# une valeur unique ou une map par environnement : { dev: ..., qualif: ..., prod: ... }
+# une valeur unique ou une map par environnement : { dev: ..., qualif: ..., preprod: ..., prod: ... }
 # URL : https://<application>.formation-ba-compte-unique.<env>.check-consulting.net (ex. backend.formation-ba-compte-unique.dev.check-consulting.net)
 applications:
   - name: backend
     type: backend
     image: 205493924920.dkr.ecr.eu-west-3.amazonaws.com/formation-ba-compte-unique/backend
-    tag: {dev: "c4b1ca5", qualif: "", prod: ""} # dev : écrit par la CI ; qualif/prod : promotion manuelle (PR)
+    # Écrit par Kargo (dev automatique ; qualif/preprod/prod : promotion par clic).
+    # Garder une valeur par ligne, sans commentaire en fin de ligne : Kargo
+    # remplace tout jusqu'à la fin de la ligne.
+    tag:
+      dev: "c4b1ca5"
+      qualif: ""
+      preprod: ""
+      prod: ""
     containerPort: 8080
-    replicas: {dev: 1, qualif: 2, prod: 3}
+    replicas: {dev: 1, qualif: 2, preprod: 2, prod: 3}
     service:
       port: 80
     ingress:
@@ -17,13 +24,20 @@ applications:
       stripPrefix: false
     envList:
       - key: LOG_LEVEL
-        value: {dev: debug, qualif: info, prod: warn}
+        value: {dev: debug, qualif: info, preprod: info, prod: warn}
   - name: frontend
     type: frontend
     image: 205493924920.dkr.ecr.eu-west-3.amazonaws.com/formation-ba-compte-unique/frontend
-    tag: {dev: "c4b1ca5", qualif: "", prod: ""} # dev : écrit par la CI ; qualif/prod : promotion manuelle (PR)
+    # Écrit par Kargo (dev automatique ; qualif/preprod/prod : promotion par clic).
+    # Garder une valeur par ligne, sans commentaire en fin de ligne : Kargo
+    # remplace tout jusqu'à la fin de la ligne.
+    tag:
+      dev: "c4b1ca5"
+      qualif: ""
+      preprod: ""
+      prod: ""
     containerPort: 8080
-    replicas: {dev: 1, qualif: 2, prod: 3}
+    replicas: {dev: 1, qualif: 2, preprod: 2, prod: 3}
     service:
       port: 80
     ingress:

@@ -1,6 +1,6 @@
 # Push sur main uniquement : construit chaque dossier modifié qui contient un Dockerfile
-# (backend/, frontend/, ...), pousse l'image dans ECR via OIDC, puis écrit son sha
-# dans helm.yaml (tag.dev) -> ArgoCD redéploie dev.
+# (backend/, frontend/, ...) et pousse l'image dans ECR via OIDC. Kargo détecte
+# l'image, écrit son sha dans helm.yaml (tag.dev) -> ArgoCD redéploie dev.
 # Les étapes viennent de formation-ba-gitops/ci-template.
 name: ci
 
@@ -38,8 +38,12 @@ jobs:
           component: ${{ matrix.component }}
           tag: ${{ needs.changes.outputs.sha }}
 
+  # Désactivé : Kargo détecte l'image dans ECR et écrit tag.dev (promotion auto).
+  # Réactivation (retour arrière) : variable d'organisation CI_UPDATE_TAG=true.
+  # Ne jamais l'activer en même temps que Kargo (deux écritures de tag.dev).
   update-tag:
     needs: [changes, build]
+    if: vars.CI_UPDATE_TAG == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write           # push du commit avec GITHUB_TOKEN (ne relance pas la CI)
