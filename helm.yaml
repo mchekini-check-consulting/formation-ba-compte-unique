@@ -22,6 +22,9 @@ applications:
       enabled: true
       path: /
       stripPrefix: false
+    # Base PostgreSQL "backend" créée automatiquement (Cluster app-db du namespace,
+    # sauvegardée sur S3) ; connexion injectée : SPRING_DATASOURCE_*, PG*, DATABASE_URL
+    database: true
     envList:
       - key: LOG_LEVEL
         value: {dev: debug, qualif: info, preprod: info, prod: warn}
