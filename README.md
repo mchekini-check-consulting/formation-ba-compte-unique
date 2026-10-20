@@ -3,9 +3,9 @@
 Monorepo contenant les microservices backend et l'application frontend.
 
 ```
-backend/                  # microservices Spring Boot (Maven multi-module)
-  pom.xml                 # parent Maven
-  compte-unique/           # microservice "Hello World"
+backend/                  # microservice Spring Boot compte-unique (Maven)
+  pom.xml
+  src/                    # microservice "Hello World"
 frontend/                 # application Angular
 ```
 
@@ -34,7 +34,7 @@ frontend/                 # application Angular
 
 ```bash
 cd backend
-./mvnw -pl compte-unique spring-boot:run
+./mvnw spring-boot:run
 ```
 
 Disponible sur http://localhost:8080/
