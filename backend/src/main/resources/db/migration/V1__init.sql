@@ -1,0 +1,4 @@
+-- Migrations Flyway, appliquées au démarrage dans l'ordre V1, V2... ; une migration
+-- appliquée ne se modifie plus. Les ajouter de façon compatible avec la version
+-- précédente (2 réplicas en preprod/prod pendant un déploiement).
+-- V1 : schéma initial vide.
