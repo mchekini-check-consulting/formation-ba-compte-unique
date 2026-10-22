@@ -19,11 +19,10 @@ applications:
     replicas: {dev: 1, qualif: 1, preprod: 2, prod: 2}
     service:
       port: 80
-    # Exposé par la passerelle de l'environnement (préfixe retiré avant le pod) :
-    #   https://api.<env>.check-consulting.net/formation-ba-compte-unique/backend/...
-    # Appelable depuis le navigateur uniquement par le frontend du projet (CORS).
-    ingress:
-      enabled: true
+    # Pas d'Ingress : Service ClusterIP seulement. Exposé par la passerelle de
+    # l'environnement (backend listé dans business.projects[].api de formation-ba-gitops) :
+    #   https://api.<env>.check-consulting.net/formation-ba-compte-unique/backend/...  (préfixe retiré)
+    # Appelable depuis le navigateur uniquement par les frontends de l'environnement (CORS).
     # Base PostgreSQL compte_unique : créée et sauvegardée automatiquement.
     # Consigne : dans backend/src/main/resources/application.yaml, déclarer
     #   spring.datasource.url, spring.datasource.username, spring.datasource.password
