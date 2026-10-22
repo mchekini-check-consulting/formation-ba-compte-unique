@@ -1,7 +1,8 @@
 # Microservices de ce dépôt, déployés par formation-ba-gitops sur chaque environnement.
 # Valeurs littérales uniquement. replicas, tag et envList[].value acceptent
 # une valeur unique ou une map par environnement : { dev: ..., qualif: ..., preprod: ..., prod: ... }
-# URL : https://<application>.formation-ba-compte-unique.<env>.check-consulting.net (ex. backend.formation-ba-compte-unique.dev.check-consulting.net)
+# URL : frontend https://<application>.formation-ba-compte-unique.<env>.check-consulting.net ;
+#       backend  https://api.<env>.check-consulting.net/formation-ba-compte-unique/<application>
 applications:
   - name: backend
     type: backend
@@ -18,13 +19,18 @@ applications:
     replicas: {dev: 1, qualif: 1, preprod: 2, prod: 2}
     service:
       port: 80
+    # Exposé par la passerelle de l'environnement (préfixe retiré avant le pod) :
+    #   https://api.<env>.check-consulting.net/formation-ba-compte-unique/backend/...
+    # Appelable depuis le navigateur uniquement par le frontend du projet (CORS).
     ingress:
       enabled: true
-      path: /
-      stripPrefix: false
-    # Base PostgreSQL "backend" créée automatiquement (Cluster app-db du namespace,
-    # sauvegardée sur S3) ; connexion injectée : SPRING_DATASOURCE_*, PG*, DATABASE_URL
-    database: true
+    # Base PostgreSQL compte_unique : créée et sauvegardée automatiquement.
+    # Consigne : dans backend/src/main/resources/application.yaml, déclarer
+    #   spring.datasource.url, spring.datasource.username, spring.datasource.password
+    # (valeurs locales) ; sur le cluster, Spring Boot les remplace par les variables
+    # injectées SPRING_DATASOURCE_URL, SPRING_DATASOURCE_USERNAME, SPRING_DATASOURCE_PASSWORD.
+    database:
+      name: compte_unique
     envList:
       - key: LOG_LEVEL
         value: {dev: debug, qualif: info, preprod: info, prod: warn}
