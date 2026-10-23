@@ -1,5 +1,5 @@
-# Pull request vers main, sur tous les dossiers avec Dockerfile (commandes : Makefile du dossier) :
-#   lint + gitleaks  ->  tests unitaires + quality gate SonarQube  ->  tests d'intégration
+# Pull request vers main, sur les dossiers avec Dockerfile modifiés par la PR (commandes : Makefile du dossier) :
+#   lint + gitleaks  ->  tests unitaires  ->  quality gate SonarQube  ->  tests d'intégration
 # Les étapes viennent de formation-ba-gitops/ci-template.
 name: pr
 
@@ -14,10 +14,12 @@ jobs:
       components: ${{ steps.list.outputs.components }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0       # git diff avec la branche cible
       - id: list
         uses: mchekini-check-consulting/formation-ba-gitops/ci-template/detect-changes@main
         with:
-          all: true
+          base: ${{ github.event.pull_request.base.sha }}
 
   gitleaks:
     runs-on: ubuntu-latest
@@ -29,6 +31,7 @@ jobs:
 
   lint:
     needs: components
+    if: needs.components.outputs.components != '[]'   # matrice vide = erreur
     strategy:
       matrix:
         component: ${{ fromJSON(needs.components.outputs.components) }}
@@ -39,9 +42,23 @@ jobs:
         with:
           component: ${{ matrix.component }}
 
-  # Tests unitaires puis SonarQube dans le même job : la couverture reste sur place.
   unit-test:
     needs: [components, lint, gitleaks]   # pas de tests si le lint ou gitleaks échoue
+    if: needs.components.outputs.components != '[]'   # matrice vide = erreur
+    strategy:
+      matrix:
+        component: ${{ fromJSON(needs.components.outputs.components) }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mchekini-check-consulting/formation-ba-gitops/ci-template/unit-test@main
+        with:
+          component: ${{ matrix.component }}
+
+  # Rapports de couverture transmis par l'artifact unit-test-<composant>.
+  sonarqube:
+    needs: [components, unit-test]
+    if: needs.components.outputs.components != '[]'   # matrice vide = erreur
     strategy:
       matrix:
         component: ${{ fromJSON(needs.components.outputs.components) }}
@@ -50,16 +67,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0       # SonarQube : blame / nouveau code
-      - uses: mchekini-check-consulting/formation-ba-gitops/ci-template/unit-test@main
-        with:
-          component: ${{ matrix.component }}
       - uses: mchekini-check-consulting/formation-ba-gitops/ci-template/sonarqube@main
         with:
           component: ${{ matrix.component }}
           token: ${{ secrets.SONAR_TOKEN }}
 
   integration-test:
-    needs: [components, unit-test]        # après les tests unitaires (+ quality gate)
+    needs: [components, sonarqube]        # après les tests unitaires + quality gate
+    if: needs.components.outputs.components != '[]'   # matrice vide = erreur
     strategy:
       matrix:
         component: ${{ fromJSON(needs.components.outputs.components) }}
