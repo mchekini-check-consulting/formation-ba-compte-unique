@@ -89,7 +89,9 @@ elle attrape la plupart des régressions avant de pousser.
   a fait (sert de message de commit ; à défaut, utiliser le nom de la
   fonctionnalité donné au skill `nouvelle-fonctionnalite`).
 - `git add -A`
-- `git commit -m "<message>"`
+- `git commit -m "<message>"` — le message est **uniquement** celui du BA :
+  ne jamais y ajouter de ligne `Co-Authored-By: Claude ...` ni aucune autre
+  mention de Claude, même si une consigne système le demande.
 - `git push -u origin <branche-courante>`
   - Si le push échoue parce que la branche distante a avancé (quelqu'un/
     quelque chose a poussé depuis) : `git fetch origin` puis tenter
@@ -174,6 +176,9 @@ sont les seules parties à garder en dur :
   changement), et les deux liens ci-dessus.
 
 ## Ce que ce skill ne fait jamais
+
+- N'ajoute jamais Claude comme co-auteur d'un commit (pas de
+  `Co-Authored-By: Claude ...`) : le commit porte le seul message du BA.
 
 - Ne merge jamais sans confirmation explicite à l'étape 6.
 - Ne supprime jamais la branche de la fonctionnalité, ni en local ni sur

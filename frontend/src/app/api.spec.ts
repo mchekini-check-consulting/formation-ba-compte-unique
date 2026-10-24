@@ -3,7 +3,7 @@ import { apiBase } from './api';
 describe('apiBase', () => {
   it('pointe la passerelle de l\'environnement du frontend', () => {
     expect(apiBase('frontend.formation-ba-compte-unique.qualif.check-consulting.net')).toBe(
-      'https://api.qualif.check-consulting.net/formation-ba-compte-unique/backend',
+      'https://gateway.formation-ba-compte-unique.qualif.check-consulting.net/backend',
     );
   });
 

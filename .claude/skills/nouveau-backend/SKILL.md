@@ -1,6 +1,6 @@
 ---
 name: nouveau-backend
-description: Initialise un nouveau microservice backend minimal ("Hello World" uniquement) pour un Business Analyst (BA) qui ne maîtrise pas git — synchronise main, crée la branche, détecte la stack déjà utilisée dans CE dépôt (Node/Java/Python — ce skill est réutilisé tel quel dans plusieurs dépôts `formation-ba-*` qui n'ont pas tous la même stack), duplique un composant backend existant comme modèle vivant pour sa plomberie (Dockerfile/Makefile/sonar-project.properties/build), lui donne sa propre base de données, et l'ajoute à `helm.yaml`. Ne commit ni ne push rien (c'est le rôle du skill `deploy`). À utiliser quand le BA veut créer un nouveau backend / microservice / service, en plus de ceux qui existent déjà.
+description: Initialise un nouveau microservice backend minimal ("Hello World" uniquement) pour un Business Analyst (BA) qui ne maîtrise pas git — synchronise main, crée la branche, détecte la stack déjà utilisée dans CE dépôt (Node/Java/Python — ce skill est réutilisé tel quel dans plusieurs dépôts `formation-ba-*` qui n'ont pas tous la même stack), duplique un composant backend existant comme modèle vivant pour sa plomberie (Dockerfile/Makefile/sonar-project.properties/build), lui donne sa propre base de données, l'ajoute à `helm.yaml`, et vérifie/met à jour le gateway du projet (type: gateway dans helm.yaml, et gateway.yaml s'il fige un routage personnalisé) pour que ce backend soit joignable depuis l'extérieur. Ne commit ni ne push rien (c'est le rôle du skill `deploy`). À utiliser quand le BA veut créer un nouveau backend / microservice / service, en plus de ceux qui existent déjà.
 ---
 
 # Initialiser un nouveau backend (microservice)
@@ -201,20 +201,41 @@ qu'écoute réellement l'app copiée), `replicas` identiques au modèle,
 `database.name: <nom-de-base-du-slug>`. Reprendre les commentaires
 existants (DATABASE_URL, etc.) en les adaptant au nouveau nom.
 
-### 10. Signaler une limite importante au BA
+### 10. Vérifier le gateway du projet, et le mettre à jour si nécessaire
 
-L'exposition de ce backend par la passerelle API nécessite une
-configuration dans le **dépôt d'infrastructure** `formation-ba-gitops`
-(`business.projects[].api`), hors de portée de ce skill (dépôt différent,
-accès différent). Le dire clairement au BA : sans cette étape faite par son
-encadrant technique, le service tournera mais ne sera pas joignable depuis
-l'extérieur.
+Un backend `type: backend` dans `helm.yaml` est **automatiquement**
+surveillé par Kargo dès le premier merge (aucune action externe, cf.
+`kargo-pipelines` de `formation-ba-gitops`) — ça, c'est déjà acquis, quel
+que soit ce projet. Reste la question de savoir si ce nouveau backend sera
+**joignable depuis l'extérieur**, qui dépend du gateway de CE projet :
+
+- Chercher dans `helm.yaml` une application `type: gateway` existante.
+  - **Aucune** : rien à faire ici. Le dire simplement au BA : ce backend
+    tourne et est surveillé par Kargo, mais n'est joignable que depuis
+    l'intérieur du cluster tant qu'aucun gateway n'existe sur ce projet
+    (créer un gateway est un choix à part, pas automatique).
+  - **Un gateway existe** : regarder s'il y a un `gateway.yaml` à la racine
+    du dépôt (configuration personnalisée du routage).
+    - **Absent** : rien à faire — le routage par défaut (généré par le
+      chart `charts-ba-formations`) détecte déjà tous les `type: backend`
+      de `helm.yaml`, ce nouveau compris, sans action supplémentaire.
+    - **Présent** : ce fichier fige le routage (plus de détection
+      automatique dès qu'il existe) — il faut lui **ajouter l'entrée de ce
+      nouveau backend** : un router (`PathPrefix`/<slug>`)`), un middleware
+      `<slug>-strip` (stripPrefix `/<slug>`), une entrée `services` vers
+      `http://<slug>:80`, et ajouter son nom aux `middlewares` du router
+      (réutiliser le middleware `cors` déjà présent, ne pas en créer un
+      second). Copier-adapter le motif des entrées déjà présentes dans ce
+      fichier pour les autres backends plutôt que d'en inventer un nouveau
+      — puis relire le fichier modifié en entier (pas de `helm template`
+      possible depuis ce dépôt, le chart vit dans `formation-ba-gitops`).
 
 ### 11. Conclure en langage simple
 
 Résumer : le dossier `<slug>/` est prêt (squelette "Hello World" vérifié),
 la base de données dédiée est déclarée, l'espace de travail "<nom>" est
-ouvert. Le BA peut maintenant développer sa logique métier dans `<slug>/`.
+ouvert, et l'état du gateway (étape 10) a été vérifié et mis à jour si
+besoin. Le BA peut maintenant développer sa logique métier dans `<slug>/`.
 **Ce skill n'a rien commité ni poussé** — quand le BA aura une première
 version, `deploy` s'occupera du commit, du push, de la PR et du suivi.
 
@@ -231,7 +252,11 @@ version, `deploy` s'occupera du commit, du push, de la PR et du suivi.
   GitHub.
 - N'écrase jamais un dossier de composant existant portant le même nom —
   s'arrête et demande un autre nom.
+- Ne crée jamais lui-même une application `type: gateway` si le projet n'en
+  a pas déjà une — c'est une décision à part, pas une conséquence
+  automatique de la création d'un backend (étape 10).
 - Ne supprime jamais de travail en cours sans réponse explicite du BA.
-- Ne modifie jamais le dépôt `formation-ba-gitops` (passerelle API) — se
-  contente de signaler la limite à l'étape 10.
+- Ne modifie jamais le dépôt `formation-ba-gitops` — n'en a plus besoin pour
+  un nouveau composant d'un projet déjà existant (ApplicationSet par projet,
+  détection automatique depuis `helm.yaml`).
 - Ne force jamais un `reset --hard` sur `main` sans confirmation explicite.
