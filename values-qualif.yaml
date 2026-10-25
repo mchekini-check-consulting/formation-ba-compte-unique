@@ -1,0 +1,10 @@
+# qualif : ce qui change dans cet environnement (fusionné avec helm.yaml).
+# tag : écrit par Kargo à chaque promotion (applications.<nom>.tag) ;
+# vide : application pas encore déployée dans cet environnement.
+applications:
+  backend:
+    tag: "55d1d54"
+    replicas: 1
+  frontend:
+    tag: "68ec957"
+    replicas: 1
