@@ -44,4 +44,26 @@ class ItemServiceTest {
 		verify(items, never()).save(any(Item.class));
 	}
 
+	@Test
+	void creerRefuseUnNomNull() {
+		ResponseStatusException erreur = assertThrows(ResponseStatusException.class,
+				() -> service.creer(new ItemRequest(null, "x")));
+		assertEquals(HttpStatus.BAD_REQUEST, erreur.getStatusCode());
+		verify(items, never()).save(any(Item.class));
+	}
+
+	@Test
+	void creerAccepteUneDescriptionNulle() {
+		when(items.save(any(Item.class))).thenAnswer(invocation -> invocation.getArgument(0));
+		Item cree = service.creer(new ItemRequest("Premier", null));
+		assertNull(cree.getDescription());
+	}
+
+	@Test
+	void creerConserveUneDescriptionNonVideNettoyee() {
+		when(items.save(any(Item.class))).thenAnswer(invocation -> invocation.getArgument(0));
+		Item cree = service.creer(new ItemRequest("Premier", "  Une description  "));
+		assertEquals("Une description", cree.getDescription());
+	}
+
 }

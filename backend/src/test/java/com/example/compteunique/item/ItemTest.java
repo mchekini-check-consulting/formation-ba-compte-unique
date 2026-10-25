@@ -18,4 +18,11 @@ class ItemTest {
 		assertEquals("description", item.getDescription());
 	}
 
+	@Test
+	void constructeurSansArgumentReserveAJpa() {
+		Item item = new Item();
+		assertNull(item.getId());
+		assertNull(item.getNom());
+	}
+
 }

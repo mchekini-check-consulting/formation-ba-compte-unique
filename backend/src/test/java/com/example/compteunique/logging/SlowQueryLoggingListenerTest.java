@@ -49,4 +49,11 @@ class SlowQueryLoggingListenerTest {
 		assertThat(MDC.get("layer")).isNull();
 	}
 
+	@Test
+	void beforeQueryNeDeclencheAucunLog() {
+		listener.beforeQuery(mock(ExecutionInfo.class), List.of(new QueryInfo("select 1")));
+
+		assertThat(MDC.get("layer")).isNull();
+	}
+
 }
