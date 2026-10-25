@@ -1,6 +1,6 @@
 ---
 name: nouveau-backend
-description: Initialise un nouveau microservice backend minimal ("Hello World" uniquement) pour un Business Analyst (BA) qui ne maîtrise pas git — synchronise main, crée la branche, détecte la stack déjà utilisée dans CE dépôt (Node/Java/Python — ce skill est réutilisé tel quel dans plusieurs dépôts `formation-ba-*` qui n'ont pas tous la même stack), duplique un composant backend existant comme modèle vivant pour sa plomberie (Dockerfile/Makefile/sonar-project.properties/build), lui donne sa propre base de données, l'ajoute à `helm.yaml` et aux `values-<env>.yaml`, et ajoute sa route au gateway du projet (section `gateway` de helm.yaml) pour que ce backend soit joignable depuis l'extérieur. Ne commit ni ne push rien (c'est le rôle du skill `deploy`). À utiliser quand le BA veut créer un nouveau backend / microservice / service, en plus de ceux qui existent déjà.
+description: Initialise un nouveau microservice backend minimal ("Hello World" uniquement) pour un Business Analyst (BA) qui ne maîtrise pas git — synchronise main, crée la branche, détecte la stack déjà utilisée dans CE dépôt (Node/Java/Python — ce skill est réutilisé tel quel dans plusieurs dépôts `formation-ba-*` qui n'ont pas tous la même stack), duplique un composant backend existant comme modèle vivant pour sa plomberie (Dockerfile/Makefile/sonar-project.properties/build), lui donne sa propre base de données, l'ajoute à `helm.yaml`, et vérifie/met à jour le gateway du projet (type: gateway dans helm.yaml, et gateway.yaml s'il fige un routage personnalisé) pour que ce backend soit joignable depuis l'extérieur. Ne commit ni ne push rien (c'est le rôle du skill `deploy`). À utiliser quand le BA veut créer un nouveau backend / microservice / service, en plus de ceux qui existent déjà.
 ---
 
 # Initialiser un nouveau backend (microservice)
@@ -78,9 +78,9 @@ git switch -c feature/<slug>
 Ne jamais supposer Node/NestJS ni un nom de dossier : regarder ce qui existe
 réellement dans **ce** dépôt.
 
-- Lister les composants backend existants : applications de `helm.yaml`
-  (clés sous `applications:`) avec `type: backend` (en général `backend`,
-  mais peut être nommé autrement, ou il peut y en avoir plusieurs déjà).
+- Lister les composants backend existants : dossiers à la racine listés
+  dans `helm.yaml` avec `type: backend` (en général `backend/`, mais peut
+  être nommé autrement, ou il peut y en avoir plusieurs déjà).
 - S'il en existe au moins un, choisir le plus simple/représentatif comme
   **modèle vivant** — à la fois pour sa stack (Node, Java/Maven, Python...)
   et pour sa "plomberie" CI/plateforme (`Dockerfile`, `Makefile`,
@@ -198,91 +198,56 @@ n'a pas encore touché.
 Docker, etc.) et être lent : le lancer si les prérequis sont disponibles,
 sinon le dire simplement au BA plutôt que de bloquer dessus.
 
-### 9. Ajouter le service à `helm.yaml` et aux `values-<env>.yaml`
+### 9. Ajouter le service à `helm.yaml`
 
-Dans `helm.yaml` (ce qui est identique dans tous les environnements), ajouter
-une entrée sous `applications:`, sur le même modèle que l'application backend
-utilisée comme modèle à l'étape 6 :
+Ajouter une entrée sous `applications:` (à la racine du dépôt), sur le même
+modèle que l'entrée backend existante utilisée comme modèle à l'étape 6 :
+`name: <slug>`, `type: backend`, `image:
+205493924920.dkr.ecr.eu-west-3.amazonaws.com/<nom-du-dépôt>/<slug>` (nom du
+dépôt = `gh repo view --json name -q .name`, pas une valeur à recopier d'un
+autre dépôt), `tag: {dev: "", qualif: "", preprod: "", prod: ""}` (vide :
+aucune image construite encore — Kargo remplira `tag.dev` automatiquement
+après le premier merge), `containerPort` identique au modèle (le port
+qu'écoute réellement l'app copiée), `replicas` identiques au modèle,
+`service.port: 80`, pas d'`ingress` (backend = pas d'exposition directe),
+`database.name: <nom-de-base-du-slug>`. Reprendre les commentaires
+existants (DATABASE_URL, etc.) en les adaptant au nouveau nom.
 
-```yaml
-  <slug>:
-    type: backend
-    image: 205493924920.dkr.ecr.eu-west-3.amazonaws.com/<nom-du-dépôt>/<slug>
-    containerPort: <identique au modèle : le port qu'écoute réellement l'app copiée>
-    service:
-      port: 80
-    database: <nom-de-base-du-slug>
-    env:
-      <mêmes variables que le modèle, mêmes valeurs communes>
-```
-
-Ajouter aussi la base sous `database.databases` de `helm.yaml`
-(`<nom-de-base-du-slug>: {}`, à la suite des bases existantes ; ne pas toucher
-au reste du bloc `database`).
-
-Nom du dépôt = `gh repo view --json name -q .name` (pas une valeur à recopier
-d'un autre dépôt). Pas d'`ingress` (backend = exposé par le gateway). Reprendre
-les commentaires du modèle (consigne `DATABASE_URL`, etc.) en les adaptant au
-nouveau nom.
-
-Dans **chaque** `values-<env>.yaml` présent à la racine (`values-dev.yaml`,
-`values-qualif.yaml`, ...), ajouter la même application avec un tag vide (aucune
-image construite encore : Kargo l'écrira après le premier merge ; tant qu'il
-est vide, l'application n'est pas déployée dans cet environnement), les mêmes
-`replicas` que le modèle dans ce fichier, et ses variables propres à
-l'environnement s'il en a :
-
-```yaml
-  <slug>:
-    tag: ""
-    replicas: <identique au modèle dans ce fichier>
-```
-
-### 10. Ajouter la route du gateway
+### 10. Vérifier le gateway du projet, et le mettre à jour si nécessaire
 
 Un backend `type: backend` dans `helm.yaml` est **automatiquement**
 surveillé par Kargo dès le premier merge (aucune action externe, cf.
-`kargo-pipelines` de `formation-ba-gitops`). Pour qu'il soit **joignable
-depuis l'extérieur**, il lui faut une route dans la section `gateway` de
-`helm.yaml` :
+`kargo-pipelines` de `formation-ba-gitops`) — ça, c'est déjà acquis, quel
+que soit ce projet. Reste la question de savoir si ce nouveau backend sera
+**joignable depuis l'extérieur**, qui dépend du gateway de CE projet :
 
-- `gateway.enabled: true` : ajouter sous `gateway.routes`, à la suite des
-  routes existantes et sur le même modèle (mêmes commentaires) :
-  ```yaml
-      <slug>:
-        path: /<slug>
-        service: <slug>
-        stripPrefix: true
-        cors: true
-        middlewares: []
-  ```
-  Le backend sera alors joignable sur
-  `https://gateway.<nom-du-dépôt>.<env>.check-consulting.net/<slug>/...`
-  (préfixe retiré, CORS selon `gateway.cors.origins`). Ne pas toucher aux
-  autres routes, à `cors` ni aux `middlewares`.
-- `gateway.enabled: false` ou section absente : rien à faire ici. Le dire
-  simplement au BA : ce backend tourne et est surveillé par Kargo, mais n'est
-  joignable que depuis l'intérieur du cluster tant que le gateway du projet
-  n'est pas activé (activer le gateway est un choix à part, pas automatique).
-
-Relire ensuite `helm.yaml` et les `values-<env>.yaml` modifiés en entier
-(indentation : 2 espaces par niveau). Si le dépôt `formation-ba-gitops` est
-présent à côté de ce dépôt (`../formation-ba-gitops`), vérifier le rendu :
-
-```
-helm dependency build ../formation-ba-gitops/chart-base/charts-ba-formations/<version>
-helm template test ../formation-ba-gitops/chart-base/charts-ba-formations/<version> \
-  -f helm.yaml -f values-dev.yaml --set env=dev --set project=<nom-du-dépôt>
-```
-(`<version>` : `business.charts.app` de `../formation-ba-gitops/gitops/values.yaml`).
-Sinon, le dire simplement : ce sera vérifié par ArgoCD après le merge.
+- Chercher dans `helm.yaml` une application `type: gateway` existante.
+  - **Aucune** : rien à faire ici. Le dire simplement au BA : ce backend
+    tourne et est surveillé par Kargo, mais n'est joignable que depuis
+    l'intérieur du cluster tant qu'aucun gateway n'existe sur ce projet
+    (créer un gateway est un choix à part, pas automatique).
+  - **Un gateway existe** : regarder s'il y a un `gateway.yaml` à la racine
+    du dépôt (configuration personnalisée du routage).
+    - **Absent** : rien à faire — le routage par défaut (généré par le
+      chart `charts-ba-formations`) détecte déjà tous les `type: backend`
+      de `helm.yaml`, ce nouveau compris, sans action supplémentaire.
+    - **Présent** : ce fichier fige le routage (plus de détection
+      automatique dès qu'il existe) — il faut lui **ajouter l'entrée de ce
+      nouveau backend** : un router (`PathPrefix`/<slug>`)`), un middleware
+      `<slug>-strip` (stripPrefix `/<slug>`), une entrée `services` vers
+      `http://<slug>:80`, et ajouter son nom aux `middlewares` du router
+      (réutiliser le middleware `cors` déjà présent, ne pas en créer un
+      second). Copier-adapter le motif des entrées déjà présentes dans ce
+      fichier pour les autres backends plutôt que d'en inventer un nouveau
+      — puis relire le fichier modifié en entier (pas de `helm template`
+      possible depuis ce dépôt, le chart vit dans `formation-ba-gitops`).
 
 ### 11. Conclure en langage simple
 
 Résumer : le dossier `<slug>/` est prêt (squelette "Hello World" vérifié),
 la base de données dédiée est déclarée, l'espace de travail "<nom>" est
-ouvert, et la route du gateway (étape 10) a été ajoutée si le gateway est
-activé. Le BA peut maintenant développer sa logique métier dans `<slug>/`.
+ouvert, et l'état du gateway (étape 10) a été vérifié et mis à jour si
+besoin. Le BA peut maintenant développer sa logique métier dans `<slug>/`.
 Le logging JSON (couches `controller`/`db`) fonctionne déjà sans rien
 faire ; pour la couche `service`, dire simplement au BA d'appliquer à ses
 futures classes métier le même mécanisme que celui déjà utilisé dans le
@@ -304,11 +269,11 @@ version, `deploy` s'occupera du commit, du push, de la PR et du suivi.
   GitHub.
 - N'écrase jamais un dossier de composant existant portant le même nom —
   s'arrête et demande un autre nom.
-- N'active jamais lui-même le gateway (`gateway.enabled`) si le projet ne
-  l'a pas déjà — c'est une décision à part, pas une conséquence
+- Ne crée jamais lui-même une application `type: gateway` si le projet n'en
+  a pas déjà une — c'est une décision à part, pas une conséquence
   automatique de la création d'un backend (étape 10).
 - Ne supprime jamais de travail en cours sans réponse explicite du BA.
-- Ne modifie jamais le dépôt `formation-ba-gitops` — n'en a pas besoin pour
-  un nouveau composant d'un projet déjà existant (tout est dans le dépôt du
-  projet : `helm.yaml`, `values-<env>.yaml`).
+- Ne modifie jamais le dépôt `formation-ba-gitops` — n'en a plus besoin pour
+  un nouveau composant d'un projet déjà existant (ApplicationSet par projet,
+  détection automatique depuis `helm.yaml`).
 - Ne force jamais un `reset --hard` sur `main` sans confirmation explicite.
