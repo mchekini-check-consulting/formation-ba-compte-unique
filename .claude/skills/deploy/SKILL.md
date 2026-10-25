@@ -12,8 +12,8 @@ forcer un push sans confirmation explicite à l'étape prévue pour ça.
 Rappel du pipeline réel de ce dépôt (cf. `ci-template/README.md` et
 `chart-base/kargo-pipelines/README.md`) : merge sur `main` → build de l'image
 et push vers ECR (`ci.yaml`) → Kargo détecte la nouvelle image et la promeut
-automatiquement vers la Stage `dev` (il écrit le tag dans `helm.yaml` et
-pousse un commit sur `main`) → ArgoCD synchronise l'Application `dev-<repo>`.
+automatiquement vers la Stage `dev` (il écrit le tag dans `values-dev.yaml`
+et pousse un commit sur `main`) → ArgoCD synchronise l'Application `dev-<repo>`.
 Le déploiement sur dev est donc **automatique après le merge**, mais pas
 instantané (Kargo scrute ECR périodiquement). Le rôle de ce skill s'arrête
 une fois la pipeline GitHub Actions sur `main` au vert : il ne surveille pas
@@ -169,8 +169,8 @@ sont les seules parties à garder en dur :
   temps que Kargo promeuve et qu'ArgoCD synchronise).
 - Stage `qualif` dans l'interface Kargo, pour que le BA puisse cliquer sur
   "Promote" quand il le souhaite (la promotion vers qualif n'est pas
-  automatique, cf. `helm.yaml` : "qualif/preprod/prod : promotion par
-  clic") :
+  automatique : promotion par clic dans Kargo, qui écrit alors le tag dans
+  `values-qualif.yaml`) :
   `https://kargo.dev.check-consulting.net/project/<nom-du-dépôt>/stage/qualif`.
 - Conclure en une phrase simple : ce qui a été mis en ligne (résumé du
   changement), et les deux liens ci-dessus.

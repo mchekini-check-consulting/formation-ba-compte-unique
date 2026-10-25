@@ -1,68 +1,84 @@
-# Microservices de ce dépôt, déployés par formation-ba-gitops sur chaque environnement.
-# Valeurs littérales uniquement. replicas, tag et envList[].value acceptent
-# une valeur unique ou une map par environnement : { dev: ..., qualif: ..., preprod: ..., prod: ... }
-# URL : frontend/gateway https://<application>.formation-ba-compte-unique.<env>.check-consulting.net
-#       backend : jamais d'URL directe (Service ClusterIP seulement), exposé par
-#       le pod "gateway" ci-dessous (type: gateway) : .../gateway/<backend>/...
+# Applications de ce dépôt, déployées par formation-ba-gitops (chart charts-ba-formations).
+# Ce fichier : ce qui est identique dans tous les environnements.
+# values-<env>.yaml : ce qui change par environnement (tag écrit par Kargo,
+# replicas, variables). Helm fusionne les deux, clé par clé (le second l'emporte).
+# URL : frontend https://<application>.formation-ba-compte-unique.<env>.check-consulting.net
+#       backends https://gateway.formation-ba-compte-unique.<env>.check-consulting.net/<route>/...  (préfixe retiré)
 applications:
-  - name: backend
+  backend:
     type: backend
     image: 205493924920.dkr.ecr.eu-west-3.amazonaws.com/formation-ba-compte-unique/backend
-    # Écrit par Kargo (dev automatique ; qualif/preprod/prod : promotion par clic).
-    # Garder une valeur par ligne, sans commentaire en fin de ligne : Kargo
-    # remplace tout jusqu'à la fin de la ligne.
-    tag:
-      dev: cf53008
-      qualif: 55d1d54
-      preprod: ""
-      prod: ""
     containerPort: 8080
-    replicas: {dev: 1, qualif: 1, preprod: 2, prod: 2}
     service:
       port: 80
-    # Pas d'Ingress direct : Service ClusterIP seulement. Exposé par le pod
-    # "gateway" ci-dessous :
-    #   https://gateway.formation-ba-compte-unique.<env>.check-consulting.net/backend/...  (préfixe retiré)
-    # Appelable depuis le navigateur uniquement par les frontends de l'environnement (CORS).
+    # Pas d'Ingress : Service ClusterIP seulement, exposé par le gateway (plus bas).
     # Base PostgreSQL compte_unique : créée et sauvegardée automatiquement.
     # Consigne : dans backend/src/main/resources/application.yaml, déclarer
     #   spring.datasource.url, spring.datasource.username, spring.datasource.password
     # (valeurs locales) ; sur le cluster, Spring Boot les remplace par les variables
     # injectées SPRING_DATASOURCE_URL, SPRING_DATASOURCE_USERNAME, SPRING_DATASOURCE_PASSWORD.
-    database:
-      name: compte_unique
-    envList:
-      - key: LOG_LEVEL
-        value: {dev: debug, qualif: info, preprod: info, prod: warn}
-  - name: gateway
-    type: gateway
-    # Pas d'image/tag : fourni par la plateforme (petit Traefik autonome),
-    # rien à construire ni à promouvoir. Expose les backends ci-dessus
-    # (type: backend) sous https://gateway.formation-ba-compte-unique.<env>.check-consulting.net/<backend>/...
-    # (préfixe retiré) ; CORS limité aux frontends de l'environnement.
-    # Configuration personnalisée (routage, rate limiting, authentification
-    # centralisée...) : voir gateway.yaml à la racine du dépôt. Si ce fichier
-    # est absent, le routage vers les backends ci-dessus est généré
-    # automatiquement (comportement par défaut).
-    replicas: {dev: 1, qualif: 1, preprod: 2, prod: 2}
-    ingress:
-      enabled: true
-  - name: frontend
+    database: compte_unique
+    env:
+      LOG_LEVEL: info
+  frontend:
     type: frontend
     image: 205493924920.dkr.ecr.eu-west-3.amazonaws.com/formation-ba-compte-unique/frontend
-    # Écrit par Kargo (dev automatique ; qualif/preprod/prod : promotion par clic).
-    # Garder une valeur par ligne, sans commentaire en fin de ligne : Kargo
-    # remplace tout jusqu'à la fin de la ligne.
-    tag:
-      dev: 68ec957
-      qualif: 68ec957
-      preprod: ""
-      prod: ""
     containerPort: 8080
-    replicas: {dev: 1, qualif: 1, preprod: 2, prod: 2}
     service:
       port: 80
     ingress:
       enabled: true
       path: /
       stripPrefix: false
+
+# Gateway : https://gateway.formation-ba-compte-unique.<env>.check-consulting.net<path>/...
+# Un Ingress par route sur le Traefik de la plateforme (pas de pod).
+gateway:
+  enabled: true
+  # Applications autorisées à appeler le gateway depuis le navigateur (CORS) :
+  # converties en https://<application>.<projet>.<env>.check-consulting.net
+  cors:
+    origins: [frontend]
+  routes:
+    backend:
+      path: /backend           # préfixe d'URL sur le gateway
+      service: backend         # Service (application) appelé
+      stripPrefix: true        # /backend/items -> /items
+      cors: true               # applique cors.origins
+      middlewares: []          # noms de gateway.middlewares
+  # Middlewares du projet, spec Traefik native (Middleware gateway-<nom>), ex. :
+  #   limite: {rateLimit: {average: 50, burst: 100}}
+  middlewares: {}
+
+# Base PostgreSQL du projet : Cluster app-db, un par environnement, avec ses
+# sauvegardes S3 (bucket de l'environnement). Une valeur qui change selon
+# l'environnement se met dans values-<env>.yaml.
+database:
+  instances: 1                 # 1 : pas de réplique
+  enablePDB: false             # sans réplique, un PDB bloquerait le drain du nœud
+  storage: 2Gi                 # ne peut qu'augmenter
+  superuser: false             # true : Secret app-db-superuser (postgres)
+  # Bases du cluster (une par application avec database) et réglages par base
+  databases:
+    compte_unique: {}
+  backup:
+    # Base complète planifiée + WAL archivés en continu : restauration à
+    # n'importe quel instant de la fenêtre de rétention (PITR)
+    physical:
+      enabled: true
+      schedule: "0 0 2 * * *"  # 6 champs (secondes en tête) : 02:00 UTC
+      retention: 7d
+    # pg_dump quotidien de chaque base (pour une seule base : databases.<base>.logical,
+    # bloc complet {enabled, schedule, retentionDays})
+    logical:
+      enabled: false
+      schedule: "30 2 * * *"   # 5 champs : 02:30 UTC
+      retentionDays: 14
+  # Archive S3 où le cluster écrit. Restauration (gitops/README.md, « Restaurer
+  # une base »), dans values-<env>.yaml : archive neuve (app-db-g1, -g2...),
+  # restore.from = ancienne archive, restore.enabled: true, puis false.
+  archive: app-db
+  restore:
+    enabled: false
+    from: ""                   # archive lue pendant la restauration
+    targetTime: ""             # ex. "2026-10-20T10:30:00Z" ; vide = dernier état archivé
