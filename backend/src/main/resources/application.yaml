@@ -11,3 +11,7 @@ spring:
     open-in-view: false
     hibernate:
       ddl-auto: validate   # le schéma vient uniquement des migrations Flyway
+
+logging:
+  level:
+    root: ${LOG_LEVEL:INFO}

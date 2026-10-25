@@ -112,15 +112,27 @@ Puis, en lisant le code copié (peu importe le langage), réduire au minimum
 "Hello World" :
 - **Garder** : le point d'entrée de l'application, le branchement à la base
   de données (générique, lu depuis des variables d'environnement — cf.
-  `helm.yaml`), et **une seule route minimale qui répond "Hello World"**
+  `helm.yaml`), **une seule route minimale qui répond "Hello World"**
   (ou équivalent déjà présent dans le modèle — ne pas en inventer une si le
-  modèle en a déjà une).
+  modèle en a déjà une), et **l'infrastructure de logging applicatif** du
+  modèle (logger JSON structuré sur stdout respectant la variable
+  d'environnement `LOG_LEVEL`, intercepteur/middleware de couche
+  `controller`, mécanisme réutilisable de couche `service` — annotation,
+  décorateur ou aspect selon la stack —, logging des requêtes DB lentes ou
+  en erreur) : c'est de la plomberie générique au même titre que le
+  `Dockerfile`, pas un exemple métier, même si elle vit sous `src/` — ne
+  jamais la retirer ni la réinventer, quel que soit son nom dans la stack
+  détectée.
 - **Retirer** tout module/ressource métier d'exemple plus riche qu'un
   "Hello World" (ex. un module CRUD de démonstration, ses migrations, ses
   tests dédiés) — et toute référence à ce module dans le fichier
-  d'assemblage de l'application. L'objectif est un squelette qui démarre,
-  répond, passe les tests, et que le BA remplira lui-même — pas un exemple
-  métier à adapter.
+  d'assemblage de l'application. Ne pas confondre avec l'infrastructure de
+  logging ci-dessus (à garder) : seul le module métier d'exemple et ses
+  propres tests partent, pas la plomberie de logging qui l'entourait (ex.
+  l'annotation/décorateur de logging posée sur son service disparaît avec
+  lui, mais le mécanisme réutilisable qui la définit reste). L'objectif est
+  un squelette qui démarre, répond, passe les tests, et que le BA remplira
+  lui-même — pas un exemple métier à adapter.
 - Adapter les quelques identifiants qui doivent changer, quel que soit le
   langage : nom du projet/paquet dans son fichier de métadonnées
   (`package.json`, `pom.xml`, `pyproject.toml`...), nom de la base de
@@ -236,6 +248,11 @@ Résumer : le dossier `<slug>/` est prêt (squelette "Hello World" vérifié),
 la base de données dédiée est déclarée, l'espace de travail "<nom>" est
 ouvert, et l'état du gateway (étape 10) a été vérifié et mis à jour si
 besoin. Le BA peut maintenant développer sa logique métier dans `<slug>/`.
+Le logging JSON (couches `controller`/`db`) fonctionne déjà sans rien
+faire ; pour la couche `service`, dire simplement au BA d'appliquer à ses
+futures classes métier le même mécanisme que celui déjà utilisé dans le
+modèle (ex. une annotation/décorateur à poser sur la classe) pour que ses
+méthodes soient loguées automatiquement.
 **Ce skill n'a rien commité ni poussé** — quand le BA aura une première
 version, `deploy` s'occupera du commit, du push, de la PR et du suivi.
 
