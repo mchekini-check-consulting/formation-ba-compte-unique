@@ -1,319 +1,257 @@
 ---
 name: nouveau-backend
-description: Initialise un nouveau microservice backend minimal ("Hello World" uniquement) pour un Business Analyst (BA) qui ne maîtrise pas git — synchronise main, crée la branche, détecte la stack déjà utilisée dans CE dépôt (Node/Java/Python — ce skill est réutilisé tel quel dans plusieurs dépôts `formation-ba-*` qui n'ont pas tous la même stack), duplique un composant backend existant comme modèle vivant pour sa plomberie (Dockerfile/Makefile/sonar-project.properties/build), lui donne sa propre base de données, met en place dès la création le logging structuré minimal (JSON, champ layer controller/service/db), l'ajoute à `helm.yaml`, et vérifie/met à jour le gateway du projet (type: gateway dans helm.yaml, et gateway.yaml s'il fige un routage personnalisé) pour que ce backend soit joignable depuis l'extérieur. Ne commit ni ne push rien (c'est le rôle du skill `deploy`). À utiliser quand le BA veut créer un nouveau backend / microservice / service, en plus de ceux qui existent déjà.
+description: Initialise un nouveau microservice backend minimal ("Hello World") pour un Business Analyst (BA) qui ne maîtrise pas git — synchronise main, crée la branche, détecte la stack du dépôt (Node, Java ou Python) à partir d'un backend existant, le duplique comme modèle (Dockerfile, Makefile, Sonar, logging structuré controller/service/db), lui donne sa base de données et ses ports locaux, vérifie que l'image Docker démarre, l'ajoute à la fin de helm.yaml et au gateway (gateway.yaml). Ne commit ni ne push rien (rôle du skill deploy). À utiliser quand le BA veut créer un nouveau backend / microservice / service / API, en plus de ceux qui existent déjà.
 ---
 
 # Initialiser un nouveau backend (microservice)
 
 Public : un Business Analyst, pas un développeur. Expliquer chaque étape en
-langage simple (pas de jargon git brut non expliqué). Ne jamais faire
-d'action destructrice (écraser un dossier existant, écraser des
-modifications en cours) sans confirmation explicite.
+langage simple. Ne jamais faire d'action destructrice (écraser un dossier,
+des modifications en cours) sans confirmation explicite.
 
-**Ce skill est copié tel quel dans plusieurs dépôts métier**
-(`formation-ba-assurance-iard`, `formation-ba-compte-unique`,
-`formation-ba-gestion-financiere`, `formation-ba-quali-formation`, ...).
-Ils partagent la même convention de pipeline (`ci-template` :
-tout dossier avec `Dockerfile` + `Makefile` (`lint`/`test-unit`/
-`test-integration`) + `sonar-project.properties` devient un composant,
-détecté automatiquement, rien à configurer côté GitHub Actions), **mais pas
-forcément la même stack applicative** (Node, Java/Maven ou Python selon le
-dépôt — cf. `ci-template/README.md`, action `setup`). Ce skill ne doit donc
-jamais supposer une stack précise ni le nom d'un dossier précis : il
-détecte celle du dépôt où il est lancé, et reste volontairement minimal
-(objectif : un simple "Hello World" qui respecte le contrat CI — pas un
-scaffold métier).
+Ce skill est le même dans tous les dépôts `formation-ba-*`, qui n'ont pas tous
+la même stack (Node/NestJS, Java/Spring Boot, Python/Django). Il ne suppose
+jamais une stack ni un nom de dossier : il part d'un backend qui existe déjà
+dans **ce** dépôt. Contrat CI (`ci-template`) : tout dossier racine avec
+`Dockerfile` + `Makefile` (`lint`/`test-unit`/`test-integration`) +
+`sonar-project.properties` est un composant, construit et testé
+automatiquement — rien à configurer dans GitHub Actions ni dans
+`formation-ba-gitops`. Les conventions du dépôt sont résumées dans `CLAUDE.md`.
 
 ## Étapes
 
-### 1. Vérifier l'état courant (comme `nouvelle-fonctionnalite`)
+### 1. Vérifier l'état courant et synchroniser main
 
-- `git rev-parse --is-inside-work-tree`. Si non : expliquer au BA qu'il doit
-  ouvrir le dossier de son projet.
-- `git status --porcelain` :
-  - Modifications non enregistrées **et** pas sur `main` : s'arrêter,
-    demander au BA ce qu'il veut faire de ce travail en cours. Ne jamais le
-    supprimer sans réponse explicite.
-  - Déjà sur une branche `feature/...` propre : informer le BA et demander
-    s'il veut vraiment créer un nouvel espace de travail (à partir de main)
-    ou continuer celui en cours.
-
-### 2. Synchroniser main
-
+Comme le skill `nouvelle-fonctionnalite` (étapes 1 à 3) : travail en cours à
+ranger ou mettre en ligne d'abord, puis
 ```
 git fetch origin
 git switch main
 git pull --ff-only origin main
 ```
-Mêmes précautions que `nouvelle-fonctionnalite` si `switch` ou
-`pull --ff-only` échouent (ne jamais `reset --hard` sans confirmation
-explicite).
+Si le BA est déjà sur une branche `feature/...` non mise en ligne et veut y
+ajouter ce backend : rester sur cette branche (pas de nouvelle branche), mais
+y intégrer d'abord `main` (`git merge --no-edit origin/main`, conflits traités
+comme dans le skill `deploy`, étape 3).
 
-### 3. Demander le nom du nouveau backend
+### 2. Demander le nom du nouveau backend
 
-En langage simple et explicite sur le fait qu'il s'agit d'un backend (ce
-skill ne crée que ça, pas un frontend) : "Quel nom voulez-vous donner à ce
-nouveau backend ?" (ex. "Contrats", "Gestion des sinistres").
+« Quel nom voulez-vous donner à ce nouveau backend ? » (ex. « Contrats »,
+« Gestion des sinistres »). Ce skill ne crée qu'un backend, pas un frontend.
 
-### 4. Construire le nom du dossier, de la branche et de la base de données
+### 3. Construire les noms
 
-- Slug : minuscules, accents retirés, espaces/caractères spéciaux remplacés
-  par des tirets (même règle que `nouvelle-fonctionnalite`). Ex. "Gestion
-  des sinistres" → `gestion-des-sinistres`.
-- Dossier du composant, à la racine du dépôt : `<slug>/`. Vérifier qu'il
-  n'existe pas déjà (`test -d <slug>`) — sinon s'arrêter et proposer un
-  autre nom plutôt que d'écraser quoi que ce soit.
-- Branche : `feature/<slug>`.
-- Nom de la base de données dédiée : `<slug>` avec les tirets remplacés par
-  des underscores (identifiant SQL). Ex. `gestion_des_sinistres`.
+- Slug : minuscules, sans accents, tirets à la place des espaces et
+  caractères spéciaux. « Gestion des sinistres » → `gestion-des-sinistres`.
+- Dossier : `<slug>/` à la racine. S'il existe déjà, ou si `<slug>` est déjà
+  un `name` dans `helm.yaml` : s'arrêter et proposer un autre nom.
+- Branche : `feature/<slug>` (sauf cas de l'étape 1 où l'on reste sur la
+  branche en cours) → `git switch -c feature/<slug>`.
+- Base de données : `<slug>` avec des underscores (`gestion_des_sinistres`).
+- Chemin public (via le gateway) : `/<slug>`, donc
+  `https://gateway.<dépôt>.<env>.check-consulting.net/<slug>/...`.
 
-### 5. Créer la branche
+### 4. Choisir le modèle et détecter la stack
 
+- Les backends existants sont les `applications` de `helm.yaml` avec
+  `type: backend` (en général `backend/`). Prendre le plus simple comme
+  **modèle**.
+- Aucun backend dans le dépôt : ne pas deviner. S'arrêter et demander au
+  formateur la stack à utiliser.
+- Stack : `package.json` → Node ; `pom.xml` → Java/Maven ; `manage.py` →
+  Python/Django.
+
+### 5. Dupliquer le modèle, réduit à « Hello World »
+
+Copier uniquement les fichiers suivis par git du modèle (jamais
+`node_modules/`, `dist/`, `coverage/`, `target/`, `.venv/`) :
 ```
-git switch -c feature/<slug>
-```
-
-### 6. Détecter la stack de CE dépôt, à partir d'un backend existant
-
-Ne jamais supposer Node/NestJS ni un nom de dossier : regarder ce qui existe
-réellement dans **ce** dépôt.
-
-- Lister les composants backend existants : dossiers à la racine listés
-  dans `helm.yaml` avec `type: backend` (en général `backend/`, mais peut
-  être nommé autrement, ou il peut y en avoir plusieurs déjà).
-- S'il en existe au moins un, choisir le plus simple/représentatif comme
-  **modèle vivant** — à la fois pour sa stack (Node, Java/Maven, Python...)
-  et pour sa "plomberie" CI/plateforme (`Dockerfile`, `Makefile`,
-  `sonar-project.properties`, fichiers de build/lint spécifiques à cette
-  stack) : ces fichiers encodent des choix de la plateforme (image de base,
-  outil de lint, wiring Sonar) qu'il ne faut pas réinventer.
-- S'il n'en existe **aucun** (ce serait le premier backend du dépôt) : ce
-  skill ne peut pas deviner la stack à utiliser. S'arrêter et demander au
-  BA/à son encadrant technique quelle stack utiliser (node, maven ou
-  python — cf. `ci-template/README.md`), plutôt que d'en imposer une.
-
-### 7. Dupliquer ce modèle, réduit au strict minimum ("Hello World")
-
-Copier uniquement les fichiers suivis par git du composant modèle choisi
-(jamais `node_modules/`, `dist/`, `coverage/`, `target/`, `.venv/` même
-s'ils existent sur le poste) :
-```
-mkdir -p <slug>
-git ls-files <composant-modèle> | while read -r f; do
-  dest="<slug>${f#<composant-modèle>}"
+git ls-files <modèle> | while read -r f; do
+  dest="<slug>${f#<modèle>}"
   mkdir -p "$(dirname "$dest")"
   cp "$f" "$dest"
 done
 ```
-Vérifier que le compte de fichiers copiés correspond
-(`find <slug> -type f | wc -l` ≈ `git ls-files <composant-modèle> | wc -l`).
+Vérifier le nombre de fichiers copiés (`find <slug> -type f | wc -l` ≈
+`git ls-files <modèle> | wc -l`).
 
-Puis, en lisant le code copié (peu importe le langage), réduire au minimum
-"Hello World" :
-- **Garder** : le point d'entrée de l'application, le branchement à la base
-  de données (générique, lu depuis des variables d'environnement — cf.
-  `helm.yaml`), et **une seule route minimale qui répond "Hello World"**
-  (ou équivalent déjà présent dans le modèle — ne pas en inventer une si le
-  modèle en a déjà une).
-- **Retirer** tout module/ressource métier d'exemple plus riche qu'un
-  "Hello World" (ex. un module CRUD de démonstration, ses migrations, ses
-  tests dédiés) — et toute référence à ce module dans le fichier
-  d'assemblage de l'application. L'objectif est un squelette qui démarre,
-  répond, passe les tests, et que le BA remplira lui-même — pas un exemple
-  métier à adapter.
-- Adapter les quelques identifiants qui doivent changer, quel que soit le
-  langage : nom du projet/paquet dans son fichier de métadonnées
-  (`package.json`, `pom.xml`, `pyproject.toml`...), nom de la base de
-  données par défaut dans la config locale/dev (`<nom-de-base-du-slug>` de
-  l'étape 4).
-- Remplacer le `README.md` par une version courte et propre pour ce
-  service (nom, comment lancer `make lint`/`test-unit`/`test-integration`,
-  rappel que c'est un squelette minimal). Ne pas copier un README par
-  défaut du framework tel quel s'il contient des éléments trompeurs (ex. un
-  faux jeton dans un badge, qui déclenche une fausse alerte gitleaks à
-  chaque scan).
-- Ne pas toucher aux fichiers de plomberie CI/plateforme identifiés à
-  l'étape 6 (`Dockerfile`, `Makefile`, `sonar-project.properties`, config de
-  lint/format/build de la stack) : ils sont déjà corrects pour cette
-  plateforme et cette stack.
+Puis réduire, quel que soit le langage :
+- **Garder** : le point d'entrée, la connexion à la base (lue depuis les
+  variables d'environnement), la route « Hello World » du modèle, et **toute
+  la plomberie** : `Dockerfile`, `Makefile`, `sonar-project.properties`,
+  config de lint/build, `compose.yaml`, et le **logging structuré** (dossier
+  `logging/` ou équivalent, config du logger comme `logback-spring.xml`).
+  Le logging n'est pas un exemple métier : ne jamais le retirer.
+- **Retirer** : la ressource d'exemple (`item`/`items` : entité, contrôleur,
+  service, tests dédiés) et ses références dans l'assemblage de
+  l'application.
+- **Migrations** : retirer celles qui créent la ressource d'exemple ; garder
+  la migration initiale si elle existe (Flyway `V1__init.sql`, TypeORM
+  `...-init.ts`), Django : supprimer les migrations de l'exemple et garder
+  `migrations/__init__.py`. Le modèle de données se fera ensuite avec le
+  skill `modifier-le-modele-de-donnees`.
+- **Renommer** : nom du projet/paquet (`package.json` `name`, `pom.xml`
+  `artifactId`/`name`, `spring.application.name`, paquet Java
+  `com.example.<ancien>` → `com.example.<slug sans tirets>`, application
+  Django), nom de la base locale par défaut → `<base>` (étape 3).
+- Remplacer le `README.md` du composant par une version courte : nom, rôle,
+  ports locaux (étape 6), commandes `make lint`/`test-unit`/`test-integration`.
 
-### 8. Mettre en place le logging structuré minimal (controller/service/db)
+### 6. Ports locaux : faire tourner ce backend à côté des autres
 
-Convention fixée côté infrastructure (formation-ba-gitops/Alloy/Loki),
-valable pour tous les backends de tous les dépôts `formation-ba-*` : une
-ligne JSON par log sur stdout, avec au minimum les champs time/level/msg,
-PLUS un champ `layer` qui vaut `controller`, `service` ou `db` selon
-l'origine du log. Seules les lignes qui ont ce champ `layer` sont
-collectées dans Loki (catégorie "business") ; tout le reste (démarrage,
-câblage) n'a pas besoin de ce champ et reste simplement visible via
-`kubectl logs`. Niveau minimal : variable d'environnement `LOG_LEVEL`
-(déjà injectée par `helm.yaml`, envList) — ne jamais en inventer une autre.
+Sur le poste du BA, plusieurs backends doivent pouvoir tourner en même temps.
+Ne **jamais** changer le port d'écoute de l'application dans l'image (il doit
+rester égal au `containerPort` du modèle) ; on ne change que les valeurs
+locales :
+- **Base locale** : dans `<slug>/compose.yaml`, publier PostgreSQL sur un port
+  libre différent de ceux des autres `compose.yaml` du dépôt (5432 → `5433`,
+  puis `5434`...), `POSTGRES_DB: <base>`. Mettre le même port dans l'URL locale
+  par défaut du code (`postgresql://app:app@localhost:5433/<base>`,
+  `jdbc:postgresql://localhost:5433/<base>` dans `application.yaml`, exemple
+  `DATABASE_URL` de `compose.yaml` pour Django). Sur le cluster, ces valeurs
+  sont remplacées par les variables injectées (`DATABASE_URL`,
+  `SPRING_DATASOURCE_URL`...).
+- **Port de l'application en local** : le port du modèle + 1 (puis + 2...),
+  passé au lancement, sans changer le code : Node `PORT=3001 npm run start:dev`,
+  Java `SERVER_PORT=8081 ./mvnw spring-boot:run`, Django
+  `python manage.py runserver 8001`. L'écrire dans le README du composant.
 
-- **Si le modèle vivant (étape 6) a déjà cette infrastructure** (un dossier
-  `logging/` ou équivalent parmi ses fichiers suivis par git) : elle a été
-  copiée avec le reste à l'étape 7 — la garder telle quelle, c'est de la
-  plomberie, pas du code métier de démo à retirer. Vérifier seulement
-  qu'elle reste branchée après la réduction à "Hello World" : le
-  middleware/intercepteur global (couche controller) n'a rien à faire de
-  spécifique ; la couche service, elle, doit décorer/envelopper au moins la
-  fonction ou méthode qui répond "Hello World" (même minimal, pour que le
-  mécanisme reste visible et testé).
-- **Si le modèle n'a pas encore cette infrastructure** (premier backend de
-  ce dépôt à l'avoir) : la mettre en place pour la stack détectée, de façon
-  idiomatique — pas en copiant du code d'un autre langage :
-  - Un logger qui écrit en JSON sur stdout et respecte `LOG_LEVEL` (ex.
-    SLF4J+Logback+encoder JSON pour Spring Boot, module `logging` standard +
-    formatter JSON + `extra` pour Django, un logger JSON dédié pour
-    NestJS).
-  - Couche **controller** : intercepteur/middleware global qui logue chaque
-    requête HTTP (`layer: controller`) avec la route **déclarée** (jamais
-    l'URL avec ses valeurs, ex. `/items` pas `/items/42`), le code de
-    statut, la durée.
-  - Couche **service** : un mécanisme réutilisable (décorateur, aspect
-    AOP, wrapper...) qui logue `layer: service` à la fin de chaque méthode
-    publique de la couche métier — jamais les arguments ni la valeur de
-    retour, appliqué au moins à la méthode qui répond "Hello World".
-  - Couche **db** : logger `layer: db` uniquement pour les requêtes en
-    erreur ou lentes (seuil ~200ms), jamais les requêtes normales (trop de
-    volume), jamais les paramètres SQL (valeurs réelles).
-  - Aucune donnée personnelle ou sensible dans aucun de ces logs.
-  - Pour comprendre l'esprit exact de ces 4 points (pas pour copier du
-    code), s'inspirer de ce qui existe déjà : `backend/quali_formation/logging/`
-    dans ce dépôt s'il y est déjà (Python/Django), ou
-    `formation-ba-assurance-iard/backend/src/logging/` (json-logger.ts,
-    logging.interceptor.ts, loggable.decorator.ts, typeorm-logger.ts) pour
-    la version Node/NestJS de référence.
+### 7. Vérifier le logging structuré
 
-### 9. Vérifier que le squelette fonctionne avant de rendre la main
+Convention de la plateforme (Alloy/Loki) : une ligne JSON par log sur stdout
+(`time`, `level`, `msg`), niveau minimal `LOG_LEVEL`, et un champ `layer`
+(`controller`, `service` ou `db`) sur les seuls logs métier — les autres
+lignes ne sont pas collectées dans le dashboard métier.
+- Vérifier que la plomberie copiée est toujours branchée après la réduction :
+  intercepteur/middleware global (controller), mécanisme réutilisable de la
+  couche service (`@Loggable` en NestJS et Java, décorateur `loggable` en
+  Python) appliqué au service qui répond « Hello World » s'il y en a un,
+  logger des requêtes lentes ou en erreur (db).
+- Si le modèle n'a pas cette plomberie : ne pas l'inventer, le signaler au
+  formateur.
 
-Depuis `<slug>/`, lancer les commandes d'installation puis `make lint` et
-`make test-unit` (les commandes d'installation dépendent de la stack
-détectée à l'étape 6 : `npm install` pour Node, `mvn install`/équivalent
-pour Java, `pip install -r requirements.txt`/`poetry install` pour Python).
+### 8. Vérifier que le squelette fonctionne
 
-Vérifier aussi, en conditions réelles, que l'image Docker de **ce** nouveau
-composant démarre et répond — tous les BA ont Docker installé, ce test ne
-doit donc jamais être sauté silencieusement :
+Depuis `<slug>/` : installation selon la stack (`npm install`,
+`./mvnw -B -q dependency:resolve`, `pip install -r requirements-dev.txt`),
+puis `make lint` et `make test-unit`.
 
-1. Démarrer la base de données du composant si le modèle en fournit une
-   (`compose.yaml` copié à l'étape 7) : `cd <slug> && docker compose up -d`.
-2. Construire l'image : `docker build -t <slug> .`
-3. Lancer un conteneur de test, branché sur le **réseau créé par ce
-   `docker compose`** (pas sur le port 5432 de l'hôte : il est souvent déjà
-   pris par un autre PostgreSQL local, le conteneur de test échouerait à
-   tort). Trouver ce réseau (`docker network ls | grep <slug>`, en général
-   `<slug>_default`), puis joindre la base par son nom de service
-   (`postgres`) à l'intérieur de ce réseau ; seul le port de l'app est
-   exposé à l'hôte, sur un port libre (ex. `8099` — en choisir un autre
-   s'il est déjà pris) :
+Puis l'image Docker, en conditions réelles (tous les BA ont Docker) :
+1. `docker compose up -d` (base du composant).
+2. `docker build -t <slug> .`
+3. Lancer le conteneur sur le **réseau** du compose (pas le port PostgreSQL de
+   l'hôte), base jointe par son nom de service `postgres` :
    ```
-   docker run -d --name <slug>-test \
-     --network <slug>_default \
-     -e DATABASE_URL="postgresql://app:app@postgres:5432/<nom-de-base-du-slug>" \
+   docker run -d --name <slug>-test --network <slug>_default \
+     -e DATABASE_URL="postgresql://app:app@postgres:5432/<base>" \
+     -e SPRING_DATASOURCE_URL="jdbc:postgresql://postgres:5432/<base>" \
+     -e SPRING_DATASOURCE_USERNAME=app -e SPRING_DATASOURCE_PASSWORD=app \
+     -e LOG_LEVEL=info \
      -p 8099:<containerPort> <slug>
    ```
-4. Laisser quelques secondes au conteneur pour démarrer, puis vérifier
-   réellement la réponse sur `http://localhost:8099/` (`curl -sf
-   http://localhost:8099/`, ou équivalent si le modèle répond sur une autre
-   route "Hello World") : la commande doit réussir et renvoyer le contenu
-   attendu, pas seulement démarrer sans erreur.
-5. Nettoyer dans tous les cas (même en cas d'échec) :
-   `docker rm -f <slug>-test` puis `docker compose down`.
+   (réseau : `docker network ls | grep <slug>` ; port 8099 pris → en prendre
+   un autre).
+4. Après quelques secondes : `curl -sf http://localhost:8099/` doit renvoyer
+   le « Hello World » du modèle.
+5. `docker logs <slug>-test` doit contenir une ligne JSON avec
+   `"layer":"controller"` pour cet appel. Absente : le logging n'a pas
+   survécu à la copie, corriger avant de continuer.
+6. Nettoyer dans tous les cas : `docker rm -f <slug>-test`, `docker compose down`.
 
-Si `docker` n'est exceptionnellement pas disponible sur ce poste, le dire
-simplement au BA — ce sera de toute façon vérifié par la CI (`build-push`)
-dès le premier merge.
+Un échec ici est un problème de ce skill, pas du BA : corriger directement.
+`make test-integration` : le lancer si Docker est disponible, sinon le dire.
 
-En cas d'échec à cette étape (squelette cassé, y compris le Dockerfile ou
-la connexion à la base), c'est un problème de ce skill, pas du travail du
-BA : corriger directement, ne pas demander au BA de déboguer un code qu'il
-n'a pas encore touché.
+### 9. Ajouter le backend à `helm.yaml`
 
-`make test-integration` peut nécessiter des services (base de données via
-Docker, etc.) et être lent : le lancer si les prérequis sont disponibles,
-sinon le dire simplement au BA plutôt que de bloquer dessus.
+Ajouter une entrée **à la fin** de la liste `applications:` — jamais au
+milieu : Kargo repère chaque application par sa position et écrit
+`applications.<position>.tag.<env>`. Recopier la forme et les commentaires de
+l'entrée du modèle, adaptés au nouveau nom :
 
-### 10. Ajouter le service à `helm.yaml`
+```yaml
+  - name: <slug>
+    type: backend
+    image: 205493924920.dkr.ecr.eu-west-3.amazonaws.com/<dépôt>/<slug>
+    # Écrit par Kargo (dev automatique ; qualif/preprod/prod : promotion par clic).
+    # Garder une valeur par ligne, sans commentaire en fin de ligne : Kargo
+    # remplace tout jusqu'à la fin de la ligne.
+    tag:
+      dev: ""
+      qualif: ""
+      preprod: ""
+      prod: ""
+    containerPort: <containerPort du modèle>
+    replicas: <identique au modèle>
+    service:
+      port: 80
+    database:
+      name: <base>
+    envList:
+      - key: LOG_LEVEL
+        value: <identique au modèle>
+```
 
-Ajouter une entrée sous `applications:` (à la racine du dépôt), sur le même
-modèle que l'entrée backend existante utilisée comme modèle à l'étape 6 :
-`name: <slug>`, `type: backend`, `image:
-205493924920.dkr.ecr.eu-west-3.amazonaws.com/<nom-du-dépôt>/<slug>` (nom du
-dépôt = `gh repo view --json name -q .name`, pas une valeur à recopier d'un
-autre dépôt), `tag: {dev: "", qualif: "", preprod: "", prod: ""}` (vide :
-aucune image construite encore — Kargo remplira `tag.dev` automatiquement
-après le premier merge), `containerPort` identique au modèle (le port
-qu'écoute réellement l'app copiée), `replicas` identiques au modèle,
-`service.port: 80`, pas d'`ingress` (backend = pas d'exposition directe),
-`database.name: <nom-de-base-du-slug>`. Reprendre les commentaires
-existants (DATABASE_URL, etc.) en les adaptant au nouveau nom.
+- `<dépôt>` : `gh repo view --json name -q .name`, jamais recopié d'ailleurs.
+- `tag` **toujours en bloc, une valeur par ligne**, jamais
+  `tag: {dev: "", ...}` sur une ligne. Ne jamais inventer de valeur de tag.
+- Pas d'`ingress` : un backend n'est exposé que par le gateway.
+- Tags vides = pas encore déployé, c'est normal : la plateforme ignore ce
+  backend dans un environnement tant qu'il n'a pas de tag (le reste du projet
+  continue d'être déployé normalement). Sa base est créée dès le merge.
 
-### 11. Vérifier le gateway du projet, et le mettre à jour si nécessaire
+### 10. Ajouter le backend au gateway
 
-Un backend `type: backend` dans `helm.yaml` est **automatiquement**
-surveillé par Kargo dès le premier merge (aucune action externe, cf.
-`kargo-pipelines` de `formation-ba-gitops`) — ça, c'est déjà acquis, quel
-que soit ce projet. Reste la question de savoir si ce nouveau backend sera
-**joignable depuis l'extérieur**, qui dépend du gateway de CE projet :
+- Pas d'application `type: gateway` dans `helm.yaml` : le dire simplement (ce
+  backend ne sera joignable que depuis l'intérieur du cluster) ; créer un
+  gateway est une décision du formateur, ne pas le faire.
+- Gateway sans `gateway.yaml` : rien à faire, le routage par défaut inclut
+  automatiquement chaque backend déployé.
+- `gateway.yaml` présent (cas de tous les dépôts de formation) : il fige le
+  routage, il faut y ajouter le backend en recopiant le motif de `backend` :
+  ```yaml
+      routers:
+        <slug>:
+          rule: "PathPrefix(`/<slug>`)"
+          service: <slug>
+          middlewares: [<slug>-strip, cors]
+      middlewares:
+        <slug>-strip:
+          stripPrefix: {prefixes: ["/<slug>"]}
+      services:
+        <slug>:
+          loadBalancer: {servers: [{url: "http://<slug>:80"}]}
+  ```
+  Réutiliser le middleware `cors` existant (ne pas en créer un second). Relire
+  le fichier en entier (indentation YAML, bloc `gatewayConfig: |`). Tant que
+  le backend n'est pas déployé dans un environnement, sa route y répond 502 :
+  c'est normal.
 
-- Chercher dans `helm.yaml` une application `type: gateway` existante.
-  - **Aucune** : rien à faire ici. Le dire simplement au BA : ce backend
-    tourne et est surveillé par Kargo, mais n'est joignable que depuis
-    l'intérieur du cluster tant qu'aucun gateway n'existe sur ce projet
-    (créer un gateway est un choix à part, pas automatique).
-  - **Un gateway existe** : regarder s'il y a un `gateway.yaml` à la racine
-    du dépôt (configuration personnalisée du routage).
-    - **Absent** : rien à faire — le routage par défaut (généré par le
-      chart `charts-ba-formations`) détecte déjà tous les `type: backend`
-      de `helm.yaml`, ce nouveau compris, sans action supplémentaire.
-    - **Présent** : ce fichier fige le routage (plus de détection
-      automatique dès qu'il existe) — il faut lui **ajouter l'entrée de ce
-      nouveau backend** : un router (`PathPrefix`/<slug>`)`), un middleware
-      `<slug>-strip` (stripPrefix `/<slug>`), une entrée `services` vers
-      `http://<slug>:80`, et ajouter son nom aux `middlewares` du router
-      (réutiliser le middleware `cors` déjà présent, ne pas en créer un
-      second). Copier-adapter le motif des entrées déjà présentes dans ce
-      fichier pour les autres backends plutôt que d'en inventer un nouveau
-      — puis relire le fichier modifié en entier (pas de `helm template`
-      possible depuis ce dépôt, le chart vit dans `formation-ba-gitops`).
+### 11. Conclure en langage simple
 
-### 12. Conclure en langage simple
+Résumer : le dossier `<slug>/` est prêt et vérifié (« Hello World » qui répond,
+logs structurés en place), sa base est déclarée, il est ajouté à `helm.yaml`
+et au gateway. Ses ports locaux (étape 6). Il apparaîtra sur dev quelques
+minutes après la mise en ligne (skill `deploy`), puis sur qualif après le clic
+« Promote » dans Kargo.
 
-Résumer : le dossier `<slug>/` est prêt (squelette "Hello World" vérifié,
-logging structuré minimal en place), la base de données dédiée est
-déclarée, l'espace de travail "<nom>" est ouvert, et l'état du gateway
-(étape 11) a été vérifié et mis à jour si besoin. Le BA peut maintenant
-développer sa logique métier dans `<slug>/`.
-Le logging JSON (couches `controller`/`db`) fonctionne déjà sans rien
-faire ; pour la couche `service`, dire simplement au BA d'appliquer à ses
-futures classes métier le même mécanisme que celui déjà utilisé dans le
-modèle (ex. une annotation/décorateur à poser sur la classe) pour que ses
-méthodes soient loguées automatiquement.
-**Ce skill n'a rien commité ni poussé** — quand le BA aura une première
-version, `deploy` s'occupera du commit, du push, de la PR et du suivi.
+Suite possible :
+- ajouter ses tables : skill `modifier-le-modele-de-donnees` ;
+- l'appeler depuis le frontend : skill `appeler-un-backend` ;
+- le lancer avec le reste de l'application : skill `lancer-en-local`.
+
+Pour la couche service, rappeler au BA d'appliquer à ses futures classes ou
+fonctions métier le même mécanisme de log que le modèle (ex. `@Loggable()`).
+
+**Rien n'a été commité ni poussé** : c'est le rôle de `deploy`.
 
 ## Ce que ce skill ne fait jamais
 
-- Ne suppose jamais une stack ou un nom de dossier fixe — détecte toujours
-  à partir de ce qui existe réellement dans le dépôt où il est lancé
-  (étape 6), et s'arrête pour demander plutôt que d'en inventer une s'il
-  n'y a encore aucun backend.
-- Ne copie jamais un exemple métier complet (type CRUD de démonstration) —
-  s'en tient à "Hello World", quelle que soit la stack.
-- Ne retire jamais l'infrastructure de logging du modèle en la confondant
-  avec du code métier de démo à réduire (étape 7) — c'est de la plomberie,
-  comme le Dockerfile ou le Makefile, et le nouveau backend ne doit jamais
-  démarrer sans elle (étape 8).
-- Ne commit, ne push et n'ouvre jamais de PR — 100% local, comme
-  `nouvelle-fonctionnalite`. C'est `deploy` qui s'occupe de tout envoi vers
-  GitHub.
-- N'écrase jamais un dossier de composant existant portant le même nom —
-  s'arrête et demande un autre nom.
-- Ne crée jamais lui-même une application `type: gateway` si le projet n'en
-  a pas déjà une — c'est une décision à part, pas une conséquence
-  automatique de la création d'un backend (étape 11).
-- Ne supprime jamais de travail en cours sans réponse explicite du BA.
-- Ne modifie jamais le dépôt `formation-ba-gitops` — n'en a plus besoin pour
-  un nouveau composant d'un projet déjà existant (ApplicationSet par projet,
-  détection automatique depuis `helm.yaml`).
-- Ne force jamais un `reset --hard` sur `main` sans confirmation explicite.
+- Ne suppose jamais une stack ni un nom de dossier ; s'arrête s'il n'y a aucun
+  backend modèle.
+- Ne copie jamais l'exemple métier (`items`) ; ne retire jamais le logging.
+- N'ajoute jamais un backend au milieu de `applications:`, n'écrit jamais
+  `tag` sur une seule ligne, n'invente jamais une valeur de tag.
+- Ne change jamais le port d'écoute de l'application dans l'image.
+- Ne crée jamais d'application `type: gateway`.
+- Ne commit, ne push et n'ouvre jamais de PR.
+- N'écrase jamais un dossier existant ; ne modifie jamais `formation-ba-gitops`.
