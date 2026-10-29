@@ -1,196 +1,242 @@
 ---
 name: deploy
-description: Gère tout le cycle de mise en ligne pour un Business Analyst (BA) qui ne maîtrise pas git — vérifie lint/gitleaks/tests/quality gate Sonar en local, commit, push, attend que les contrôles GitHub passent au vert, merge la PR vers main (avec confirmation, sans supprimer la branche), attend que la pipeline GitHub Actions sur main soit au vert, puis donne le lien de l'application frontend sur dev et le lien de promotion vers qualif dans Kargo. À utiliser quand le BA dit qu'il a terminé son développement et veut déployer / mettre en ligne / passer en dev.
+description: Gère tout le cycle de mise en ligne pour un Business Analyst (BA) qui ne maîtrise pas git — enregistre le travail (après validation de la liste des fichiers), intègre la dernière version de main (Kargo et les autres BA y écrivent souvent) en résolvant les conflits sans perte, vérifie lint/gitleaks/tests/couverture 80 % en local selon la stack (Node, Java, Python), pousse, ouvre la PR, attend que GitHub soit au vert, merge vers main (avec confirmation, sans supprimer la branche), attend la pipeline de main, puis donne les liens dev/qualif. À utiliser quand le BA dit qu'il a terminé son développement et veut déployer / mettre en ligne / passer en dev.
 ---
 
 # Déployer sur dev
 
 Public : un Business Analyst, pas un développeur. Expliquer chaque étape en
-langage simple (pas de jargon git brut non expliqué). Ne jamais merger ou
-forcer un push sans confirmation explicite à l'étape prévue pour ça.
+langage simple (pas de jargon git brut non expliqué). Ne jamais merger ni
+forcer quoi que ce soit sans confirmation explicite à l'étape prévue pour ça.
 
-Rappel du pipeline réel de ce dépôt (cf. `ci-template/README.md` et
-`chart-base/kargo-pipelines/README.md`) : merge sur `main` → build de l'image
-et push vers ECR (`ci.yaml`) → Kargo détecte la nouvelle image et la promeut
-automatiquement vers la Stage `dev` (il écrit le tag dans `helm.yaml` et
-pousse un commit sur `main`) → ArgoCD synchronise l'Application `dev-<repo>`.
-Le déploiement sur dev est donc **automatique après le merge**, mais pas
-instantané (Kargo scrute ECR périodiquement). Le rôle de ce skill s'arrête
-une fois la pipeline GitHub Actions sur `main` au vert : il ne surveille pas
-activement la promotion Kargo ni la synchronisation ArgoCD, il se contente
-de donner au BA les deux liens utiles pour qu'il vérifie lui-même, à son
-rythme.
+Pipeline de ce dépôt : merge sur `main` → la CI (`ci.yaml`) construit l'image
+de chaque dossier modifié, taguée avec les 7 premiers caractères du commit →
+Kargo détecte l'image (toutes les minutes), écrit ce tag dans `helm.yaml`
+(`tag.dev`) par un commit `promote(dev): ...` sur `main` → ArgoCD redéploie
+l'Application `dev-<dépôt>`. Qualif : même chose, mais seulement quand le BA
+clique sur « Promote » dans Kargo.
+
+Conséquence pour git : **`main` avance tout seul**, plusieurs fois par jour
+(commits Kargo sur `helm.yaml`, merges des autres BA). On intègre donc
+toujours la dernière version de `main` dans la branche **avant** les
+contrôles et l'envoi (étape 3), par un *merge* — jamais par un *rebase*, qui
+obligerait ensuite à forcer l'envoi.
 
 ## Étapes
 
 ### 1. Vérifier qu'il y a bien quelque chose à déployer
 
 - `git branch --show-current`. Si c'est `main` : s'arrêter, expliquer qu'il
-  n'y a pas de fonctionnalité en cours et qu'il faut d'abord utiliser le
-  skill `nouvelle-fonctionnalite`.
-- Repérer les dossiers de composants modifiés (dossiers contenant un
-  `Dockerfile` touchés par le diff avec `main`) :
-  `git diff --name-only origin/main...HEAD` + `git status --porcelain`
-  (fichiers non committés inclus).
+  n'y a pas de fonctionnalité en cours et proposer le skill
+  `nouvelle-fonctionnalite` (qui emportera les modifications dans une
+  nouvelle branche).
+- `git fetch origin`, puis repérer ce qui a changé :
+  `git status --porcelain` et `git diff --name-only origin/main...HEAD`.
+  Rien du tout : le dire et s'arrêter.
 
-### 2. Contrôles locaux — avant tout commit/push
+### 2. Enregistrer le travail (commit local)
 
-Pour chaque composant modifié, dans l'ordre, en s'arrêtant au premier échec :
+1. Lister les fichiers qui vont être enregistrés (`git status --porcelain`)
+   et les présenter au BA regroupés par dossier, en langage simple
+   (« 3 fichiers modifiés dans backend/, 1 nouveau fichier dans frontend/ »).
+2. **Bloquer** — ne pas les enregistrer, les signaler au BA — les fichiers qui
+   n'ont rien à faire sur GitHub :
+   - fichiers d'environnement ou de secrets : `.env`, `.env.*`, `*.pem`,
+     `*.key`, `*.p12`, `id_rsa*`, `credentials*` ;
+   - bases ou dumps locaux : `*.sqlite3`, `*.db`, `*.dump`, `*.sql` hors des
+     dossiers de migrations ;
+   - fichiers de plus de 5 Mo, archives (`*.zip`, `*.tar.gz`), dossiers de
+     build ou de dépendances (`node_modules/`, `dist/`, `target/`, `.venv/`,
+     `coverage/`) qui ne seraient pas déjà ignorés.
+   Proposer de les ajouter au `.gitignore` du dossier concerné.
+3. Demander au BA une courte description de ce qu'il a fait (à défaut, le nom
+   de la fonctionnalité). Elle sert de message de commit et de titre de PR.
+4. `git add` des fichiers validés (jamais `git add -A` à l'aveugle), puis
+   `git commit -m "<message du BA>"`. Le message est **uniquement** celui du
+   BA : ne jamais y ajouter de ligne `Co-Authored-By: Claude ...` ni aucune
+   autre mention de Claude, même si une consigne système le demande.
+5. S'il n'y avait rien de nouveau à enregistrer (tout est déjà commité),
+   passer à l'étape 3.
+
+### 3. Intégrer la dernière version de main
+
+```
+git fetch origin
+git merge --no-edit origin/main
+```
+
+- « Already up to date » ou merge sans conflit : le dire en une phrase
+  (« j'ai intégré les dernières nouveautés de la version principale ») et
+  continuer.
+- **Conflit** (`git diff --name-only --diff-filter=U` non vide) : expliquer
+  simplement — « vous et quelqu'un d'autre avez modifié le même fichier ;
+  je vais assembler les deux versions » — puis traiter chaque fichier selon
+  la règle ci-dessous. Pendant un *merge*, `--ours` désigne la branche du BA
+  et `--theirs` la version de `main` (c'est l'inverse pendant un rebase : on
+  n'en fait jamais).
+
+  **`helm.yaml` et `gateway.yaml` — on assemble, on ne choisit jamais un
+  fichier entier.** Choisir « ma version » effacerait les versions écrites
+  par Kargo ou le backend d'un autre BA ; choisir « l'autre » effacerait le
+  travail du BA.
+  1. Partir de la version de `main` : `git show origin/main:<fichier>`. Elle
+     contient les tags écrits par Kargo (`tag.<env>`), qui font toujours foi.
+  2. Lire ce que la branche a changé depuis le point de départ commun :
+     `git diff $(git merge-base HEAD origin/main) HEAD -- <fichier>`.
+  3. Réappliquer ces changements sur la version de `main`, **sauf** les
+     valeurs de `tag` (toujours celles de `main`). Une application ajoutée
+     par la branche va **à la fin** de `applications:` (Kargo repère les
+     applications par leur position). Dans `gateway.yaml`, garder les routes,
+     middlewares et services des deux côtés, et réunir les origines CORS.
+  4. Relire le fichier obtenu en entier (YAML valide, une valeur par ligne
+     sous `tag:`, rien de perdu des deux côtés), l'écrire, `git add <fichier>`.
+
+  **Fichiers de dépendances verrouillées** (`package-lock.json`...) :
+  `git checkout --theirs -- <fichier>` (version de `main`), puis relancer
+  l'installation (`npm install` dans le dossier) pour y réintégrer les
+  dépendances ajoutées par la branche, puis `git add <fichier>`.
+
+  **Code et autres fichiers** :
+  1. Lire les trois versions : point de départ `git show :1:<fichier>`,
+     branche du BA `git show :2:<fichier>`, `main` `git show :3:<fichier>`.
+  2. Expliquer au BA, en termes métier, ce que chaque côté a changé.
+  3. Si les deux changements sont compatibles (cas le plus fréquent : des
+     ajouts à des endroits différents ou des fonctions différentes) :
+     proposer une version qui garde les deux, la résumer au BA, et l'écrire
+     après son accord (`git add <fichier>`).
+  4. S'ils se contredisent (la même règle métier modifiée de deux façons) :
+     ne pas trancher à la place du BA. Lui demander quel comportement doit
+     l'emporter. S'il ne sait pas : `git merge --abort` (tout revient comme
+     avant l'étape 3, rien n'est perdu) et lui conseiller de voir avec
+     l'autre personne ou son formateur.
+
+  Une fois tous les fichiers traités : `git commit --no-edit`. Les contrôles
+  de l'étape 4 vérifieront le résultat assemblé.
+
+- **Migrations en double, même sans conflit** : si la branche et `main` ont
+  chacune ajouté une migration au même backend, vérifier qu'elles ne se
+  marchent pas dessus (même numéro Flyway `V<n>__`, deux migrations Django
+  « feuilles », migration TypeORM absente de la liste de
+  `database.module.ts`). Corriger côté branche comme décrit dans le skill
+  `modifier-le-modele-de-donnees` (section « Pièges git »), puis commiter.
+
+### 4. Contrôles locaux — avant tout envoi
+
+Composants à contrôler : les dossiers contenant un `Dockerfile` touchés par
+`git diff --name-only origin/main...HEAD`. Pour chacun, dans l'ordre, en
+s'arrêtant au premier échec :
 
 1. `make lint`
-2. `make test-unit`
-3. `make test-integration`
-4. Si la commande `gitleaks` est disponible (`command -v gitleaks`) :
-   `gitleaks detect --source . -v --no-banner`. Si absent, ne pas bloquer —
-   dire simplement que GitHub le vérifiera à la prochaine étape.
+2. `make test-unit` (produit aussi le rapport de couverture)
+3. Couverture ≥ 80 % (ci-dessous)
+4. `make test-integration` (si Docker est requis et indisponible, le dire
+   simplement : GitHub le vérifiera)
+5. Si `gitleaks` est installé (`command -v gitleaks`) :
+   `gitleaks detect --source . -v --no-banner`. Sinon, ne pas bloquer :
+   GitHub le vérifiera.
+
 En cas d'échec : traduire l'erreur en langage clair (quel fichier, quel test,
-quelle règle), s'arrêter et proposer de l'aide pour corriger. Ne jamais
-committer/pousser du code dont les contrôles locaux échouent.
+quelle règle), proposer la correction, la faire avec l'accord du BA, puis
+relancer. Ne jamais envoyer du code dont les contrôles locaux échouent.
 
-#### Quality gate SonarQube — approximation locale sans jeton
+#### Couverture 80 % — approximation locale du quality gate SonarQube
 
-Le `SONAR_TOKEN` utilisé par la CI est un secret GitHub : il ne peut jamais
-être relu (ni par ce skill, ni par personne — c'est volontaire, pour la
-sécurité). Lancer le vrai scanner SonarQube en local est donc impossible
-sans qu'un humain crée et transmette un jeton personnel.
+Le jeton SonarQube de la CI est un secret GitHub illisible : le vrai scanner
+ne tourne pas en local. On lit à la place le rapport de couverture produit
+par `make test-unit`, selon la stack du composant :
 
-À la place, relancer les tests unitaires du composant modifié avec un seuil
-de couverture de 80 %, passé en option de ligne de commande (pas de
-modification des fichiers du projet) :
-```
-npm run test:cov -- --coverage.reporter=lcov \
-  --coverage.thresholds.lines=80 --coverage.thresholds.branches=80 \
-  --coverage.thresholds.functions=80 --coverage.thresholds.statements=80
-```
-La commande échoue d'elle-même si la couverture descend sous 80 %, sans
-contacter aucun serveur. C'est une approximation (couverture globale du
-composant, alors que Sonar regarde la couverture du *nouveau* code) mais
-elle attrape la plupart des régressions avant de pousser.
+| Stack (fichier présent) | Rapport | Taux de lignes couvertes |
+|---|---|---|
+| Node / Angular (`package.json`) | `lcov.info` sous `coverage/` | `awk -F: '/^LF:/{t+=$2} /^LH:/{h+=$2} END{printf "%.1f\n", h*100/t}' $(find coverage -name lcov.info)` |
+| Java / Maven (`pom.xml`) | `target/site/jacoco/jacoco.xml` | dernier `<counter type="LINE" missed="M" covered="C"/>` du fichier (total du composant) : C × 100 / (M + C) |
+| Python (`manage.py`, `requirements.txt`) | `.coverage` | `coverage report --fail-under=80` |
 
-- En cas d'échec, ce seuil est bloquant : le message de vitest indique le
-  fichier et les lignes non couvertes. Identifier ce que fait ce code et
-  ajouter directement le(s) test(s) manquant(s) qui l'exercent (pas
-  seulement le proposer), puis relancer la commande jusqu'à passer le
-  seuil, avant de continuer. Dire simplement au BA ce qui a été ajouté et
-  pourquoi ("j'ai ajouté un test pour telle ligne, elle n'était pas encore
-  vérifiée"). Ne pousser qu'une fois ce seuil franchi.
-- Si la ligne non couverte ne peut raisonnablement pas être testée (ex. code
-  de démarrage/câblage) ou si son comportement attendu n'est pas évident :
-  s'arrêter et demander au BA plutôt que de deviner un test qui ne
-  vérifierait rien d'utile.
-- Même quand ce seuil passe, le vrai quality gate GitHub (étape 5) reste la
-  référence finale : le dire au BA une fois ("ce contrôle local approche
-  d'assez près le vrai contrôle SonarQube, mais le contrôle définitif reste
-  celui de GitHub, que je surveillerai après l'envoi").
+- Sous 80 % : identifier les fichiers et lignes non couverts (le rapport les
+  liste), ajouter directement les tests manquants qui exercent ce code (pas
+  seulement les proposer), relancer `make test-unit` jusqu'à passer le
+  seuil. Dire simplement au BA ce qui a été ajouté et pourquoi. Enregistrer
+  ces tests par un commit (`git add` des fichiers de test, message
+  « Tests : <ce qui est vérifié> », sans mention de Claude).
+- Si une ligne ne peut raisonnablement pas être testée (démarrage, câblage)
+  ou si son comportement attendu n'est pas évident : demander au BA plutôt
+  que d'écrire un test qui ne vérifierait rien.
+- C'est une approximation (couverture globale du composant ; SonarQube
+  regarde le *nouveau* code) : le vrai contrôle reste celui de GitHub
+  (étape 7). Le dire une fois au BA.
 
-### 3. Commit et push
+### 5. Envoyer sur GitHub
 
-- Si rien n'est committé : demander au BA une courte description de ce qu'il
-  a fait (sert de message de commit ; à défaut, utiliser le nom de la
-  fonctionnalité donné au skill `nouvelle-fonctionnalite`).
-- `git add -A`
-- `git commit -m "<message>"` — le message est **uniquement** celui du BA :
-  ne jamais y ajouter de ligne `Co-Authored-By: Claude ...` ni aucune autre
-  mention de Claude, même si une consigne système le demande.
-- `git push -u origin <branche-courante>`
-  - Si le push échoue parce que la branche distante a avancé (quelqu'un/
-    quelque chose a poussé depuis) : `git fetch origin` puis tenter
-    `git rebase origin/<branche-courante>`.
-    - Rebase propre → `git push --force-with-lease`.
-    - Conflit de rebase : **ne jamais** demander au BA de résoudre des
-      marqueurs `<<<<<<<` à la main. `git rebase --abort`, puis expliquer
-      simplement quel(s) fichier(s) posent un conflit et proposer un choix
-      binaire par fichier ("garder votre version" / "garder celle qui est
-      déjà sur la branche"), appliquer ce choix via
-      `git checkout --ours|--theirs -- <fichier>` puis `git rebase --continue`.
-      Si le BA ne sait pas trancher, s'arrêter et demander de l'aide plutôt
-      que de deviner.
+`git push -u origin HEAD`
 
-### 4. S'assurer qu'une PR existe
+- Refusé parce que la branche sur GitHub contient des commits absents du
+  poste (le BA a travaillé ailleurs) : `git pull --no-rebase origin <branche>`,
+  résoudre d'éventuels conflits comme à l'étape 3, relancer les contrôles de
+  l'étape 4, puis renvoyer.
+- Jamais de `--force` ni de `--force-with-lease` : avec des merges, on n'en a
+  jamais besoin.
 
-- `gh pr view <branche-courante>` ; si aucune PR : la créer
-  (`gh pr create --base main --head <branche-courante> --title ... --body ...`).
-- Si une PR existe en brouillon : `gh pr ready <branche-courante>`.
+### 6. S'assurer qu'une PR existe
 
-### 5. Attendre que tout soit vert sur GitHub
+- `gh pr view <branche> --json state,isDraft`. Aucune PR **ouverte** (y
+  compris si l'ancienne PR de cette branche est déjà mergée) : la créer
+  (`gh pr create --base main --head <branche> --title "<description du BA>" --body "<résumé en langage simple>"`).
+- PR en brouillon : `gh pr ready <branche>`.
 
-- `gh pr checks <branche-courante> --watch`
-- Un contrôle rouge (lint, gitleaks, quality gate Sonar, tests) : récupérer le
-  détail (`gh run view --log-failed`), traduire en langage simple ce qui a
-  échoué, s'arrêter. Ne pas relancer en boucle à l'aveugle.
+### 7. Attendre que tout soit vert sur GitHub
 
-### 6. Merge — confirmation obligatoire
+- `gh pr checks <branche> --watch`.
+- Un contrôle rouge (lint, gitleaks, quality gate Sonar, tests) : récupérer
+  le détail (`gh run view <id> --log-failed`), le traduire en langage simple,
+  corriger avec l'accord du BA, recommencer à l'étape 2. Ne pas relancer en
+  boucle à l'aveugle.
+- `gh pr view <branche> --json mergeable,mergeStateStatus` : si `CONFLICTING`
+  (`main` a bougé pendant les contrôles), revenir à l'étape 3.
 
-Une fois tout vert et aucun conflit en attente :
+### 8. Merge — confirmation obligatoire
 
-- Résumer au BA en une phrase ce qui va se passer : "Tout est vérifié ✅. Si
-  vous confirmez, votre travail va être intégré à la version principale, ce
-  qui déclenchera automatiquement sa mise en ligne sur dev. Votre branche
-  `<nom>` ne sera pas supprimée. Je confirme ?"
-- **Attendre une confirmation explicite** avant de merger. Ne jamais merger
-  automatiquement.
-- Sur confirmation : `gh pr merge <branche-courante> --merge` (merge
-  classique, pas de squash, **sans** `--delete-branch` : convention déjà
-  utilisée dans l'historique de ce dépôt — commits "Merge pull request #N" —
-  et la branche locale/distante reste en place après le merge). Ce merge se
-  fait côté GitHub (distant) uniquement.
-- Séparation des responsabilités : ce skill ne touche pas à la branche
-  locale après ce merge (pas de `git switch main`, pas de `git pull`) — le
-  BA reste sur sa branche de fonctionnalité. C'est le skill
-  `nouvelle-fonctionnalite` qui synchronisera `main` en local, la prochaine
-  fois qu'il sera lancé.
+- Résumer au BA : « Tout est vérifié ✅. Si vous confirmez, votre travail va
+  être intégré à la version principale, ce qui déclenchera sa mise en ligne
+  sur dev. Votre branche <nom> ne sera pas supprimée. Je confirme ? »
+- **Attendre une confirmation explicite.** Ne jamais merger automatiquement.
+- Sur confirmation : `gh pr merge <branche> --merge` (merge classique,
+  convention du dépôt, **sans** `--delete-branch`). Si GitHub refuse parce
+  que la branche est en retard ou en conflit : revenir à l'étape 3.
+- Ne pas toucher à la branche locale après le merge (pas de `git switch
+  main`) : c'est `nouvelle-fonctionnalite` qui repartira d'un `main` à jour.
 
-### 7. Attendre que la pipeline GitHub Actions sur main soit au vert
+### 9. Attendre la pipeline de main
 
-- `gh run list --branch main --limit 1` pour repérer le run `ci.yaml`
-  déclenché par le merge, puis `gh run watch <id>`.
-- Si ce run échoue : récupérer le détail (`gh run view <id> --log-failed`),
-  traduire en langage simple ce qui a échoué, s'arrêter — ne pas aller plus
-  loin et ne pas relancer en boucle à l'aveugle.
-- Dès que ce run est vert, le rôle du skill s'arrête ici : il ne surveille
-  pas la promotion Kargo vers dev ni la synchronisation ArgoCD (c'est
-  automatique côté plateforme, et peut prendre quelques minutes).
+- Commit de merge : `gh pr view <branche> --json mergeCommit -q .mergeCommit.oid`.
+- Le run `ci.yaml` de **ce** commit (Kargo pousse aussi sur `main`, ne pas
+  prendre « le dernier run ») : `gh run list --workflow ci.yaml --commit <sha> --json databaseId,status,conclusion`,
+  puis `gh run watch <id>`.
+- Échec : `gh run view <id> --log-failed`, traduire, s'arrêter.
 
-### 8. Donner les deux liens utiles au BA
+### 10. Donner les liens et la suite
 
-**Ce skill est copié tel quel dans plusieurs dépôts métier**
-(`formation-ba-assurance-iard`, `formation-ba-compte-unique`,
-`formation-ba-gestion-financiere`, `formation-ba-quali-formation`, ...) :
-ne jamais écrire le nom d'un dépôt en dur dans ces liens. Détecter le nom
-du dépôt courant (`gh repo view --json name -q .name`, ou à défaut
-`basename "$(git rev-parse --show-toplevel)"`) et l'utiliser pour les
-deux liens. Le domaine de la plateforme et l'hôte Kargo, eux, sont
-partagés par tous ces dépôts (une seule plateforme, un seul Kargo) — ce
-sont les seules parties à garder en dur :
+Ne jamais écrire un nom de dépôt en dur : le détecter
+(`gh repo view --json name -q .name`, à défaut
+`basename "$(git rev-parse --show-toplevel)"`).
 
-- Application frontend sur dev :
-  `https://frontend.<nom-du-dépôt>.dev.check-consulting.net`. Le BA peut
-  l'ouvrir pour constater lui-même quand sa mise en ligne est visible (le
-  temps que Kargo promeuve et qu'ArgoCD synchronise).
-- Stage `qualif` dans l'interface Kargo, pour que le BA puisse cliquer sur
-  "Promote" quand il le souhaite (la promotion vers qualif n'est pas
-  automatique, cf. `helm.yaml` : "qualif/preprod/prod : promotion par
-  clic") :
-  `https://kargo.dev.check-consulting.net/project/<nom-du-dépôt>/stage/qualif`.
-- Conclure en une phrase simple : ce qui a été mis en ligne (résumé du
-  changement), et les deux liens ci-dessus.
+- Application sur dev : `https://frontend.<dépôt>.dev.check-consulting.net`
+  — visible quelques minutes après (Kargo puis ArgoCD).
+- Promotion vers qualif, quand il le souhaite :
+  `https://kargo.dev.check-consulting.net/project/<dépôt>/stage/qualif`
+  (bouton « Promote »).
+- Pour savoir si la mise en ligne a réellement abouti : demander « vérifie mon
+  déploiement » (skill `verifier-mon-deploiement`).
+- Pour la suite : cette fonctionnalité est terminée ; pour le prochain sujet,
+  demander une nouvelle fonctionnalité (skill `nouvelle-fonctionnalite`).
 
 ## Ce que ce skill ne fait jamais
 
-- N'ajoute jamais Claude comme co-auteur d'un commit (pas de
-  `Co-Authored-By: Claude ...`) : le commit porte le seul message du BA.
-
-- Ne merge jamais sans confirmation explicite à l'étape 6.
-- Ne supprime jamais la branche de la fonctionnalité, ni en local ni sur
-  GitHub, après le merge.
-- Ne synchronise jamais `main` en local après le merge — ça reste le rôle du
-  skill `nouvelle-fonctionnalite`, la prochaine fois qu'il sera lancé.
-- Ne résout jamais un conflit en modifiant le contenu du code à la place du
-  BA — seulement des choix "garder ma version / garder l'autre" par fichier,
-  validés par le BA.
-- Ne force jamais un push sans qu'un rebase propre ait précédé.
+- N'ajoute jamais Claude comme co-auteur d'un commit.
+- Ne merge jamais sans confirmation explicite à l'étape 8.
+- Ne fait jamais de rebase, de push forcé ni de `reset --hard`.
+- Ne choisit jamais un fichier entier (« ma version » / « l'autre ») pour
+  `helm.yaml` ou `gateway.yaml` : il assemble les deux.
+- Ne modifie jamais une valeur `tag` de `helm.yaml` : c'est Kargo qui les écrit.
+- N'enregistre jamais un fichier de secrets, une base locale ou un gros
+  fichier, et n'enregistre jamais sans montrer la liste au BA.
+- Ne supprime jamais la branche de la fonctionnalité, ni en local ni sur GitHub.
 - Ne relance jamais une CI en échec en boucle sans comprendre la cause.
-- Ne surveille pas activement la promotion Kargo vers dev ni la
-  synchronisation ArgoCD après le merge : il s'arrête une fois la pipeline
-  GitHub Actions au vert et donne les liens au BA pour qu'il vérifie
-  lui-même.
