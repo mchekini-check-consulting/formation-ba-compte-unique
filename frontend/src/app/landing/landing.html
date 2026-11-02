@@ -1,0 +1,328 @@
+<div class="landing">
+  <aside>
+    <div class="logo">Hi-Tech<span>Bank</span></div>
+    <nav>
+      <a href="#accueil"><i></i>Accueil</a>
+      <div class="sep">Mes produits</div>
+      <a href="#compte"><i></i>Compte courant</a>
+      <a href="#epargne"><i></i>Épargne et placements</a>
+      <a href="#credits"><i></i>Crédits</a>
+      <div class="sep">Pour aller plus loin</div>
+      <a href="#optimisation"><i></i>Optimisation et conseil</a>
+      <a href="#simulateurs"><i></i>Simulateurs</a>
+      <a href="#patrimoine"><i></i>Mon patrimoine</a>
+      <a href="#bientot"><i></i>Bientôt</a>
+    </nav>
+    <a class="cta" href="#parcours" (click)="ouvrirParcours($event)">Ouvrir mon compte</a>
+  </aside>
+
+  <main>
+    @if (!parcoursOuvert()) {
+      <div class="top">
+        <a class="btn o" href="#">Me connecter</a>
+        <a class="btn p" href="#parcours" (click)="ouvrirParcours($event)">Ouvrir mon compte</a>
+      </div>
+
+      <div id="accueil" class="hero">
+        <div class="wrap">
+          <div>
+            <div class="eyebrow">Un seul compte, toute votre situation</div>
+            <h1>Tout votre argent, enfin au même endroit.</h1>
+            <p>Compte courant, épargne, placements et crédits réunis. Vous voyez votre patrimoine, vos frais et vos prochaines échéances, et vous recevez des pistes expliquées simplement.</p>
+            <div class="actions">
+              <a class="btn m" href="#parcours" (click)="ouvrirParcours($event)">Ouvrir mon compte en 30 min</a>
+              <a class="btn o" href="#epargne">Découvrir nos produits</a>
+            </div>
+            <div class="note">Compte courant ouvrable sans versement initial. Identifiant envoyé par e-mail, lien d'activation pour définir votre mot de passe.</div>
+          </div>
+          <div class="hero-art" aria-hidden="true">
+            <div class="float a">
+              <div class="k">Patrimoine total</div>
+              <div class="v">48 320 €</div>
+              <svg class="spark" viewBox="0 0 240 46" preserveAspectRatio="none"><path d="M0 36 C30 30 45 38 70 26 S115 14 140 22 S190 6 240 10" fill="none" stroke="#0b2545" stroke-width="3" stroke-linecap="round"/><path d="M0 36 C30 30 45 38 70 26 S115 14 140 22 S190 6 240 10 L240 46 L0 46Z" fill="#0b2545" opacity=".08"/></svg>
+            </div>
+            <div class="float c">
+              <div class="k">Épargne de précaution</div>
+              <div class="v" style="font-size: 20px">4 mois</div>
+            </div>
+            <div class="float b">
+              <div class="k">Compte courant</div>
+              <div class="v">1 240,50 €</div>
+              <span class="pill">Disponible</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="proof">
+        <div><strong>1 compte</strong><span>pour tous vos produits</span></div>
+        <div><strong>0 €</strong><span>pour ouvrir un compte courant</span></div>
+        <div><strong>30 min</strong><span>pour ouvrir votre compte</span></div>
+        <div><strong>Chaque matin</strong><span>vos montants mis à jour</span></div>
+      </div>
+
+      <section id="compte">
+        <div class="wrap feature">
+          <div>
+            <div class="eyebrow">Mes produits · Compte courant</div>
+            <h2>Le compte du quotidien, simple et sans frais cachés</h2>
+            <p class="lead" style="margin-bottom: 0">Paiements, virements, prélèvements et carte : tout passe par votre compte courant, avec un IBAN français.</p>
+            <ul>
+              <li><span class="check">✓</span><span><b>Ouverture sans versement initial</b>, à 0 €.</span></li>
+              <li><span class="check">✓</span><span><b>IBAN français</b> et carte de paiement.</span></li>
+              <li><span class="check">✓</span><span><b>Solde mis à jour</b> et historique des opérations.</span></li>
+              <li><span class="check">✓</span><span><b>Frais affichés</b> avant toute souscription.</span></li>
+            </ul>
+            <div style="margin-top: 28px"><a class="btn p" href="#parcours" (click)="ouvrirParcours($event)">Ouvrir mon compte courant</a></div>
+          </div>
+          <div class="phone" aria-hidden="true">
+            <div class="screen">
+              <div class="eyebrow" style="font-size: 11px">Bonjour Marie</div>
+              <div class="big">1 240,50 €</div>
+              <div class="pill">Compte courant · ouvert</div>
+              <div style="margin-top: 18px">
+                <div class="row"><span>Salaire</span><span>+ 2 150,00 €</span></div>
+                <div class="row"><span>Loyer</span><span>− 890,00 €</span></div>
+                <div class="row"><span>Abonnement mobile</span><span>− 29,99 €</span></div>
+                <div class="row"><span>Virement vers Livret A</span><span>− 50,00 €</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="epargne" class="alt">
+        <div class="wrap">
+          <div class="rubric-head">
+            <div>
+              <div class="eyebrow">Mes produits · Épargne et placements</div>
+              <h2>Épargner et faire fructifier, à votre rythme</h2>
+              <p class="lead">Livrets réglementés pour l'épargne disponible, assurance-vie et PER pour préparer l'avenir. Le minimum d'ouverture dépend du produit, il est affiché sur chaque carte. Taux des livrets au 1er août 2026.</p>
+            </div>
+          </div>
+
+          <div class="cards">
+            <a class="card" href="#compte">
+              <div class="art"><svg viewBox="0 0 300 132" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="g1" x1="0" x2="1"><stop offset="0" stop-color="#00b894"/><stop offset="1" stop-color="#7ee8c9"/></linearGradient></defs><rect width="300" height="132" fill="url(#g1)"/><circle cx="250" cy="30" r="46" fill="#fff" opacity=".18"/><rect x="104" y="46" width="92" height="64" rx="12" fill="#fff" opacity=".95"/><rect x="118" y="60" width="64" height="8" rx="4" fill="#00b894"/><rect x="118" y="76" width="40" height="8" rx="4" fill="#bfeee2"/></svg></div>
+              <div class="body"><span class="tag t-mint">Épargne réglementée</span><h3>Livret A</h3><p>Une épargne disponible à tout moment, au taux fixé par l'État. Plafond de versements de 22 950 €.</p><span class="rate"><b>1,70 %</b> brut / an</span><span class="min">Ouverture dès 10 €</span><span class="note">Disponible après l'ouverture de votre compte</span><span class="go">Voir le compte courant →</span></div>
+            </a>
+            <a class="card" href="#compte">
+              <div class="art"><svg viewBox="0 0 300 132" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="g2" x1="0" x2="1"><stop offset="0" stop-color="#43c26b"/><stop offset="1" stop-color="#b8f0c8"/></linearGradient></defs><rect width="300" height="132" fill="url(#g2)"/><path d="M0 110 Q75 80 150 100 T300 90 V132 H0Z" fill="#fff" opacity=".35"/><circle cx="150" cy="56" r="26" fill="#fff"/><path d="M142 56 l6 6 l12 -12" stroke="#2f9e55" stroke-width="5" fill="none" stroke-linecap="round"/></svg></div>
+              <div class="body"><span class="tag t-mint">Épargne réglementée</span><h3>LDDS</h3><p>Livret de développement durable et solidaire : vos fonds financent l'économie sociale et solidaire. Plafond de 12 000 €.</p><span class="rate"><b>1,70 %</b> brut / an</span><span class="min">Ouverture dès 10 €</span><span class="note">Disponible après l'ouverture de votre compte</span><span class="go">Voir le compte courant →</span></div>
+            </a>
+            <a class="card" href="#compte">
+              <div class="art"><svg viewBox="0 0 300 132" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="g3" x1="0" x2="1"><stop offset="0" stop-color="#f5a524"/><stop offset="1" stop-color="#ffd98a"/></linearGradient></defs><rect width="300" height="132" fill="url(#g3)"/><rect x="88" y="40" width="124" height="72" rx="14" fill="#fff"/><path d="M104 88 L124 66 L144 76 L168 52 L196 64" stroke="#f5a524" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div class="body"><span class="tag t-amber">Épargne réglementée</span><h3>CEL</h3><p>Compte épargne logement : vous épargnez pour un projet immobilier et accédez à un crédit à taux prédéfini. Plafond de 15 300 €.</p><span class="rate"><b>1,25 %</b> brut / an</span><span class="min">Ouverture dès 300 € · puis 75 € minimum par versement</span><span class="note">Disponible après l'ouverture de votre compte</span><span class="go">Voir le compte courant →</span></div>
+            </a>
+            <a class="card" href="#compte">
+              <div class="art"><svg viewBox="0 0 300 132" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="g4" x1="0" x2="1"><stop offset="0" stop-color="#0b2545"/><stop offset="1" stop-color="#4f7396"/></linearGradient></defs><rect width="300" height="132" fill="url(#g4)"/><circle cx="90" cy="70" r="30" fill="#fff" opacity=".9"/><circle cx="150" cy="54" r="22" fill="#fff" opacity=".7"/><circle cx="208" cy="78" r="28" fill="#fff" opacity=".85"/></svg></div>
+              <div class="body"><span class="tag t-blue">Placement</span><h3>Assurance-vie</h3><p>Un contrat de placement et de transmission : fonds en euros, unités de compte. Frais d'entrée 0 %. Frais de gestion de 0,65 % par an sur le fonds en euros et de 0,60 % par an sur les unités de compte.</p><span class="rate"><b>2,90 %</b> brut visé en 2026 sur le fonds en euros, soit 2,25 % net après frais, non garanti</span><span class="min">Versement minimum : 100 €</span><span class="note">Disponible après l'ouverture de votre compte</span><span class="go">Voir le compte courant →</span></div>
+            </a>
+            <a class="card" href="#compte">
+              <div class="art"><svg viewBox="0 0 300 132" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="g5" x1="0" x2="1"><stop offset="0" stop-color="#0f7f6e"/><stop offset="1" stop-color="#7fd6c2"/></linearGradient></defs><rect width="300" height="132" fill="url(#g5)"/><path d="M150 26 L186 60 L150 96 L114 60Z" fill="#fff" opacity=".9"/><circle cx="150" cy="60" r="8" fill="#0f7f6e"/><path d="M60 110 Q150 80 240 110" stroke="#fff" stroke-width="4" fill="none" opacity=".6"/></svg></div>
+              <div class="body"><span class="tag t-violet">Retraite</span><h3>PER</h3><p>Plan d'épargne retraite : vous préparez vos revenus de retraite. Les fonds sont bloqués jusqu'à la retraite, sauf cas prévus par la loi.</p><span class="min">Versement minimum : 100 €</span><span class="note">Disponible après l'ouverture de votre compte</span><span class="go">Voir le compte courant →</span></div>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section id="credits">
+        <div class="wrap">
+          <div class="rubric-head">
+            <div>
+              <div class="eyebrow">Mes produits · Crédits</div>
+              <h2>Financer un projet, en toute clarté</h2>
+              <p class="lead">Chaque crédit est simulé avant engagement : mensualité, coût total et taux d'endettement. Aucune décision sans votre accord.</p>
+            </div>
+          </div>
+          <div class="cards" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr))">
+            <a class="card" href="#parcours" (click)="ouvrirParcours($event)">
+              <div class="art"><svg viewBox="0 0 300 132" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="g6" x1="0" x2="1"><stop offset="0" stop-color="#0b2545"/><stop offset="1" stop-color="#3f6b8f"/></linearGradient></defs><rect width="300" height="132" fill="url(#g6)"/><path d="M90 96 L90 58 L150 28 L210 58 L210 96Z" fill="#fff"/><rect x="132" y="70" width="36" height="26" fill="#3f6b8f"/><rect x="72" y="92" width="156" height="6" rx="3" fill="#fff" opacity=".6"/></svg></div>
+              <div class="body"><span class="tag t-blue">Crédit</span><h3>Crédit immobilier</h3><p>Un prêt pour acheter ou faire des travaux. Vous voyez la mensualité, le coût total et l'assurance avant de vous engager.</p><span class="go">Simuler mon projet →</span></div>
+            </a>
+            <a class="card" href="#parcours" (click)="ouvrirParcours($event)">
+              <div class="art"><svg viewBox="0 0 300 132" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="g7" x1="0" x2="1"><stop offset="0" stop-color="#d9785a"/><stop offset="1" stop-color="#f0b49c"/></linearGradient></defs><rect width="300" height="132" fill="url(#g7)"/><rect x="100" y="34" width="100" height="64" rx="12" fill="#fff"/><rect x="116" y="50" width="68" height="8" rx="4" fill="#d9785a"/><rect x="116" y="66" width="44" height="8" rx="4" fill="#f8d5c6"/><circle cx="222" cy="92" r="14" fill="#fff" opacity=".8"/></svg></div>
+              <div class="body"><span class="tag t-rose">Crédit</span><h3>Crédit à la consommation</h3><p>Un prêt pour un projet ponctuel, comme un véhicule ou des travaux. Montant, durée et taux sont affichés avant toute signature.</p><span class="go">Simuler mon projet →</span></div>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section id="optimisation" class="alt">
+        <div class="wrap">
+          <div class="dark">
+            <div class="eyebrow">Optimisation et conseil</div>
+            <h2>Des pistes qui vous ressemblent, et vous décidez</h2>
+            <p class="lead" style="margin-bottom: 0">Un moteur d'optimisation, assisté par IA, analyse votre situation et propose des pistes. Les règles de recommandation sont validées par notre conformité.</p>
+
+            <div class="opt-grid" style="margin-top: 28px">
+              <div><span class="tag t-mint">Règles validées</span><h4>Des recommandations encadrées</h4><p>Chaque piste indique la règle appliquée, ses avantages et ses limites.</p></div>
+              <div><span class="tag t-blue">Personnalisé</span><h4>Adapté à votre profil</h4><p>Revenus, charges, objectifs et horizon, avec votre accord.</p></div>
+              <div><span class="tag t-amber">Vous décidez</span><h4>Vous gardez la main</h4><p>Chaque piste est une information, à votre rythme.</p></div>
+            </div>
+
+            <div class="usecase">
+              <div>
+                <h3>Cas d'usage : un agent IA conseiller à vos côtés</h3>
+                <p>Marie a un compte courant, un livret et une assurance-vie. Elle veut préparer sa retraite, mais ne sait pas par où commencer.</p>
+                <p>Dans son espace, l'agent lui explique sa situation en quelques phrases, puis lui propose de simuler un PER avec les hypothèses affichées.</p>
+              </div>
+              <div class="chat">
+                <div class="bubble ai"><b>Agent IA :</b> « Votre épargne de précaution couvre environ 4 mois de charges. Souhaitez-vous simuler un versement mensuel sur votre PER ? »</div>
+                <div class="bubble me">« Oui, 200 € par mois. »</div>
+                <div class="bubble ai"><b>Agent IA :</b> « Voici le résultat, avec des frais d'entrée de 0 % et le taux net de votre fonds en euros. Je reste disponible pour vos questions. »</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="simulateurs">
+        <div class="wrap">
+          <div class="eyebrow">Simulateurs</div>
+          <h2>Simulez avant de vous engager</h2>
+          <p class="lead">Testez vos projets sans rien modifier. Les hypothèses restent visibles, et les résultats sont indicatifs.</p>
+          <div class="sim-row">
+            <a class="sim" href="#parcours" (click)="ouvrirParcours($event)"><span class="tag t-rose">Crédit</span><h4>Simulateur de crédit</h4><p>Mensualité, coût total et durée, avec le taux et l'assurance utilisés.</p><span class="go">Simuler un crédit →</span></a>
+            <a class="sim" href="#parcours" (click)="ouvrirParcours($event)"><span class="tag t-violet">Retraite</span><h4>Simulateur PER</h4><p>Capital projeté à la retraite, avec versements mensuels et frais d'entrée de 0 %.</p><span class="go">Simuler mon PER →</span></a>
+            <a class="sim" href="#parcours" (click)="ouvrirParcours($event)"><span class="tag t-blue">Placement</span><h4>Simulateur assurance-vie</h4><p>Intérêts du fonds en euros, crédités une fois par an, et effet des frais.</p><span class="go">Simuler mon assurance-vie →</span></a>
+          </div>
+        </div>
+      </section>
+
+      <section id="patrimoine" class="alt">
+        <div class="wrap patri">
+          <div>
+            <div class="eyebrow">Mon patrimoine</div>
+            <h2>Une vue complète, mise à jour chaque matin</h2>
+            <p class="lead" style="margin-bottom: 0">Votre épargne, vos placements et vos crédits apparaissent ensemble. Vous savez à tout moment ce que vous possédez, ce que vous devez et ce que vous pouvez faire.</p>
+          </div>
+          <div class="donut-box">
+            <div style="display: flex; align-items: center; gap: 26px; flex-wrap: wrap">
+              <svg width="170" height="170" viewBox="0 0 42 42" aria-hidden="true">
+                <circle cx="21" cy="21" r="15.9" fill="none" stroke="#0b2545" stroke-width="6" stroke-dasharray="45 55" stroke-dashoffset="25"/>
+                <circle cx="21" cy="21" r="15.9" fill="none" stroke="#00b894" stroke-width="6" stroke-dasharray="35 65" stroke-dashoffset="-20"/>
+                <circle cx="21" cy="21" r="15.9" fill="none" stroke="#f5a524" stroke-width="6" stroke-dasharray="20 80" stroke-dashoffset="-55"/>
+                <text x="21" y="20" text-anchor="middle" font-size="4" fill="#5d6887">Patrimoine</text>
+                <text x="21" y="25" text-anchor="middle" font-size="4.6" font-weight="800" fill="#0b2545">48 320 €</text>
+              </svg>
+              <div class="legend" style="flex: 1; min-width: 200px">
+                <div><span><i style="background: #0b2545"></i>Épargne</span><b>21 800 €</b></div>
+                <div><span><i style="background: #00b894"></i>Placements</span><b>20 280 €</b></div>
+                <div><span><i style="background: #f5a524"></i>Crédit restant dû</span><b>− 9 600 €</b></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="bientot">
+        <div class="wrap">
+          <div class="soon">
+            <span class="tag t-amber">Bientôt</span>
+            <div>
+              <h3>Tous vos comptes, même ceux d'une autre banque</h3>
+              <p>Dans une prochaine étape, vous pourrez ajouter les comptes détenus ailleurs, avec votre accord explicite. Votre vue deviendra encore plus complète.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="final">
+        <div class="wrap">
+          <h2>Prêt à voir clair dans votre argent ?</h2>
+          <p>Ouvrez votre compte en ligne en environ 30 minutes, sans versement initial pour le compte courant.</p>
+          <a class="btn m" href="#parcours" style="font-size: 16px; padding: 16px 28px" (click)="ouvrirParcours($event)">Ouvrir mon compte</a>
+          <div class="sub">Pièce d'identité et selfie demandés. Identifiant envoyé par e-mail, lien d'activation pour définir votre mot de passe.</div>
+        </div>
+      </div>
+
+      <footer>Maquette de validation métier. Données de démonstration. Les rendements affichés sont estimés et ne sont pas une promesse de performance. L'agent IA conseiller et le moteur d'optimisation ne remplacent pas un conseil personnalisé. Mentions légales, politique de protection des données et accessibilité disponibles en bas de chaque page.</footer>
+    } @else {
+      <div class="parcours" id="parcours">
+        <div class="pbar">
+          <a href="#" (click)="fermerParcours($event)">← Retour au site</a>
+          <span class="pstep" id="pstep">Étape {{ etape() }} sur {{ totalEtapes }}</span>
+        </div>
+
+        <div class="pv" [class.on]="etape() === 1">
+          <h2>Mon identité</h2>
+          <p class="lead">Ces informations permettent à la banque de vous reconnaître. Elles sont vérifiées avant toute suite.</p>
+          <div class="pbox">
+            <div class="row2">
+              <div class="fld"><label for="nom">Nom de naissance *</label><input id="nom" placeholder="Dupont"></div>
+              <div class="fld"><label for="prenoms">Prénoms *</label><input id="prenoms" placeholder="Marie Claire"></div>
+              <div class="fld"><label for="naissance">Date de naissance *</label><input id="naissance" placeholder="JJ/MM/AAAA"><div class="hint">Vous devez avoir au moins 18 ans.</div></div>
+              <div class="fld"><label for="lieu">Lieu de naissance *</label><input id="lieu" placeholder="Ville et pays"></div>
+              <div class="fld"><label for="nationalite">Nationalité *</label><select id="nationalite"><option>Française</option><option>Autre</option></select></div>
+              <div class="fld"><label for="email">E-mail *</label><input id="email" placeholder="prenom.nom@exemple.fr"><div class="hint">Votre identifiant et votre lien d'activation vous seront envoyés à cette adresse.</div></div>
+            </div>
+            <div class="fld"><label for="adresse">Adresse postale *</label><input id="adresse" placeholder="Numéro, rue, code postal, ville"></div>
+            <div class="fld"><label for="mobile">Téléphone mobile *</label><input id="mobile" placeholder="06 00 00 00 00"></div>
+            <div class="info">Vos informations sont vérifiées auprès des listes de sanctions et de personnes politiquement exposées. Le résultat est obtenu en quelques secondes.</div>
+          </div>
+          <div class="pnav"><button type="button" class="pbtn ghost" (click)="precedent()">Retour</button><button type="button" class="pbtn" (click)="suivant()">Continuer</button></div>
+        </div>
+
+        <div class="pv" [class.on]="etape() === 2">
+          <h2>Ma pièce d'identité</h2>
+          <p class="lead">Carte nationale d'identité, passeport ou titre de séjour, en cours de validité.</p>
+          <div class="pbox">
+            <div class="drop">Glissez votre pièce ici, ou choisissez un fichier<br><span class="hint">PNG, JPEG, BMP, GIF ou PDF · 2 Mo maximum</span></div>
+            <div class="info">Vérification réalisée par notre partenaire de contrôle d'identité. Photo nette, sans reflet, bords visibles.</div>
+            <div class="warnb">Permis de conduire, pièce expirée ou fichier non authentique : la demande d'ouverture est annulée. Pour ouvrir un compte à la banque, contactez un conseiller.</div>
+          </div>
+          <div class="pnav"><button type="button" class="pbtn ghost" (click)="precedent()">Retour</button><button type="button" class="pbtn" (click)="suivant()">Continuer</button></div>
+        </div>
+
+        <div class="pv" [class.on]="etape() === 3">
+          <h2>Vérification de présence</h2>
+          <p class="lead">Un selfie, puis un mouvement de tête demandé à l'écran, pour vérifier que vous êtes bien la personne de la pièce.</p>
+          <div class="pbox">
+            <div class="drop">Caméra prête<br><span class="hint">Placez votre visage dans le cadre, dans une lumière suffisante</span></div>
+            <div class="info">Mouvement demandé : tournez doucement la tête vers la gauche, puis vers la droite.</div>
+            <div class="warnb">Une photo imprimée ou une vidéo présentée à la caméra ne sont pas acceptées.</div>
+          </div>
+          <div class="pnav"><button type="button" class="pbtn ghost" (click)="precedent()">Retour</button><button type="button" class="pbtn" (click)="suivant()">Continuer</button></div>
+        </div>
+
+        <div class="pv" [class.on]="etape() === 4">
+          <h2>Mes réponses et consentements</h2>
+          <p class="lead">Ces questions sont obligatoires. Elles permettent à la banque de connaître votre situation.</p>
+          <div class="pbox">
+            <div class="fld"><label for="objet">Objet de la relation *</label><select id="objet"><option>Choisir</option><option>Épargne</option><option>Placement</option><option>Crédit</option><option>Compte au quotidien</option></select></div>
+            <div class="chk"><input type="checkbox" id="c1"><label for="c1">J'ai lu et j'accepte le traitement de mes données d'identité (obligatoire).</label></div>
+            <div class="chk"><input type="checkbox" id="c2"><label for="c2">J'accepte le traitement de mes données de situation pour des simulations personnalisées (facultatif).</label></div>
+          </div>
+          <div class="pnav"><button type="button" class="pbtn ghost" (click)="precedent()">Retour</button><button type="button" class="pbtn" (click)="suivant()">Continuer</button></div>
+        </div>
+
+        <div class="pv" [class.on]="etape() === 5">
+          <h2>Signer ma convention de compte</h2>
+          <p class="lead">Lisez votre convention, puis signez-la électroniquement.</p>
+          <div class="pbox">
+            <div class="info">Convention de compte courant : frais, conditions d'utilisation et droits. Un exemplaire vous sera remis après signature.</div>
+            <div class="fld"><label for="code">Code de signature reçu par SMS *</label><input id="code" placeholder="6 chiffres"><div class="hint">Valable 5 minutes. Trois erreurs annulent l'opération de signature.</div></div>
+          </div>
+          <div class="pnav"><button type="button" class="pbtn ghost" (click)="precedent()">Retour</button><button type="button" class="pbtn" (click)="suivant()">Signer</button></div>
+        </div>
+
+        <div class="pv" [class.on]="etape() === 6">
+          <h2>Votre compte courant est ouvert</h2>
+          <p class="lead">Félicitations. Voici ce qui se passe maintenant.</p>
+          <div class="pbox">
+            <div class="mock">
+              <div class="row"><span>Compte courant</span><span style="color: #00775f">Ouvert</span></div>
+              <div class="row"><span>IBAN</span><span>FR76 •••• •••• 1234</span></div>
+              <div class="row"><span>Solde</span><span>0 €</span></div>
+            </div>
+            <div class="info" style="margin-top: 18px"><strong>Votre identifiant</strong> vous a été envoyé par e-mail.</div>
+            <div class="warnb"><strong>Votre lien d'activation</strong> vous est également envoyé par e-mail. Il est valable 24 heures et à usage unique. Passé ce délai, vous pouvez demander un nouveau lien.</div>
+            <div class="info"><strong>Livret A :</strong> vous pourrez l'ouvrir depuis votre espace client, une fois votre compte courant activé.</div>
+          </div>
+          <div class="pnav"><button type="button" class="pbtn" (click)="suivant()">Terminer</button></div>
+        </div>
+      </div>
+    }
+  </main>
+</div>
