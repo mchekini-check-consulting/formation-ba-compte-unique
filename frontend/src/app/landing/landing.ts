@@ -1,6 +1,6 @@
 import { Component, signal } from '@angular/core';
 
-const DERNIERE_ETAPE = 7;
+const DERNIERE_ETAPE = 6;
 
 // Landing page Hi-Tech Bank et parcours d'ouverture de compte (maquette sans backend :
 // les champs du parcours ne sont ni enregistrés ni envoyés).
@@ -12,6 +12,7 @@ const DERNIERE_ETAPE = 7;
 export class Landing {
   protected readonly parcoursOuvert = signal(false);
   protected readonly etape = signal(1);
+  protected readonly totalEtapes = DERNIERE_ETAPE;
 
   protected ouvrirParcours(event: Event): void {
     event.preventDefault();

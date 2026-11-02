@@ -31,7 +31,7 @@ describe('Landing', () => {
 
   it("ouvre le parcours à l'étape 1 et masque la page", async () => {
     await cliquer('.top .btn.p');
-    expect(page.querySelector('#pstep')?.textContent).toContain('Étape 1 sur 7');
+    expect(page.querySelector('#pstep')?.textContent).toContain('Étape 1 sur 6');
     expect(etapeVisible()?.textContent).toContain('Mon identité');
     expect(page.querySelector('.hero')).toBeNull();
   });
@@ -39,7 +39,7 @@ describe('Landing', () => {
   it('avance et recule entre les étapes', async () => {
     await cliquer('.top .btn.p');
     await cliquer('.pv.on .pbtn:not(.ghost)');
-    expect(page.querySelector('#pstep')?.textContent).toContain('Étape 2 sur 7');
+    expect(page.querySelector('#pstep')?.textContent).toContain('Étape 2 sur 6');
     expect(etapeVisible()?.textContent).toContain("Ma pièce d'identité");
     await cliquer('.pv.on .pbtn.ghost');
     expect(etapeVisible()?.textContent).toContain('Mon identité');
@@ -60,7 +60,7 @@ describe('Landing', () => {
 
   it('confirme le compte ouvert puis revient à la page', async () => {
     await cliquer('.top .btn.p');
-    for (let etape = 1; etape < 7; etape++) {
+    for (let etape = 1; etape < 6; etape++) {
       await cliquer('.pv.on .pbtn:not(.ghost)');
     }
     expect(etapeVisible()?.textContent).toContain('Votre compte courant est ouvert');
@@ -68,11 +68,30 @@ describe('Landing', () => {
     expect(page.querySelector('.hero')).not.toBeNull();
   });
 
+  it('envoie les cartes épargne vers le compte courant, sans ouvrir le parcours', async () => {
+    const cartes = page.querySelectorAll<HTMLAnchorElement>('#epargne .card');
+    expect(cartes.length).toBe(5);
+    cartes.forEach((carte) => expect(carte.getAttribute('href')).toBe('#compte'));
+    await cliquer('#epargne .card');
+    expect(page.querySelector('.parcours')).toBeNull();
+  });
+
+  it("annonce le lien d'activation et le Livret A à la fin du parcours", async () => {
+    await cliquer('.top .btn.p');
+    for (let etape = 1; etape < 6; etape++) {
+      await cliquer('.pv.on .pbtn:not(.ghost)');
+    }
+    const fin = etapeVisible()?.textContent ?? '';
+    expect(fin).toContain("lien d'activation");
+    expect(fin).toContain('Livret A');
+    expect(fin).not.toContain('mot de passe provisoire');
+  });
+
   it("repart de l'étape 1 à chaque ouverture", async () => {
     await cliquer('.top .btn.p');
     await cliquer('.pv.on .pbtn:not(.ghost)');
     await cliquer('.pbar a');
     await cliquer('.top .btn.p');
-    expect(page.querySelector('#pstep')?.textContent).toContain('Étape 1 sur 7');
+    expect(page.querySelector('#pstep')?.textContent).toContain('Étape 1 sur 6');
   });
 });
