@@ -45,7 +45,15 @@ const OBLIGATOIRES: Partial<Record<ChampIdentite, string>> = {
   dateExpiration: "Date d'expiration obligatoire",
 };
 
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/** E-mail : un seul « @ », pas d'espace, un domaine avec au moins un point (ex. exemple.fr). */
+export function emailValide(texte: string): boolean {
+  const [local, domaine, ...reste] = texte.split('@');
+  if (reste.length > 0 || !local || !domaine || /\s/.test(texte)) {
+    return false;
+  }
+  const parties = domaine.split('.');
+  return parties.length >= 2 && parties.every((partie) => partie.length > 0);
+}
 const MOBILE = /^(0|\+33\s?)[67]([\s.-]?\d{2}){4}$/;
 const TELEPHONE = /^(0|\+33\s?)[1-9]([\s.-]?\d{2}){4}$/;
 
@@ -79,7 +87,7 @@ type Controle = (identite: Identite, aujourdhui: Date) => string | null;
 // Contrôles de format, lancés seulement sur les champs qui ne sont pas déjà en erreur
 // (champ obligatoire vide).
 const CONTROLES: [ChampIdentite, Controle][] = [
-  ['email', (i) => (EMAIL.test(i.email.trim()) ? null : 'Adresse e-mail mal formée')],
+  ['email', (i) => (emailValide(i.email.trim()) ? null : 'Adresse e-mail mal formée')],
   ['mobile', (i) => (MOBILE.test(i.mobile.trim()) ? null : 'Numéro mobile mal formé')],
   ['fixe', (i) => (!i.fixe.trim() || TELEPHONE.test(i.fixe.trim()) ? null : 'Numéro de téléphone mal formé')],
   [
@@ -126,7 +134,7 @@ export function validerIdentite(identite: Identite, aujourdhui = new Date()): Er
 }
 
 // Pièce d'identité (CUB-9) : refus avant envoi, avec le motif précis.
-const TYPES_ACCEPTES = ['image/png', 'image/jpeg', 'image/bmp', 'image/gif', 'application/pdf'];
+const TYPES_ACCEPTES = new Set(['image/png', 'image/jpeg', 'image/bmp', 'image/gif', 'application/pdf']);
 const EXTENSIONS_ACCEPTEES = /\.(png|jpe?g|bmp|gif|pdf)$/i;
 export const TAILLE_MAX_OCTETS = 2 * 1024 * 1024;
 
@@ -136,7 +144,7 @@ export function tailleLisible(octets: number): string {
 
 /** Motif de refus du fichier, ou null s'il peut être envoyé. */
 export function refusFichier(fichier: { name: string; type: string; size: number }): string | null {
-  if (!TYPES_ACCEPTES.includes(fichier.type) && !EXTENSIONS_ACCEPTEES.test(fichier.name)) {
+  if (!TYPES_ACCEPTES.has(fichier.type) &&!EXTENSIONS_ACCEPTEES.test(fichier.name)) {
     return 'Format non accepté : PNG, JPEG, BMP, GIF ou PDF uniquement';
   }
   if (fichier.size > TAILLE_MAX_OCTETS) {

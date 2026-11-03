@@ -3,6 +3,7 @@ import {
   Identite,
   Reponses,
   TAILLE_MAX_OCTETS,
+  emailValide,
   lireDate,
   refusFichier,
   sansErreur,
@@ -48,6 +49,20 @@ describe("Règles de l'étape « M'identifier »", () => {
       fixe: 'Numéro de téléphone mal formé',
       codePostal: 'Code postal à 5 chiffres',
     });
+  });
+
+  it.each([
+    ['marie.dupont@exemple.fr', true],
+    ['m@a.b.c', true],
+    ['marie@exemple', false],
+    ['marie@@exemple.fr', false],
+    ['@exemple.fr', false],
+    ['marie@', false],
+    ['marie dupont@exemple.fr', false],
+    ['marie@exemple..fr', false],
+    ['marie@.fr', false],
+  ])("contrôle le format de l'e-mail %s", (email, valide) => {
+    expect(emailValide(email)).toBe(valide);
   });
 
   it("n'impose pas 5 chiffres au code postal hors de France", () => {
