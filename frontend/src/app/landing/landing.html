@@ -156,9 +156,9 @@
             <p class="lead" style="margin-bottom: 0">Un moteur d'optimisation, assisté par IA, analyse votre situation et propose des pistes. Les règles de recommandation sont validées par notre conformité.</p>
 
             <div class="opt-grid" style="margin-top: 28px">
-              <div><span class="tag t-mint">Règles validées</span><h4>Des recommandations encadrées</h4><p>Chaque piste indique la règle appliquée, ses avantages et ses limites.</p></div>
-              <div><span class="tag t-blue">Personnalisé</span><h4>Adapté à votre profil</h4><p>Revenus, charges, objectifs et horizon, avec votre accord.</p></div>
-              <div><span class="tag t-amber">Vous décidez</span><h4>Vous gardez la main</h4><p>Chaque piste est une information, à votre rythme.</p></div>
+              <div><span class="tag t-mint">Règles validées</span><h3>Des recommandations encadrées</h3><p>Chaque piste indique la règle appliquée, ses avantages et ses limites.</p></div>
+              <div><span class="tag t-blue">Personnalisé</span><h3>Adapté à votre profil</h3><p>Revenus, charges, objectifs et horizon, avec votre accord.</p></div>
+              <div><span class="tag t-amber">Vous décidez</span><h3>Vous gardez la décision</h3><p>Chaque piste est une information, à votre rythme.</p></div>
             </div>
 
             <div class="usecase">
@@ -183,9 +183,9 @@
           <h2>Simulez avant de vous engager</h2>
           <p class="lead">Testez vos projets sans rien modifier. Les hypothèses restent visibles, et les résultats sont indicatifs.</p>
           <div class="sim-row">
-            <a class="sim" href="#parcours" (click)="ouvrirParcours($event)"><span class="tag t-rose">Crédit</span><h4>Simulateur de crédit</h4><p>Mensualité, coût total et durée, avec le taux et l'assurance utilisés.</p><span class="go">Simuler un crédit →</span></a>
-            <a class="sim" href="#parcours" (click)="ouvrirParcours($event)"><span class="tag t-violet">Retraite</span><h4>Simulateur PER</h4><p>Capital projeté à la retraite, avec versements mensuels et frais d'entrée de 0 %.</p><span class="go">Simuler mon PER →</span></a>
-            <a class="sim" href="#parcours" (click)="ouvrirParcours($event)"><span class="tag t-blue">Placement</span><h4>Simulateur assurance-vie</h4><p>Intérêts du fonds en euros, crédités une fois par an, et effet des frais.</p><span class="go">Simuler mon assurance-vie →</span></a>
+            <a class="sim" href="#parcours" (click)="ouvrirParcours($event)"><span class="tag t-rose">Crédit</span><h3>Simulateur de crédit</h3><p>Mensualité, coût total et durée, avec le taux et l'assurance utilisés.</p><span class="go">Simuler un crédit →</span></a>
+            <a class="sim" href="#parcours" (click)="ouvrirParcours($event)"><span class="tag t-violet">Retraite</span><h3>Simulateur PER</h3><p>Capital projeté à la retraite, avec versements mensuels et frais d'entrée de 0 %.</p><span class="go">Simuler mon PER →</span></a>
+            <a class="sim" href="#parcours" (click)="ouvrirParcours($event)"><span class="tag t-blue">Placement</span><h3>Simulateur assurance-vie</h3><p>Intérêts du fonds en euros, crédités une fois par an, et effet des frais.</p><span class="go">Simuler mon assurance-vie →</span></a>
           </div>
         </div>
       </section>
@@ -237,7 +237,14 @@
         </div>
       </div>
 
-      <footer>Maquette de validation métier. Données de démonstration. Les rendements affichés sont estimés et ne sont pas une promesse de performance. L'agent IA conseiller et le moteur d'optimisation ne remplacent pas un conseil personnalisé. Mentions légales, politique de protection des données et accessibilité disponibles en bas de chaque page.</footer>
+      <footer>
+        <p>Maquette de validation métier. Données de démonstration. Les rendements affichés sont estimés et ne sont pas une promesse de performance. L'agent IA conseiller et le moteur d'optimisation ne remplacent pas un conseil personnalisé.</p>
+        <nav class="liens-legaux" aria-label="Informations légales">
+          <a routerLink="/mentions-legales">Mentions légales</a>
+          <a routerLink="/protection-des-donnees">Politique de protection des données</a>
+          <a routerLink="/accessibilite">Accessibilité</a>
+        </nav>
+      </footer>
     } @else {
       <div class="parcours" id="parcours">
         <div class="pbar">
@@ -245,57 +252,36 @@
           <span class="pstep" id="pstep">Étape {{ etape() }} sur {{ totalEtapes }}</span>
         </div>
 
-        <div class="pv" [class.on]="etape() === 1">
-          <h2>Mon identité</h2>
-          <p class="lead">Ces informations permettent à la banque de vous reconnaître. Elles sont vérifiées avant toute suite.</p>
-          <div class="pbox">
-            <div class="row2">
-              <div class="fld"><label for="nom">Nom de naissance *</label><input id="nom" placeholder="Dupont"></div>
-              <div class="fld"><label for="prenoms">Prénoms *</label><input id="prenoms" placeholder="Marie Claire"></div>
-              <div class="fld"><label for="naissance">Date de naissance *</label><input id="naissance" placeholder="JJ/MM/AAAA"><div class="hint">Vous devez avoir au moins 18 ans.</div></div>
-              <div class="fld"><label for="lieu">Lieu de naissance *</label><input id="lieu" placeholder="Ville et pays"></div>
-              <div class="fld"><label for="nationalite">Nationalité *</label><select id="nationalite"><option>Française</option><option>Autre</option></select></div>
-              <div class="fld"><label for="email">E-mail *</label><input id="email" placeholder="prenom.nom@exemple.fr"><div class="hint">Votre identifiant et votre lien d'activation vous seront envoyés à cette adresse.</div></div>
-            </div>
-            <div class="fld"><label for="adresse">Adresse postale *</label><input id="adresse" placeholder="Numéro, rue, code postal, ville"></div>
-            <div class="fld"><label for="mobile">Téléphone mobile *</label><input id="mobile" placeholder="06 00 00 00 00"></div>
-            <div class="info">Vos informations sont vérifiées auprès des listes de sanctions et de personnes politiquement exposées. Le résultat est obtenu en quelques secondes.</div>
+        @if (annulation(); as message) {
+          <div class="pv on">
+            <h2>Demande annulée</h2>
+            <div class="ident"><div class="notice err" role="alert">{{ message }}</div></div>
+            <div class="pnav"><button type="button" class="pbtn" (click)="fermerParcours()">Retour au site</button></div>
           </div>
-          <div class="pnav"><button type="button" class="pbtn ghost" (click)="precedent()">Retour</button><button type="button" class="pbtn" (click)="suivant()">Continuer</button></div>
-        </div>
-
-        <div class="pv" [class.on]="etape() === 2">
-          <h2>Ma pièce d'identité</h2>
-          <p class="lead">Carte nationale d'identité, passeport ou titre de séjour, en cours de validité.</p>
-          <div class="pbox">
-            <div class="drop">Glissez votre pièce ici, ou choisissez un fichier<br><span class="hint">PNG, JPEG, BMP, GIF ou PDF · 2 Mo maximum</span></div>
-            <div class="info">Vérification réalisée par notre partenaire de contrôle d'identité. Photo nette, sans reflet, bords visibles.</div>
-            <div class="warnb">Permis de conduire, pièce expirée ou fichier non authentique : la demande d'ouverture est annulée. Pour ouvrir un compte à la banque, contactez un conseiller.</div>
-          </div>
-          <div class="pnav"><button type="button" class="pbtn ghost" (click)="precedent()">Retour</button><button type="button" class="pbtn" (click)="suivant()">Continuer</button></div>
-        </div>
-
-        <div class="pv" [class.on]="etape() === 3">
-          <h2>Vérification de présence</h2>
-          <p class="lead">Un selfie, puis un mouvement de tête demandé à l'écran, pour vérifier que vous êtes bien la personne de la pièce.</p>
-          <div class="pbox">
-            <div class="drop">Caméra prête<br><span class="hint">Placez votre visage dans le cadre, dans une lumière suffisante</span></div>
-            <div class="info">Mouvement demandé : tournez doucement la tête vers la gauche, puis vers la droite.</div>
-            <div class="warnb">Une photo imprimée ou une vidéo présentée à la caméra ne sont pas acceptées.</div>
-          </div>
-          <div class="pnav"><button type="button" class="pbtn ghost" (click)="precedent()">Retour</button><button type="button" class="pbtn" (click)="suivant()">Continuer</button></div>
-        </div>
-
-        <div class="pv" [class.on]="etape() === 4">
-          <h2>Mes réponses et consentements</h2>
-          <p class="lead">Ces questions sont obligatoires. Elles permettent à la banque de connaître votre situation.</p>
-          <div class="pbox">
-            <div class="fld"><label for="objet">Objet de la relation *</label><select id="objet"><option>Choisir</option><option>Épargne</option><option>Placement</option><option>Crédit</option><option>Compte au quotidien</option></select></div>
-            <div class="chk"><input type="checkbox" id="c1"><label for="c1">J'ai lu et j'accepte le traitement de mes données d'identité (obligatoire).</label></div>
-            <div class="chk"><input type="checkbox" id="c2"><label for="c2">J'accepte le traitement de mes données de situation pour des simulations personnalisées (facultatif).</label></div>
-          </div>
-          <div class="pnav"><button type="button" class="pbtn ghost" (click)="precedent()">Retour</button><button type="button" class="pbtn" (click)="suivant()">Continuer</button></div>
-        </div>
+        } @else {
+          @switch (etape()) {
+            @case (1) {
+              <div class="pv on">
+                <app-etape-identite [initiale]="identite()" (valide)="identiteValidee($event)" (annule)="annuler($event)" (retour)="precedent()" />
+              </div>
+            }
+            @case (2) {
+              <div class="pv on">
+                <app-etape-piece [dossierId]="dossierId" [identite]="identite()!" (valide)="suivant()" (annule)="annuler($event)" (retour)="precedent()" />
+              </div>
+            }
+            @case (3) {
+              <div class="pv on">
+                <app-etape-selfie [dossierId]="dossierId" (valide)="suivant()" (annule)="annuler($event)" (retour)="precedent()" />
+              </div>
+            }
+            @case (4) {
+              <div class="pv on">
+                <app-etape-questions (valide)="suivant()" (annule)="annuler($event)" (retour)="precedent()" />
+              </div>
+            }
+          }
+        }
 
         <div class="pv" [class.on]="etape() === 5">
           <h2>Signer ma convention de compte</h2>

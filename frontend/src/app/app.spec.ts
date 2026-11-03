@@ -19,6 +19,17 @@ describe('Routes', () => {
     );
   });
 
+  it.each([
+    ['/mentions-legales', 'Mentions légales'],
+    ['/protection-des-donnees', 'Politique de protection des données'],
+    ['/accessibilite', 'Accessibilité'],
+  ])('affiche la page %s', async (adresse, titre) => {
+    const harness = await RouterTestingHarness.create(adresse);
+    const ecran = harness.routeNativeElement!;
+    expect(ecran.querySelector('h1')?.textContent).toBe(titre);
+    expect(ecran.querySelector('a')?.getAttribute('href')).toBe('/');
+  });
+
   it("garde l'écran Items sur /items", async () => {
     const harness = await RouterTestingHarness.create('/items');
     expect(harness.routeNativeElement?.querySelector('h1')?.textContent).toContain('Items');

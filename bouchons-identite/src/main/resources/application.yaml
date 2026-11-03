@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: bouchons-identite
+  # Base PostgreSQL. Valeurs locales (compose.yaml) ; sur le cluster, remplacées par
+  # SPRING_DATASOURCE_URL, _USERNAME, _PASSWORD (helm.yaml : database).
+  datasource:
+    url: jdbc:postgresql://localhost:5433/bouchons_identite
+    username: app
+    password: app
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate   # le schéma vient uniquement des migrations Flyway
+
+logging:
+  level:
+    root: ${LOG_LEVEL:INFO}

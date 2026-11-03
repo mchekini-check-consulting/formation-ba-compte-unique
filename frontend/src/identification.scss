@@ -1,0 +1,96 @@
+// Styles des écrans « M'identifier » (src/app/identification), repris de la maquette
+// « Étape 1 : écrans manquants ». Fichier global car ils dépassent le budget de taille d'un
+// composant ; tout est rangé sous .ident pour ne pas toucher aux autres écrans.
+.ident {
+  --fg: #15202f; --muted: #5b6676; --line: #d9dee6; --bg: #f5f6f8; --surface: #fff;
+  --accent: #0b2545; --ok: #1d6f42; --ok-bg: #e7f4ec; --err: #b3261e; --err-bg: #fbeceb;
+  --warn: #7a4a00; --warn-bg: #fff4e0; --note-bg: #eef4fb; --note-fg: #1f3d61;
+
+  color: var(--fg);
+  font-size: 15px;
+  line-height: 1.5;
+
+  h2 { font-size: 28px; line-height: 1.25; margin: 0 0 8px; text-wrap: balance; }
+  p { margin: 0 0 12px; }
+  .muted { color: var(--muted); }
+  .petit { font-size: 13px; margin-top: 10px; }
+  .petit a { color: var(--accent); }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; }
+  .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  &.carte { max-width: 520px; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 22px; margin-bottom: 20px; }
+  &.carte h2 { font-size: 22px; }
+
+  // Formulaire « Mon identité »
+  &.idform form { display: grid; gap: 16px; }
+  fieldset { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 18px; margin: 0; min-width: 0; }
+  legend { font-weight: 600; padding: 0 6px; margin-left: -6px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
+  .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .field.full { grid-column: 1 / -1; }
+  .field label { font-size: 13px; font-weight: 600; }
+  .req { color: var(--muted); font-weight: 400; }
+  .field input, .field select, .sub-field input, .bouchon select {
+    font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line);
+    border-radius: 8px; padding: 10px 12px; width: 100%; min-width: 0;
+  }
+  input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  input[aria-invalid="true"] { border-color: var(--err); }
+  .hint { font-size: 12px; color: var(--muted); }
+  .error { font-size: 12.5px; color: var(--err); font-weight: 600; }
+  .error:empty { display: none; }
+  .result { border-radius: 12px; padding: 14px 16px; }
+  .result.ko { background: var(--err-bg); color: var(--err); }
+
+  .actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; margin-top: 14px; }
+  .pbtn:disabled, .pbtn.inactif { opacity: .5; cursor: not-allowed; }
+  .pbtn.bloc { display: block; width: 100%; margin-top: 10px; }
+
+  // Pièce d'identité
+  .drop { display: block; cursor: pointer; border: 2px dashed var(--line); border-radius: 14px; padding: 22px 16px; text-align: center; color: var(--muted); font-size: 14px; background: var(--bg); }
+  .drop.survol, .drop:focus-within { border-color: var(--accent); }
+  .drop strong { color: var(--fg); display: block; margin-bottom: 4px; }
+  .limits { font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace; font-size: 12.5px; color: var(--muted); margin-top: 8px; }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; font-size: 14px; margin-top: 10px; overflow-wrap: anywhere; }
+  .badge { font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
+  .badge.ok { background: var(--ok-bg); color: var(--ok); }
+  .badge.err { background: var(--err-bg); color: var(--err); }
+
+  .notice { font-size: 13.5px; border-radius: 12px; padding: 12px 14px; margin: 12px 0; }
+  .notice.info { background: var(--note-bg); color: var(--note-fg); }
+  .notice.warn { background: var(--warn-bg); color: var(--warn); }
+  .notice.err { background: var(--err-bg); color: var(--err); }
+
+  // Selfie
+  .oval-wrap { display: grid; place-items: center; background: var(--bg); border-radius: 14px; padding: 18px 0; margin: 10px 0; color: var(--accent); }
+  .apercu { width: 170px; height: 210px; object-fit: cover; border-radius: 50%; border: 3px dashed var(--accent); transform: scaleX(-1); }
+  .steps { margin: 0; padding-left: 20px; font-size: 14px; display: grid; gap: 6px; }
+
+  // Questions
+  .q { border: 0; border-top: 1px solid var(--line); border-radius: 0; padding: 12px 0 0; margin-top: 12px; }
+  .q:first-of-type { border-top: 0; padding-top: 0; margin-top: 0; }
+  .qt { font-size: 14px; font-weight: 600; margin-bottom: 8px; padding: 0; margin-left: 0; }
+  .opts { display: grid; gap: 6px; font-size: 14px; }
+  .opts label { display: flex; gap: 10px; align-items: center; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; cursor: pointer; }
+  .opts input { accent-color: var(--accent); }
+  .opts label.sel { border-color: var(--accent); background: var(--note-bg); }
+  .sub-field { margin: 8px 0 0 28px; font-size: 13px; }
+  .sub-field input { margin-top: 4px; }
+  .sub-field .suite { display: block; margin-top: 8px; }
+  .msg-err { color: var(--err); font-size: 12.5px; font-weight: 600; margin-top: 4px; }
+  .lien { background: none; border: 0; padding: 0; margin-top: 6px; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline; }
+  .consent { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; margin-top: 12px; }
+  .consent input { margin-top: 3px; accent-color: var(--accent); }
+
+  // Choix du résultat simulé (prototype)
+  .bouchon { margin-top: 16px; padding: 12px; border: 1px dashed var(--line); border-radius: 12px; font-size: 12.5px; color: var(--muted); }
+  .bouchon label { display: block; margin-bottom: 6px; font-weight: 600; }
+
+  .design-note { font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--line); margin-top: 14px; padding-top: 10px; }
+
+  @media (max-width: 560px) {
+    .grid { grid-template-columns: 1fr; }
+    .actions .pbtn { flex: 1 1 100%; }
+    .sub-field { margin-left: 0; }
+  }
+}

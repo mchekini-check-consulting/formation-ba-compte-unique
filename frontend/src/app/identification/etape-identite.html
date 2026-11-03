@@ -1,0 +1,93 @@
+<section class="ident idform">
+  <h2>Mon identité</h2>
+  <p class="muted">Ces informations permettent à la banque de vous reconnaître. Elles sont contrôlées avant toute suite. Les champs marqués d'un astérisque sont obligatoires.</p>
+
+  <form novalidate (submit)="continuer($event)">
+    <fieldset>
+      <legend>Identité</legend>
+      <div class="grid">
+        <div class="field"><label for="id-civilite">Civilité <span class="req">*</span></label>
+          <select id="id-civilite" [value]="identite().civilite" (change)="maj('civilite', $event)"><option>M.</option><option>Mme</option></select></div>
+        <div class="field"><label for="id-nomNaissance">Nom de naissance <span class="req">*</span></label>
+          <input id="id-nomNaissance" autocomplete="family-name" [value]="identite().nomNaissance" (input)="maj('nomNaissance', $event)" [attr.aria-invalid]="!!erreurs().nomNaissance">
+          <div class="error">{{ erreurs().nomNaissance }}</div></div>
+        <div class="field"><label for="id-nomUsage">Nom d'usage</label>
+          <input id="id-nomUsage" [value]="identite().nomUsage" (input)="maj('nomUsage', $event)"><div class="hint">Facultatif</div></div>
+        <div class="field"><label for="id-prenoms">Prénoms <span class="req">*</span></label>
+          <input id="id-prenoms" autocomplete="given-name" [value]="identite().prenoms" (input)="maj('prenoms', $event)" [attr.aria-invalid]="!!erreurs().prenoms">
+          <div class="error">{{ erreurs().prenoms }}</div></div>
+        <div class="field"><label for="id-dateNaissance">Date de naissance <span class="req">*</span></label>
+          <input id="id-dateNaissance" class="mono" placeholder="JJ/MM/AAAA" [value]="identite().dateNaissance" (input)="maj('dateNaissance', $event)" [attr.aria-invalid]="!!erreurs().dateNaissance">
+          <div class="error">{{ erreurs().dateNaissance }}</div></div>
+        <div class="field"><label for="id-communeNaissance">Commune de naissance <span class="req">*</span></label>
+          <input id="id-communeNaissance" [value]="identite().communeNaissance" (input)="maj('communeNaissance', $event)" [attr.aria-invalid]="!!erreurs().communeNaissance">
+          <div class="error">{{ erreurs().communeNaissance }}</div></div>
+        <div class="field"><label for="id-paysNaissance">Pays de naissance <span class="req">*</span></label>
+          <select id="id-paysNaissance" [value]="identite().paysNaissance" (change)="maj('paysNaissance', $event)"><option>France</option><option>Algérie</option><option>Belgique</option><option>Autre</option></select></div>
+        <div class="field"><label for="id-nationalite">Nationalité(s) <span class="req">*</span></label>
+          <select id="id-nationalite" [value]="identite().nationalite" (change)="maj('nationalite', $event)"><option>Française</option><option>Belge</option><option>Autre</option></select>
+          <div class="hint">Plusieurs nationalités possibles</div></div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Adresse postale</legend>
+      <div class="grid">
+        <div class="field full"><label for="id-voie">Numéro et voie <span class="req">*</span></label>
+          <input id="id-voie" autocomplete="address-line1" [value]="identite().voie" (input)="maj('voie', $event)" [attr.aria-invalid]="!!erreurs().voie">
+          <div class="error">{{ erreurs().voie }}</div></div>
+        <div class="field full"><label for="id-complement">Complément d'adresse</label>
+          <input id="id-complement" autocomplete="address-line2" [value]="identite().complement" (input)="maj('complement', $event)"><div class="hint">Facultatif : bâtiment, étage, boîte</div></div>
+        <div class="field"><label for="id-codePostal">Code postal <span class="req">*</span></label>
+          <input id="id-codePostal" class="mono" inputmode="numeric" maxlength="5" autocomplete="postal-code" [value]="identite().codePostal" (input)="maj('codePostal', $event)" [attr.aria-invalid]="!!erreurs().codePostal">
+          <div class="error">{{ erreurs().codePostal }}</div></div>
+        <div class="field"><label for="id-ville">Ville <span class="req">*</span></label>
+          <input id="id-ville" autocomplete="address-level2" [value]="identite().ville" (input)="maj('ville', $event)" [attr.aria-invalid]="!!erreurs().ville">
+          <div class="error">{{ erreurs().ville }}</div></div>
+        <div class="field full"><label for="id-paysAdresse">Pays de l'adresse <span class="req">*</span></label>
+          <select id="id-paysAdresse" [value]="identite().paysAdresse" (change)="maj('paysAdresse', $event)"><option>France</option><option>Belgique</option><option>Autre</option></select></div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Contact</legend>
+      <div class="grid">
+        <div class="field full"><label for="id-email">Adresse e-mail <span class="req">*</span></label>
+          <input id="id-email" type="email" autocomplete="email" [value]="identite().email" (input)="maj('email', $event)" [attr.aria-invalid]="!!erreurs().email">
+          <div class="hint">Votre identifiant vous sera envoyé à cette adresse</div>
+          <div class="error">{{ erreurs().email }}</div></div>
+        <div class="field"><label for="id-mobile">Téléphone mobile <span class="req">*</span></label>
+          <input id="id-mobile" class="mono" type="tel" autocomplete="tel" placeholder="06 00 00 00 00" [value]="identite().mobile" (input)="maj('mobile', $event)" [attr.aria-invalid]="!!erreurs().mobile">
+          <div class="hint">Reçoit le code de signature</div>
+          <div class="error">{{ erreurs().mobile }}</div></div>
+        <div class="field"><label for="id-fixe">Téléphone fixe</label>
+          <input id="id-fixe" class="mono" type="tel" [value]="identite().fixe" (input)="maj('fixe', $event)" [attr.aria-invalid]="!!erreurs().fixe">
+          <div class="hint">Facultatif</div>
+          <div class="error">{{ erreurs().fixe }}</div></div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Pièce d'identité</legend>
+      <div class="grid">
+        <div class="field"><label for="id-typePiece">Type de pièce <span class="req">*</span></label>
+          <select id="id-typePiece" [value]="identite().typePiece" (change)="maj('typePiece', $event)"><option>Carte nationale d'identité</option><option>Passeport</option><option>Titre de séjour</option></select></div>
+        <div class="field"><label for="id-numeroPiece">Numéro de la pièce <span class="req">*</span></label>
+          <input id="id-numeroPiece" class="mono" [value]="identite().numeroPiece" (input)="maj('numeroPiece', $event)" [attr.aria-invalid]="!!erreurs().numeroPiece">
+          <div class="error">{{ erreurs().numeroPiece }}</div></div>
+        <div class="field full"><label for="id-dateExpiration">Date d'expiration <span class="req">*</span></label>
+          <input id="id-dateExpiration" class="mono" placeholder="JJ/MM/AAAA" [value]="identite().dateExpiration" (input)="maj('dateExpiration', $event)" [attr.aria-invalid]="!!erreurs().dateExpiration">
+          <div class="hint">La pièce doit être en cours de validité</div>
+          <div class="error">{{ erreurs().dateExpiration }}</div></div>
+      </div>
+    </fieldset>
+
+    @if (resultat()) {
+      <div class="result ko" role="alert">{{ resultat() }}</div>
+    }
+    <div class="actions">
+      <button type="button" class="pbtn ghost" (click)="retour.emit()">Retour</button>
+      <button type="submit" class="pbtn" [disabled]="enCours()">{{ enCours() ? 'Vérification en cours…' : 'Continuer' }}</button>
+    </div>
+  </form>
+</section>

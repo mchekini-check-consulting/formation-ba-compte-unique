@@ -17,9 +17,15 @@ gatewayConfig: |
         rule: "PathPrefix(`/backend`)"
         service: backend
         middlewares: [backend-strip, cors]
+      bouchons-identite:
+        rule: "PathPrefix(`/bouchons-identite`)"
+        service: bouchons-identite
+        middlewares: [bouchons-identite-strip, cors]
     middlewares:
       backend-strip:
         stripPrefix: {prefixes: ["/backend"]}
+      bouchons-identite-strip:
+        stripPrefix: {prefixes: ["/bouchons-identite"]}
       cors:
         headers:
           accessControlAllowOriginList:
@@ -31,3 +37,5 @@ gatewayConfig: |
     services:
       backend:
         loadBalancer: {servers: [{url: "http://backend:80"}]}
+      bouchons-identite:
+        loadBalancer: {servers: [{url: "http://bouchons-identite:80"}]}
