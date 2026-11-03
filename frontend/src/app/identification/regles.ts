@@ -66,6 +66,48 @@ export function versIso(texte: string): string {
   return `${annee}-${mois}-${jour}`;
 }
 
+const FORMAT_DATE = 'Format attendu : JJ/MM/AAAA';
+
+/** Date du jour à minuit, décalée de « ans » années. */
+function jourJ(aujourdhui: Date, ans = 0): Date {
+  return new Date(aujourdhui.getFullYear() + ans, aujourdhui.getMonth(), aujourdhui.getDate());
+}
+
+/** Un contrôle de format : message d'erreur, ou null si la valeur est correcte. */
+type Controle = (identite: Identite, aujourdhui: Date) => string | null;
+
+// Contrôles de format, lancés seulement sur les champs qui ne sont pas déjà en erreur
+// (champ obligatoire vide).
+const CONTROLES: [ChampIdentite, Controle][] = [
+  ['email', (i) => (EMAIL.test(i.email.trim()) ? null : 'Adresse e-mail mal formée')],
+  ['mobile', (i) => (MOBILE.test(i.mobile.trim()) ? null : 'Numéro mobile mal formé')],
+  ['fixe', (i) => (!i.fixe.trim() || TELEPHONE.test(i.fixe.trim()) ? null : 'Numéro de téléphone mal formé')],
+  [
+    'codePostal',
+    (i) => (i.paysAdresse !== 'France' || /^\d{5}$/.test(i.codePostal.trim()) ? null : 'Code postal à 5 chiffres'),
+  ],
+  [
+    'dateNaissance',
+    (i, aujourdhui) => {
+      const naissance = lireDate(i.dateNaissance);
+      if (!naissance) {
+        return FORMAT_DATE;
+      }
+      return naissance > jourJ(aujourdhui, -18) ? 'Vous devez avoir au moins 18 ans' : null;
+    },
+  ],
+  [
+    'dateExpiration',
+    (i, aujourdhui) => {
+      const expiration = lireDate(i.dateExpiration);
+      if (!expiration) {
+        return FORMAT_DATE;
+      }
+      return expiration <= jourJ(aujourdhui) ? "Date d'expiration dépassée : corrigez la date saisie" : null;
+    },
+  ],
+];
+
 /** Contrôles de CUB-8 ; aujourdhui est passé en paramètre pour les tests. */
 export function validerIdentite(identite: Identite, aujourdhui = new Date()): Erreurs {
   const erreurs: Erreurs = {};
@@ -74,34 +116,10 @@ export function validerIdentite(identite: Identite, aujourdhui = new Date()): Er
       erreurs[champ] = message;
     }
   }
-  if (!erreurs.email && !EMAIL.test(identite.email.trim())) {
-    erreurs.email = 'Adresse e-mail mal formée';
-  }
-  if (!erreurs.mobile && !MOBILE.test(identite.mobile.trim())) {
-    erreurs.mobile = 'Numéro mobile mal formé';
-  }
-  if (identite.fixe.trim() && !TELEPHONE.test(identite.fixe.trim())) {
-    erreurs.fixe = 'Numéro de téléphone mal formé';
-  }
-  if (!erreurs.codePostal && identite.paysAdresse === 'France' && !/^\d{5}$/.test(identite.codePostal.trim())) {
-    erreurs.codePostal = 'Code postal à 5 chiffres';
-  }
-  if (!erreurs.dateNaissance) {
-    const naissance = lireDate(identite.dateNaissance);
-    const majorite = new Date(aujourdhui.getFullYear() - 18, aujourdhui.getMonth(), aujourdhui.getDate());
-    if (!naissance) {
-      erreurs.dateNaissance = 'Format attendu : JJ/MM/AAAA';
-    } else if (naissance > majorite) {
-      erreurs.dateNaissance = 'Vous devez avoir au moins 18 ans';
-    }
-  }
-  if (!erreurs.dateExpiration) {
-    const expiration = lireDate(identite.dateExpiration);
-    const jour = new Date(aujourdhui.getFullYear(), aujourdhui.getMonth(), aujourdhui.getDate());
-    if (!expiration) {
-      erreurs.dateExpiration = 'Format attendu : JJ/MM/AAAA';
-    } else if (expiration <= jour) {
-      erreurs.dateExpiration = "Date d'expiration dépassée : corrigez la date saisie";
+  for (const [champ, controle] of CONTROLES) {
+    const erreur = erreurs[champ] ? null : controle(identite, aujourdhui);
+    if (erreur) {
+      erreurs[champ] = erreur;
     }
   }
   return erreurs;
