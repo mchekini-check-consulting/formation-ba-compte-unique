@@ -66,3 +66,27 @@ applications:
       enabled: true
       path: /
       stripPrefix: false
+  - name: bouchons-identite
+    type: backend
+    image: 205493924920.dkr.ecr.eu-west-3.amazonaws.com/formation-ba-compte-unique/bouchons-identite
+    # Écrit par Kargo (dev automatique ; qualif/preprod/prod : promotion par clic).
+    # Garder une valeur par ligne, sans commentaire en fin de ligne : Kargo
+    # remplace tout jusqu'à la fin de la ligne.
+    tag:
+      dev: ""
+      qualif: ""
+      preprod: ""
+      prod: ""
+    containerPort: 8080
+    replicas: {dev: 1, qualif: 1, preprod: 2, prod: 2}
+    service:
+      port: 80
+    # Bouchons des partenaires d'identification (Stripe Identity, sanctions/PEP).
+    # Pas d'Ingress direct : exposé par le pod "gateway" :
+    #   https://gateway.formation-ba-compte-unique.<env>.check-consulting.net/bouchons-identite/...  (préfixe retiré)
+    # Base PostgreSQL bouchons_identite : créée et sauvegardée automatiquement.
+    database:
+      name: bouchons_identite
+    envList:
+      - key: LOG_LEVEL
+        value: {dev: debug, qualif: info, preprod: info, prod: warn}

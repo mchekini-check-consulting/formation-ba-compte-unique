@@ -1,0 +1,43 @@
+<section class="ident carte">
+  <h2>Ma pièce d'identité</h2>
+  <p class="muted">Carte nationale d'identité, passeport ou titre de séjour, en cours de validité.</p>
+
+  <label class="drop" [class.survol]="survol()" (dragover)="survoler($event, true)" (dragleave)="survoler($event, false)" (drop)="deposer($event)">
+    <strong>Glissez votre fichier ici</strong>ou choisissez-le sur votre appareil
+    <input type="file" class="visually-hidden" accept=".png,.jpg,.jpeg,.bmp,.gif,.pdf" (change)="choisir($event)">
+  </label>
+  <div class="limits">PNG, JPEG, BMP, GIF ou PDF · 2 Mo maximum</div>
+
+  @for (fichier of fichiers(); track $index) {
+    <div class="row">
+      <span>{{ fichier.nom }} · {{ fichier.taille }}</span>
+      @if (fichier.refus) {
+        <span class="badge err">Refusé</span>
+      } @else {
+        <span class="badge ok">Format valide</span>
+      }
+    </div>
+    @if (fichier.refus && $last) {
+      <div class="notice err" role="alert">{{ fichier.refus }}. Vous pouvez envoyer un autre fichier.</div>
+    }
+  }
+
+  @if (message(); as m) {
+    <div class="notice" [class.err]="m.type === 'err'" [class.warn]="m.type === 'warn'" role="alert">{{ m.texte }}</div>
+  }
+
+  <div class="bouchon">
+    <label for="scenario-piece">Prototype : résultat simulé par le bouchon Stripe Identity</label>
+    <select id="scenario-piece" [value]="scenario()" (change)="changerScenario($event)">
+      @for (s of scenarios; track s.code) {
+        <option [value]="s.code">{{ s.libelle }}</option>
+      }
+    </select>
+  </div>
+
+  <div class="actions">
+    <button type="button" class="pbtn ghost" (click)="retour.emit()">Retour</button>
+    <button type="button" class="pbtn" [disabled]="enCours() || !fichierValide()" (click)="envoyer()">{{ enCours() ? 'Vérification en cours…' : 'Envoyer ma pièce' }}</button>
+  </div>
+  <div class="design-note">Le fichier est transmis à Stripe Identity Document Check (délai de 30 secondes, deux relances au maximum).</div>
+</section>

@@ -18,7 +18,7 @@ describe('ItemsPage', () => {
 
   it('affiche les items du backend', async () => {
     const fixture = TestBed.createComponent(ItemsPage);
-    http.expectOne('/api/items').flush([{ id: 1, nom: 'a', description: 'd', creeLe: '' }]);
+    http.expectOne('/api/backend/items').flush([{ id: 1, nom: 'a', description: 'd', creeLe: '' }]);
     await fixture.whenStable();
     const page = fixture.nativeElement as HTMLElement;
     expect(page.querySelector('li')?.textContent).toContain('a');
@@ -27,13 +27,13 @@ describe('ItemsPage', () => {
 
   it('ajoute un item', async () => {
     const fixture = TestBed.createComponent(ItemsPage);
-    http.expectOne('/api/items').flush([]);
+    http.expectOne('/api/backend/items').flush([]);
     await fixture.whenStable();
     const page = fixture.nativeElement as HTMLElement;
     const nom = page.querySelector<HTMLInputElement>('input[name=nom]')!;
     nom.value = 'Premier';
     page.querySelector('form')!.dispatchEvent(new Event('submit'));
-    const requete = http.expectOne({ method: 'POST', url: '/api/items' });
+    const requete = http.expectOne({ method: 'POST', url: '/api/backend/items' });
     expect(requete.request.body).toEqual({ nom: 'Premier', description: '' });
     requete.flush({ id: 2, nom: 'Premier', description: null, creeLe: '' });
     await fixture.whenStable();
@@ -43,12 +43,12 @@ describe('ItemsPage', () => {
 
   it('signale une erreur du backend', async () => {
     const fixture = TestBed.createComponent(ItemsPage);
-    http.expectOne('/api/items').flush('', { status: 503, statusText: 'Unavailable' });
+    http.expectOne('/api/backend/items').flush('', { status: 503, statusText: 'Unavailable' });
     await fixture.whenStable();
     const page = fixture.nativeElement as HTMLElement;
     expect(page.querySelector('[role=alert]')?.textContent).toContain('503');
     page.querySelector('form')!.dispatchEvent(new Event('submit'));
-    http.expectOne({ method: 'POST', url: '/api/items' }).flush('', { status: 400, statusText: 'Bad Request' });
+    http.expectOne({ method: 'POST', url: '/api/backend/items' }).flush('', { status: 400, statusText: 'Bad Request' });
     await fixture.whenStable();
     expect(page.querySelector('[role=alert]')?.textContent).toContain('400');
   });

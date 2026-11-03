@@ -1,5 +1,19 @@
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { Type } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { provideRouter } from '@angular/router';
+import { EtapeIdentite } from '../identification/etape-identite';
+import { EtapePiece } from '../identification/etape-piece';
+import { EtapeQuestions } from '../identification/etape-questions';
+import { EtapeSelfie } from '../identification/etape-selfie';
+import { IDENTITE_EXEMPLE } from '../identification/exemple';
 import { Landing } from './landing';
+
+// Étapes 1 à 4 branchées sur bouchons-identite : leurs écrans sont testés à part, ici on
+// simule seulement leur résultat.
+const ETAPES_IDENTIFICATION: Type<unknown>[] = [EtapeIdentite, EtapePiece, EtapeSelfie, EtapeQuestions];
 
 describe('Landing', () => {
   let fixture: ComponentFixture<Landing>;
@@ -10,10 +24,26 @@ describe('Landing', () => {
     await fixture.whenStable();
   };
   const etapeVisible = () => page.querySelector('.pv.on');
+  const etapeIdentification = () =>
+    ETAPES_IDENTIFICATION.map((type) => fixture.debugElement.query(By.directive(type))).find(Boolean)
+      ?.componentInstance;
+  // Passe l'étape affichée : résultat simulé pour les étapes 1 à 4, clic pour les suivantes.
+  const avancer = async () => {
+    const etape = etapeIdentification();
+    if (etape) {
+      etape.valide.emit(IDENTITE_EXEMPLE);
+      await fixture.whenStable();
+    } else {
+      await cliquer('.pv.on .pbtn:not(.ghost)');
+    }
+  };
 
   beforeEach(async () => {
     vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
-    await TestBed.configureTestingModule({ imports: [Landing] }).compileComponents();
+    await TestBed.configureTestingModule({
+      imports: [Landing],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
+    }).compileComponents();
     fixture = TestBed.createComponent(Landing);
     await fixture.whenStable();
     page = fixture.nativeElement as HTMLElement;
@@ -38,11 +68,37 @@ describe('Landing', () => {
 
   it('avance et recule entre les étapes', async () => {
     await cliquer('.top .btn.p');
-    await cliquer('.pv.on .pbtn:not(.ghost)');
+    await avancer();
     expect(page.querySelector('#pstep')?.textContent).toContain('Étape 2 sur 6');
     expect(etapeVisible()?.textContent).toContain("Ma pièce d'identité");
     await cliquer('.pv.on .pbtn.ghost');
     expect(etapeVisible()?.textContent).toContain('Mon identité');
+    expect(page.querySelector<HTMLInputElement>('#id-nomNaissance')?.value).toBe('Dupont');
+  });
+
+  it('passe par la pièce, le selfie et les questions avant la signature', async () => {
+    await cliquer('.top .btn.p');
+    const titres = [];
+    for (let etape = 1; etape <= 4; etape++) {
+      titres.push(etapeVisible()?.querySelector('h2')?.textContent);
+      await avancer();
+    }
+    expect(titres).toEqual(['Mon identité', "Ma pièce d'identité", 'Vérification de présence', 'Quelques questions']);
+    expect(etapeVisible()?.textContent).toContain('Signer ma convention de compte');
+  });
+
+  it('arrête la demande annulée par un contrôle et ramène au site', async () => {
+    await cliquer('.top .btn.p');
+    await avancer();
+    etapeIdentification().annule.emit("Votre demande d'ouverture en ligne est annulée.");
+    await fixture.whenStable();
+    expect(etapeVisible()?.querySelector('h2')?.textContent).toBe('Demande annulée');
+    expect(etapeVisible()?.textContent).toContain("Votre demande d'ouverture en ligne est annulée.");
+    expect(etapeIdentification()).toBeUndefined();
+    await cliquer('.pv.on .pbtn');
+    expect(page.querySelector('.hero')).not.toBeNull();
+    await cliquer('.top .btn.p');
+    expect(etapeVisible()?.querySelector('h2')?.textContent).toBe('Mon identité');
   });
 
   it("revient à la page en reculant depuis l'étape 1", async () => {
@@ -61,7 +117,7 @@ describe('Landing', () => {
   it('confirme le compte ouvert puis revient à la page', async () => {
     await cliquer('.top .btn.p');
     for (let etape = 1; etape < 6; etape++) {
-      await cliquer('.pv.on .pbtn:not(.ghost)');
+      await avancer();
     }
     expect(etapeVisible()?.textContent).toContain('Votre compte courant est ouvert');
     await cliquer('.pv.on .pbtn');
@@ -79,7 +135,7 @@ describe('Landing', () => {
   it("annonce le lien d'activation et le Livret A à la fin du parcours", async () => {
     await cliquer('.top .btn.p');
     for (let etape = 1; etape < 6; etape++) {
-      await cliquer('.pv.on .pbtn:not(.ghost)');
+      await avancer();
     }
     const fin = etapeVisible()?.textContent ?? '';
     expect(fin).toContain("lien d'activation");
@@ -87,9 +143,35 @@ describe('Landing', () => {
     expect(fin).not.toContain('mot de passe provisoire');
   });
 
+  it('ramène le visiteur à sa position de défilement en revenant au site', async () => {
+    vi.spyOn(window, 'scrollY', 'get').mockReturnValue(1234);
+    await cliquer('#compte .btn.p');
+    await avancer();
+    await cliquer('.pbar a');
+    expect(page.querySelector('.hero')).not.toBeNull();
+    expect(window.scrollTo).toHaveBeenLastCalledWith(0, 1234);
+  });
+
+  it('indique que le visiteur garde la décision', () => {
+    expect(page.querySelector('#optimisation')?.textContent).toContain('Vous gardez la décision');
+    expect(page.querySelector('#optimisation')?.textContent).toContain('Règles validées');
+  });
+
+  it('donne accès aux pages légales depuis le bas de page', () => {
+    const liens = [...page.querySelectorAll<HTMLAnchorElement>('footer a')].map((a) => [
+      a.textContent?.trim(),
+      a.getAttribute('href'),
+    ]);
+    expect(liens).toEqual([
+      ['Mentions légales', '/mentions-legales'],
+      ['Politique de protection des données', '/protection-des-donnees'],
+      ['Accessibilité', '/accessibilite'],
+    ]);
+  });
+
   it("repart de l'étape 1 à chaque ouverture", async () => {
     await cliquer('.top .btn.p');
-    await cliquer('.pv.on .pbtn:not(.ghost)');
+    await avancer();
     await cliquer('.pbar a');
     await cliquer('.top .btn.p');
     expect(page.querySelector('#pstep')?.textContent).toContain('Étape 1 sur 6');

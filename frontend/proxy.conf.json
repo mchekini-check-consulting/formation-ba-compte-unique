@@ -1,6 +1,10 @@
 {
-  "/api": {
+  "/api/bouchons-identite": {
+    "target": "http://localhost:8081",
+    "pathRewrite": { "^/api/bouchons-identite": "" }
+  },
+  "/api/backend": {
     "target": "http://localhost:8080",
-    "pathRewrite": { "^/api": "" }
+    "pathRewrite": { "^/api/backend": "" }
   }
 }

@@ -19,7 +19,7 @@ export interface ItemRequest {
 @Injectable({ providedIn: 'root' })
 export class ItemsService {
   private readonly http = inject(HttpClient);
-  private readonly url = `${apiBase()}/items`;
+  private readonly url = `${apiBase('backend')}/items`;
 
   lister(): Observable<Item[]> {
     return this.http.get<Item[]>(this.url);

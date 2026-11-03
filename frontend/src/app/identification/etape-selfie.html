@@ -1,0 +1,54 @@
+@if (etat() === 'refusee') {
+  <section class="ident carte">
+    <h2>Autorisez la caméra</h2>
+    <p class="muted">Le selfie est nécessaire pour confirmer que vous êtes bien la personne de la pièce. Votre navigateur a bloqué l'accès à la caméra.</p>
+    <div class="notice warn" role="alert">Vérification impossible, réessayez</div>
+    <div class="notice info">Pour l'autoriser, ouvrez le réglage de la caméra de votre navigateur pour ce site, puis revenez ici.</div>
+    <button type="button" class="pbtn bloc" (click)="demarrerCamera()">Réessayer</button>
+    <button type="button" class="pbtn ghost bloc" (click)="revenir()">Revenir à l'accueil de ma demande</button>
+  </section>
+} @else {
+  <section class="ident carte">
+    <h2>Vérification de présence</h2>
+    <p class="muted">Prenez un selfie : placez votre visage dans l'ovale, dans une lumière suffisante.</p>
+    <div class="oval-wrap">
+      @if (etat() === 'camera') {
+        <video #video class="apercu" autoplay playsinline muted aria-label="Aperçu de la caméra"></video>
+      } @else {
+        <svg width="170" height="210" viewBox="0 0 170 210" aria-hidden="true">
+          <ellipse cx="85" cy="105" rx="70" ry="90" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="8 6" />
+          <circle cx="85" cy="95" r="36" fill="#d9dee6" />
+          <path d="M40 180 Q85 128 130 180" fill="#d9dee6" />
+        </svg>
+      }
+    </div>
+    <ol class="steps">
+      <li>Regardez l'écran, visage droit.</li>
+      <li>Tournez doucement la tête vers la gauche, puis vers la droite.</li>
+    </ol>
+    <div class="notice warn">Une photo imprimée ou une vidéo présentée à la caméra ne sont pas acceptées.</div>
+
+    @if (message()) {
+      <div class="notice err" role="alert">{{ message() }}</div>
+    }
+
+    <div class="bouchon">
+      <label for="scenario-selfie">Prototype : résultat simulé par le bouchon Stripe Identity</label>
+      <select id="scenario-selfie" [value]="scenario()" (change)="changerScenario($event)">
+        @for (s of scenarios; track s.code) {
+          <option [value]="s.code">{{ s.libelle }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="pbtn ghost" (click)="revenir()">Retour</button>
+      @if (etat() === 'camera') {
+        <button type="button" class="pbtn" [disabled]="enCours()" (click)="verifier()">{{ enCours() ? 'Vérification en cours…' : 'Vérifier mon selfie' }}</button>
+      } @else {
+        <button type="button" class="pbtn" (click)="demarrerCamera()">Démarrer la caméra</button>
+      }
+    </div>
+    <div class="design-note">Si le score de correspondance est inférieur à 90 %, la demande est annulée.</div>
+  </section>
+}

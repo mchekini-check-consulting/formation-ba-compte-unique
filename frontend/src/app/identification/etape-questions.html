@@ -1,0 +1,72 @@
+<section class="ident carte">
+  <h2>Quelques questions</h2>
+  <p class="muted">Ces réponses sont obligatoires pour ouvrir votre compte.</p>
+
+  @for (q of questions; track q.cle) {
+    <fieldset class="q">
+      <legend class="qt">{{ q.titre }}</legend>
+      <div class="opts">
+        @for (choix of q.choix; track choix) {
+          <label [class.sel]="reponses()[q.cle] === choix">
+            <input type="radio" [name]="q.cle" [value]="choix" [checked]="reponses()[q.cle] === choix" (change)="repondre(q.cle, choix)">{{ choix }}
+          </label>
+        }
+      </div>
+
+      @if (q.cle === 'origineFonds' && reponses().origineFonds === 'Autre') {
+        <div class="sub-field">
+          <label for="origine-autre">Précisez l'origine des fonds</label>
+          <input id="origine-autre" [value]="reponses().origineAutre" (input)="saisirAutre($event)">
+        </div>
+      }
+      @if (q.cle === 'pep' && reponses().pep === 'Oui') {
+        <div class="notice err">Oui : votre demande d'ouverture en ligne est annulée. Pour ouvrir un compte à la banque, contactez un conseiller.</div>
+      }
+      @if (q.cle === 'residenceEtranger' && reponses().residenceEtranger === 'Oui') {
+        @for (ligne of reponses().residences; track $index; let i = $index) {
+          <div class="sub-field">
+            <label [for]="'pays-' + i">Pays de résidence fiscale</label>
+            <input [id]="'pays-' + i" placeholder="Pays" [value]="ligne.pays" (input)="saisirResidence(i, 'pays', $event)" [attr.aria-invalid]="afficherErreurs() && !!erreurs().residences?.[i]?.pays">
+            @if (afficherErreurs() && erreurs().residences?.[i]?.pays; as e) {
+              <div class="msg-err">{{ e }}</div>
+            }
+            <label [for]="'nif-' + i" class="suite">Numéro d'identification fiscale</label>
+            <input [id]="'nif-' + i" placeholder="NIF" [value]="ligne.nif" (input)="saisirResidence(i, 'nif', $event)" [attr.aria-invalid]="afficherErreurs() && !!erreurs().residences?.[i]?.nif">
+            @if (afficherErreurs() && erreurs().residences?.[i]?.nif; as e) {
+              <div class="msg-err">{{ e }}</div>
+            }
+            @if (reponses().residences.length > 1) {
+              <button type="button" class="lien" (click)="retirerResidence(i)">Retirer ce pays</button>
+            }
+          </div>
+        }
+        <div class="sub-field"><button type="button" class="lien" (click)="ajouterResidence()">+ Ajouter un pays</button></div>
+      }
+      @if (erreurQuestion(q.cle); as e) {
+        <div class="msg-err" role="alert">{{ e }}</div>
+      }
+    </fieldset>
+  }
+</section>
+
+<section class="ident carte">
+  <h2>Vos données</h2>
+  <p class="muted">Nous utilisons vos données d'identité pour ouvrir votre compte et respecter nos obligations réglementaires.</p>
+  <div class="consent">
+    <input id="consentement-identite" type="checkbox" [checked]="reponses().consentementIdentite" (change)="consentir('consentementIdentite', $event)">
+    <label for="consentement-identite">J'ai lu et j'accepte le traitement de mes données d'identité (obligatoire).</label>
+  </div>
+  <div class="consent">
+    <input id="consentement-situation" type="checkbox" [checked]="reponses().consentementSituation" (change)="consentir('consentementSituation', $event)">
+    <label for="consentement-situation">J'accepte le traitement de mes données de situation pour des simulations personnalisées (facultatif).</label>
+  </div>
+  <p class="muted petit">Voir la <a href="/protection-des-donnees" target="_blank">politique de protection des données</a>.</p>
+  @if (afficherErreurs() && erreurs().consentementIdentite; as e) {
+    <div class="notice err" role="alert">{{ e }}</div>
+  }
+
+  <div class="actions">
+    <button type="button" class="pbtn ghost" (click)="retour.emit()">Retour</button>
+    <button type="button" class="pbtn" [class.inactif]="!complet()" [attr.aria-disabled]="!complet()" (click)="continuer()">Continuer</button>
+  </div>
+</section>
