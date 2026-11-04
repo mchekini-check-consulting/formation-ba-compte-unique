@@ -97,6 +97,22 @@ class ControleSanctionsServiceTest {
 		}
 	}
 
+	@ParameterizedTest
+	@CsvSource({ "CONFORME, AUCUNE_CORRESPONDANCE", "SANCTIONNE, CORRESPONDANCE_SANCTIONS",
+			"PEP, CORRESPONDANCE_PEP" })
+	void casDeTestRemplaceLaRechercheParNom(CasDeTest cas, ResultatControle attendu) {
+		ControleRequete requete = new ControleRequete("Sanctionné", "Test", LocalDate.of(1980, 1, 1), "FRANCE", cas);
+		assertEquals(attendu, service.controler(requete).resultat());
+	}
+
+	@Test
+	void casDeTestIndisponibleNeRepondPasPuisEchoue() {
+		ControleRequete requete = new ControleRequete("Dupont", "Marie", LocalDate.of(1980, 1, 1), "FRANCE",
+				CasDeTest.INDISPONIBLE);
+		ResponseStatusException erreur = assertThrows(ResponseStatusException.class, () -> service.controler(requete));
+		assertEquals(HttpStatus.SERVICE_UNAVAILABLE, erreur.getStatusCode());
+	}
+
 	@Test
 	void nomEtPrenomsObligatoires() {
 		assertEquals(HttpStatus.BAD_REQUEST, assertThrows(ResponseStatusException.class,

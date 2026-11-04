@@ -1,13 +1,25 @@
+@if (indisponible()) {
+  <section class="ident carte" aria-labelledby="titre-indisponible">
+    <h2 id="titre-indisponible">Vérification impossible</h2>
+    <div class="status"><span>Statut du dossier</span><span class="pill wait">En cours de vérification</span></div>
+    <div class="notice warn" role="alert">Vérification impossible, réessayez plus tard. Rien n'a été créé ni débité.</div>
+    <button type="button" class="pbtn ghost bloc" (click)="indisponible.set(false)">Réessayer plus tard</button>
+  </section>
+} @else {
 <section class="ident idform">
   <h2>Mon identité</h2>
-  <p class="muted">Ces informations permettent à la banque de vous reconnaître. Elles sont contrôlées avant toute suite. Les champs marqués d'un astérisque sont obligatoires.</p>
+  <p class="muted">Ces informations permettent à la banque de vous reconnaître. Les champs marqués d'un astérisque sont obligatoires.</p>
+  <div class="notice info">Données fictives. Au clic sur « Continuer », les contrôles sanctions et personnes politiquement exposées (PEP) sont lancés.</div>
 
   <form novalidate (submit)="continuer($event)">
     <fieldset>
       <legend>Identité</legend>
       <div class="grid">
         <div class="field"><label for="id-civilite">Civilité <span class="req">*</span></label>
-          <select id="id-civilite" [value]="identite().civilite" (change)="maj('civilite', $event)"><option>M.</option><option>Mme</option></select></div>
+          <select id="id-civilite" (change)="maj('civilite', $event)">
+            <option [selected]="identite().civilite === 'M.'">M.</option>
+            <option [selected]="identite().civilite === 'Mme'">Mme</option>
+          </select></div>
         <div class="field"><label for="id-nomNaissance">Nom de naissance <span class="req">*</span></label>
           <input id="id-nomNaissance" autocomplete="family-name" [value]="identite().nomNaissance" (input)="maj('nomNaissance', $event)" [attr.aria-invalid]="!!erreurs().nomNaissance">
           <div class="error">{{ erreurs().nomNaissance }}</div></div>
@@ -22,11 +34,22 @@
         <div class="field"><label for="id-communeNaissance">Commune de naissance <span class="req">*</span></label>
           <input id="id-communeNaissance" [value]="identite().communeNaissance" (input)="maj('communeNaissance', $event)" [attr.aria-invalid]="!!erreurs().communeNaissance">
           <div class="error">{{ erreurs().communeNaissance }}</div></div>
-        <div class="field"><label for="id-paysNaissance">Pays de naissance <span class="req">*</span></label>
-          <select id="id-paysNaissance" [value]="identite().paysNaissance" (change)="maj('paysNaissance', $event)"><option>France</option><option>Algérie</option><option>Belgique</option><option>Autre</option></select></div>
-        <div class="field"><label for="id-nationalite">Nationalité(s) <span class="req">*</span></label>
-          <select id="id-nationalite" [value]="identite().nationalite" (change)="maj('nationalite', $event)"><option>Française</option><option>Belge</option><option>Autre</option></select>
-          <div class="hint">Plusieurs nationalités possibles</div></div>
+        <div class="field full"><label for="id-paysNaissance">Pays de naissance <span class="req">*</span></label>
+          <select id="id-paysNaissance" (change)="maj('paysNaissance', $event)">
+            @for (p of paysNaissance; track p.code) {
+              <option [value]="p.code" [selected]="identite().paysNaissance === p.code">{{ p.libelle }}</option>
+            }
+          </select></div>
+      </div>
+      <div class="field nationalite">
+        <span class="lab" id="lab-nationalite">Nationalité <span class="req">*</span></span>
+        <div class="checks" role="radiogroup" aria-labelledby="lab-nationalite">
+          @for (n of nationalites; track n.code; let premier = $first) {
+            <label><input type="radio" name="nationalite" [id]="premier ? 'id-nationalite' : 'id-nationalite-' + n.code" [value]="n.code" [checked]="identite().nationalite === n.code" (change)="maj('nationalite', $event)"> {{ n.libelle }}</label>
+          }
+        </div>
+        <div class="hint">Une seule catégorie possible</div>
+        <div class="error">{{ erreurs().nationalite }}</div>
       </div>
     </fieldset>
 
@@ -45,7 +68,11 @@
           <input id="id-ville" autocomplete="address-level2" [value]="identite().ville" (input)="maj('ville', $event)" [attr.aria-invalid]="!!erreurs().ville">
           <div class="error">{{ erreurs().ville }}</div></div>
         <div class="field full"><label for="id-paysAdresse">Pays de l'adresse <span class="req">*</span></label>
-          <select id="id-paysAdresse" [value]="identite().paysAdresse" (change)="maj('paysAdresse', $event)"><option>France</option><option>Belgique</option><option>Autre</option></select></div>
+          <select id="id-paysAdresse" (change)="maj('paysAdresse', $event)">
+            @for (p of paysAdresse; track p) {
+              <option [selected]="identite().paysAdresse === p">{{ p }}</option>
+            }
+          </select></div>
       </div>
     </fieldset>
 
@@ -69,17 +96,23 @@
 
     <fieldset>
       <legend>Pièce d'identité</legend>
+      <p class="hint">Saisissez les informations de votre pièce. Le document lui-même sera déposé à l'étape suivante.</p>
       <div class="grid">
-        <div class="field"><label for="id-typePiece">Type de pièce <span class="req">*</span></label>
-          <select id="id-typePiece" [value]="identite().typePiece" (change)="maj('typePiece', $event)"><option>Carte nationale d'identité</option><option>Passeport</option><option>Titre de séjour</option></select></div>
+        <div class="field full"><label for="id-typePiece">Type de pièce <span class="req">*</span></label>
+          <select id="id-typePiece" (change)="maj('typePiece', $event)">
+            @for (t of typesPiece; track t.code) {
+              <option [value]="t.code" [selected]="identite().typePiece === t.code">{{ t.libelle }}</option>
+            }
+          </select>
+          <div class="hint">Le passeport n'est pas accepté.</div></div>
         <div class="field"><label for="id-numeroPiece">Numéro de la pièce <span class="req">*</span></label>
           <input id="id-numeroPiece" class="mono" [value]="identite().numeroPiece" (input)="maj('numeroPiece', $event)" [attr.aria-invalid]="!!erreurs().numeroPiece">
           <div class="error">{{ erreurs().numeroPiece }}</div></div>
-        <div class="field full"><label for="id-dateExpiration">Date d'expiration <span class="req">*</span></label>
+        <div class="field"><label for="id-dateExpiration">Date d'expiration <span class="req">*</span></label>
           <input id="id-dateExpiration" class="mono" placeholder="JJ/MM/AAAA" [value]="identite().dateExpiration" (input)="maj('dateExpiration', $event)" [attr.aria-invalid]="!!erreurs().dateExpiration">
-          <div class="hint">La pièce doit être en cours de validité</div>
           <div class="error">{{ erreurs().dateExpiration }}</div></div>
       </div>
+      <div class="notice info">Une carte nationale d'identité ou un titre de séjour en cours de validité vous rend résidente française.</div>
     </fieldset>
 
     @if (resultat()) {
@@ -91,3 +124,17 @@
     </div>
   </form>
 </section>
+
+<section class="ident carte" aria-labelledby="titre-cas-test">
+  <div class="tag">Environnement de test uniquement</div>
+  <h2 id="titre-cas-test">Choisir un cas de test</h2>
+  <p class="muted">Ces cas pilotent le bouchon US-B7. Ce panneau devra être masqué en production.</p>
+  <span class="badge test">Bouchon US-B7 (CUB-70)</span>
+  <div class="scenario-grid" role="group" aria-label="Cas de test">
+    @for (c of casDeTest; track c.code) {
+      <button type="button" [attr.aria-pressed]="cas() === c.code" (click)="cas.set(c.code)">{{ c.libelle }}</button>
+    }
+  </div>
+  <div class="design-note">Le cas choisi s'applique au prochain envoi du formulaire.</div>
+</section>
+}

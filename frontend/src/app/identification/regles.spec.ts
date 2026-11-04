@@ -32,7 +32,7 @@ describe("Règles de l'étape « M'identifier »", () => {
     const erreurs = validerIdentite(vide, AUJOURDHUI);
     expect(Object.keys(erreurs).sort()).toEqual(
       [
-        'communeNaissance', 'codePostal', 'dateExpiration', 'dateNaissance', 'email', 'mobile',
+        'communeNaissance', 'codePostal', 'dateExpiration', 'dateNaissance', 'email', 'mobile', 'nationalite',
         'nomNaissance', 'numeroPiece', 'prenoms', 'ville', 'voie',
       ].sort(),
     );

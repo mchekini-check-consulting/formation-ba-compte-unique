@@ -1,6 +1,10 @@
 <section class="ident carte">
-  <h2>Ma pièce d'identité</h2>
-  <p class="muted">Carte nationale d'identité, passeport ou titre de séjour, en cours de validité.</p>
+  <h2>Déposez votre pièce</h2>
+  <div class="checklist" aria-label="Résultat des contrôles">
+    <div><span>Contrôle sanctions</span><span class="pill ok">OK</span></div>
+    <div><span>Contrôle personne exposée (PEP)</span><span class="pill ok">OK</span></div>
+  </div>
+  <p class="muted">Déposez la carte nationale d'identité ou le titre de séjour que vous avez saisi.</p>
 
   <label class="drop" [class.survol]="survol()" (dragover)="survoler($event, true)" (dragleave)="survoler($event, false)" (drop)="deposer($event)">
     <strong>Glissez votre fichier ici</strong>ou choisissez-le sur votre appareil
@@ -39,5 +43,5 @@
     <button type="button" class="pbtn ghost" (click)="retour.emit()">Retour</button>
     <button type="button" class="pbtn" [disabled]="enCours() || !fichierValide()" (click)="envoyer()">{{ enCours() ? 'Vérification en cours…' : 'Envoyer ma pièce' }}</button>
   </div>
-  <div class="design-note">Le fichier est transmis à Stripe Identity Document Check (délai de 30 secondes, deux relances au maximum).</div>
+  <div class="design-note">Le fichier est transmis à Stripe Identity Document Check (délai de 30 secondes, deux relances au maximum). Le passeport et le permis de conduire ne sont pas acceptés.</div>
 </section>

@@ -254,15 +254,24 @@
 
         @if (annulation(); as message) {
           <div class="pv on">
-            <h2>Demande annulée</h2>
-            <div class="ident"><div class="notice err" role="alert">{{ message }}</div></div>
+            <h2>Ouverture annulée</h2>
+            <div class="ident">
+              <div class="status"><span>Statut du dossier</span><span class="pill ko">Annulé</span></div>
+              @if (controlesAnnulation(); as controles) {
+                <div class="checklist" aria-label="Résultat des contrôles">
+                  <div><span>Contrôle sanctions</span><span class="pill" [class.ok]="controles.sanctions === 'OK'" [class.ko]="controles.sanctions === 'NOK'">{{ controles.sanctions }}</span></div>
+                  <div><span>Contrôle personne exposée (PEP)</span><span class="pill" [class.ok]="controles.pep === 'OK'" [class.ko]="controles.pep === 'NOK'">{{ controles.pep }}</span></div>
+                </div>
+              }
+              <div class="notice err" role="alert">{{ message }}</div>
+            </div>
             <div class="pnav"><button type="button" class="pbtn" (click)="fermerParcours()">Retour au site</button></div>
           </div>
         } @else {
           @switch (etape()) {
             @case (1) {
               <div class="pv on">
-                <app-etape-identite [initiale]="identite()" (valide)="identiteValidee($event)" (annule)="annuler($event)" (retour)="precedent()" />
+                <app-etape-identite [dossierId]="dossierId" [initiale]="identite()" (valide)="identiteValidee($event)" (annule)="annuler($event.message, $event.controles)" (retour)="precedent()" />
               </div>
             }
             @case (2) {
