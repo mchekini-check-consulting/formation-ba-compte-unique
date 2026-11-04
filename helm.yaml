@@ -34,6 +34,20 @@ applications:
     envList:
       - key: LOG_LEVEL
         value: {dev: debug, qualif: info, preprod: info, prod: warn}
+      # Adresse de base des liens envoyés par e-mail (activation, réinitialisation).
+      - key: LIENS_ADRESSE_BASE
+        value:
+          dev: "https://frontend.formation-ba-compte-unique.dev.check-consulting.net"
+          qualif: "https://frontend.formation-ba-compte-unique.qualif.check-consulting.net"
+          preprod: "https://frontend.formation-ba-compte-unique.preprod.check-consulting.net"
+          prod: "https://frontend.formation-ba-compte-unique.prod.check-consulting.net"
+      # Comptes de test (db/demo) en dev et qualif, jamais en preprod ni en prod.
+      - key: SPRING_FLYWAY_LOCATIONS
+        value:
+          dev: "classpath:db/migration,classpath:db/demo"
+          qualif: "classpath:db/migration,classpath:db/demo"
+          preprod: "classpath:db/migration"
+          prod: "classpath:db/migration"
   - name: gateway
     type: gateway
     # Pas d'image/tag : fourni par la plateforme (petit Traefik autonome),

@@ -1,0 +1,62 @@
+.connexion {
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: #0f1b33;
+}
+
+a {
+  color: #0b2545;
+  font-weight: 700;
+}
+
+h1 {
+  color: #0b2545;
+  margin: 24px 0;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 600;
+}
+
+input {
+  padding: 10px 12px;
+  font-size: 16px;
+  border: 1px solid #5d6887;
+  border-radius: 6px;
+}
+
+button {
+  padding: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  background: #0b2545;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.erreur {
+  margin-top: 16px;
+  color: #b3261e;
+}
+
+.erreur p {
+  margin: 4px 0;
+}

@@ -12,6 +12,11 @@ spring:
     hibernate:
       ddl-auto: validate   # le schéma vient uniquement des migrations Flyway
 
+app:
+  liens:
+    # Adresse de base des liens envoyés par e-mail ; par environnement dans helm.yaml.
+    adresse-base: ${LIENS_ADRESSE_BASE:http://localhost:4200}
+
 logging:
   level:
     root: ${LOG_LEVEL:INFO}
