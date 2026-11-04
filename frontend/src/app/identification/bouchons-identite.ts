@@ -10,12 +10,16 @@ import { apiBase } from '../api';
 export type Suite = 'POURSUIVRE' | 'REPRENDRE' | 'REESSAYER' | 'REESSAYER_PLUS_TARD' | 'ANNULER';
 export type StatutDossier = 'EN_COURS_DE_VERIFICATION' | 'ANNULE';
 
+/** Cas de test du bouchon US-B7 (CUB-70), choisis dans le panneau de test de « Mon identité ». */
+export type CasDeTest = 'CONFORME' | 'SANCTIONNE' | 'PEP' | 'INDISPONIBLE';
+
 /** Dates au format AAAA-MM-JJ, comme les attend le backend. */
 export interface ControleSanctionsRequete {
   nomNaissance: string;
   prenoms: string;
   dateNaissance: string;
   nationalite: string;
+  casDeTest?: CasDeTest;
 }
 
 export interface ControleSanctionsReponse {

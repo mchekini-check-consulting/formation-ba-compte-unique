@@ -8,8 +8,8 @@ export const IDENTITE_EXEMPLE: Identite = {
   prenoms: 'Marie Claire',
   dateNaissance: '14/05/1990',
   communeNaissance: 'Lyon',
-  paysNaissance: 'France',
-  nationalite: 'Française',
+  paysNaissance: 'FRANCE',
+  nationalite: 'FRANCE',
   voie: '12 rue des Lilas',
   complement: '',
   codePostal: '69003',
@@ -18,8 +18,7 @@ export const IDENTITE_EXEMPLE: Identite = {
   email: 'marie.dupont@exemple.fr',
   mobile: '06 00 00 00 00',
   fixe: '',
-  typePiece: "Carte nationale d'identité",
+  typePiece: 'CARTE_NATIONALE_IDENTITE',
   numeroPiece: '2000000000123',
   dateExpiration: '30/06/2031',
 };
-
