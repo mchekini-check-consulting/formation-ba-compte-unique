@@ -70,7 +70,7 @@ describe('Landing', () => {
     await cliquer('.top .btn.p');
     await avancer();
     expect(page.querySelector('#pstep')?.textContent).toContain('Étape 2 sur 6');
-    expect(etapeVisible()?.textContent).toContain("Ma pièce d'identité");
+    expect(etapeVisible()?.textContent).toContain('Déposez votre pièce');
     await cliquer('.pv.on .pbtn.ghost');
     expect(etapeVisible()?.textContent).toContain('Mon identité');
     expect(page.querySelector<HTMLInputElement>('#id-nomNaissance')?.value).toBe('Dupont');
@@ -83,7 +83,7 @@ describe('Landing', () => {
       titres.push(etapeVisible()?.querySelector('h2')?.textContent);
       await avancer();
     }
-    expect(titres).toEqual(['Mon identité', "Ma pièce d'identité", 'Vérification de présence', 'Quelques questions']);
+    expect(titres).toEqual(['Mon identité', 'Déposez votre pièce', 'Vérification de présence', 'Quelques questions']);
     expect(etapeVisible()?.textContent).toContain('Signer ma convention de compte');
   });
 
@@ -92,13 +92,28 @@ describe('Landing', () => {
     await avancer();
     etapeIdentification().annule.emit("Votre demande d'ouverture en ligne est annulée.");
     await fixture.whenStable();
-    expect(etapeVisible()?.querySelector('h2')?.textContent).toBe('Demande annulée');
+    expect(etapeVisible()?.querySelector('h2')?.textContent).toBe('Ouverture annulée');
     expect(etapeVisible()?.textContent).toContain("Votre demande d'ouverture en ligne est annulée.");
     expect(etapeIdentification()).toBeUndefined();
     await cliquer('.pv.on .pbtn');
     expect(page.querySelector('.hero')).not.toBeNull();
     await cliquer('.top .btn.p');
     expect(etapeVisible()?.querySelector('h2')?.textContent).toBe('Mon identité');
+  });
+
+  it('affiche le statut Annulé et le contrôle en échec quand sanctions ou PEP annulent la demande', async () => {
+    await cliquer('.top .btn.p');
+    etapeIdentification().annule.emit({
+      message: "Votre demande d'ouverture en ligne est annulée.",
+      controles: { sanctions: 'NOK', pep: 'OK' },
+    });
+    await fixture.whenStable();
+    expect(etapeVisible()?.querySelector('h2')?.textContent).toBe('Ouverture annulée');
+    expect(etapeVisible()?.querySelector('.status')?.textContent).toContain('Annulé');
+    const pastilles = [...etapeVisible()!.querySelectorAll('.checklist .pill')];
+    expect(pastilles.map((p) => p.textContent)).toEqual(['NOK', 'OK']);
+    expect(pastilles[0].classList).toContain('ko');
+    expect(pastilles[1].classList).toContain('ok');
   });
 
   it("revient à la page en reculant depuis l'étape 1", async () => {

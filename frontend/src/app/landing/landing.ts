@@ -1,5 +1,6 @@
 import { Component, Injector, afterNextRender, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { Controles } from '../identification/dossier';
 import { EtapeIdentite } from '../identification/etape-identite';
 import { EtapePiece } from '../identification/etape-piece';
 import { EtapeQuestions } from '../identification/etape-questions';
@@ -28,6 +29,8 @@ export class Landing {
   protected readonly identite = signal<Identite | null>(null);
   /** Message d'annulation : la demande en ligne ne peut plus continuer. */
   protected readonly annulation = signal<string | null>(null);
+  /** Résultat des contrôles sanctions et PEP, quand ce sont eux qui ont annulé la demande. */
+  protected readonly controlesAnnulation = signal<Controles | null>(null);
   // Position de défilement de la landing au moment d'ouvrir le parcours (CUB-7 : le retour
   // au site ramène le visiteur là où il était).
   private positionDefilement = 0;
@@ -38,6 +41,7 @@ export class Landing {
     this.dossierId = crypto.randomUUID();
     this.identite.set(null);
     this.annulation.set(null);
+    this.controlesAnnulation.set(null);
     this.parcoursOuvert.set(true);
     this.allerA(1);
   }
@@ -55,8 +59,9 @@ export class Landing {
     this.suivant();
   }
 
-  protected annuler(message: string): void {
+  protected annuler(message: string, controles: Controles | null = null): void {
     this.annulation.set(message);
+    this.controlesAnnulation.set(controles);
     window.scrollTo(0, 0);
   }
 

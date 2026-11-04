@@ -8,7 +8,11 @@ Via le gateway : `https://gateway.<dépôt>.<env>.check-consulting.net/bouchons-
 
 ## Contrôle sanctions et PEP (CUB-70)
 
-`POST /sanctions-pep/controles` `{nomNaissance, prenoms, dateNaissance, nationalite}`
+`POST /sanctions-pep/controles` `{nomNaissance, prenoms, dateNaissance, nationalite, casDeTest?}`
+
+`casDeTest` (facultatif) : `CONFORME`, `SANCTIONNE`, `PEP` ou `INDISPONIBLE`, choisi dans
+le panneau de test de l'écran « Mon identité ». S'il est présent, il remplace la
+recherche par nom ci-dessous.
 
 | Prénoms + nom | Résultat |
 |---|---|

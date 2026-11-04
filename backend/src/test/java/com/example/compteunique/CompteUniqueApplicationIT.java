@@ -10,6 +10,12 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
+import com.example.compteunique.dossier.Categories.ResultatControle;
+import com.example.compteunique.dossier.Categories.StatutDossier;
+import com.example.compteunique.dossier.ControlesRequete;
+import com.example.compteunique.dossier.DossierRepository;
+import com.example.compteunique.dossier.DossierService;
+import com.example.compteunique.dossier.ExempleIdentite;
 import com.example.compteunique.item.Item;
 import com.example.compteunique.item.ItemRepository;
 
@@ -25,6 +31,26 @@ class CompteUniqueApplicationIT {
 
 	@Autowired
 	private ItemRepository items;
+
+	@Autowired
+	private DossierService dossierService;
+
+	@Autowired
+	private DossierRepository dossiers;
+
+	// CUB-8 : l'entité Dossier correspond à la migration V3 (ddl-auto: validate) et se relit.
+	@Test
+	void dossierEnregistreEtRelu() {
+		dossierService.renseignerIdentite("it-1", ExempleIdentite.identite());
+		dossierService.enregistrerControles("it-1", new ControlesRequete(ResultatControle.OK, ResultatControle.NOK));
+		assertThat(dossiers.findByReference("it-1")).hasValueSatisfying(dossier -> {
+			assertThat(dossier.getNomNaissance()).isEqualTo("Dupont");
+			assertThat(dossier.getSaisiLe()).isNotNull();
+			assertThat(dossier.getControlePep()).isEqualTo(ResultatControle.NOK);
+			assertThat(dossier.getControleLe()).isNotNull();
+			assertThat(dossier.getStatut()).isEqualTo(StatutDossier.ANNULE);
+		});
+	}
 
 	@Test
 	void contextLoads() {

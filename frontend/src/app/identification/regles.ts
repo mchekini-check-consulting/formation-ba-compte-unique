@@ -5,7 +5,36 @@ export const MESSAGE_ANNULATION =
   "Votre demande d'ouverture en ligne est annulée. Pour ouvrir un compte à la banque, contactez un conseiller.";
 export const MESSAGE_INDISPONIBLE = 'Vérification impossible, réessayez plus tard';
 
-/** Champs de « Mon identité » (CUB-8), tels que saisis. */
+/** Une valeur d'une liste fermée : code enregistré en base, libellé affiché. */
+export interface Choix {
+  code: string;
+  libelle: string;
+}
+
+/** CUB-8 : une seule valeur ; « États-Unis » porte l'indice américain (FATCA). */
+export const PAYS_NAISSANCE: Choix[] = [
+  { code: 'FRANCE', libelle: 'France' },
+  { code: 'UE_HORS_FRANCE', libelle: 'Union européenne hors France' },
+  { code: 'HORS_UE', libelle: 'Hors Union européenne' },
+  { code: 'ETATS_UNIS', libelle: 'États-Unis' },
+];
+
+/** CUB-8 : une seule catégorie de nationalité. */
+export const NATIONALITES: Choix[] = [
+  { code: 'FRANCE', libelle: 'France' },
+  { code: 'UE_HORS_FRANCE', libelle: 'Union européenne hors France' },
+  { code: 'HORS_UE', libelle: 'Hors Union européenne' },
+];
+
+/** CUB-8 : le passeport n'est pas proposé. */
+export const TYPES_PIECE: Choix[] = [
+  { code: 'CARTE_NATIONALE_IDENTITE', libelle: "Carte nationale d'identité" },
+  { code: 'TITRE_SEJOUR', libelle: 'Titre de séjour' },
+];
+
+export const PAYS_ADRESSE = ['France', 'Belgique', 'Autre pays'];
+
+/** Champs de « Mon identité » (CUB-8), tels que saisis ; listes fermées sous forme de code. */
 export interface Identite {
   civilite: string;
   nomNaissance: string;
@@ -36,6 +65,7 @@ const OBLIGATOIRES: Partial<Record<ChampIdentite, string>> = {
   prenoms: 'Au moins un prénom est obligatoire',
   dateNaissance: 'Date de naissance obligatoire',
   communeNaissance: 'Commune de naissance obligatoire',
+  nationalite: 'Choisissez votre nationalité',
   voie: 'Numéro et voie obligatoires',
   codePostal: 'Code postal à 5 chiffres',
   ville: 'Ville obligatoire',

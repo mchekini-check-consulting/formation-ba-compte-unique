@@ -56,6 +56,31 @@
   .badge.ok { background: var(--ok-bg); color: var(--ok); }
   .badge.err { background: var(--err-bg); color: var(--err); }
 
+  // Nationalité : une seule catégorie (boutons radio)
+  .field.nationalite { margin-top: 14px; }
+  .lab { font-size: 13px; font-weight: 600; }
+  .checks { display: grid; gap: 8px; margin-top: 4px; }
+  .checks label { display: flex; gap: 10px; align-items: center; font-size: 14px; font-weight: 400; padding: 11px 12px; cursor: pointer; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+  .checks label:has(input:checked) { border-color: var(--accent); background: var(--note-bg); color: var(--note-fg); }
+  .checks input { accent-color: var(--accent); width: 18px; height: 18px; margin: 0; flex-shrink: 0; }
+
+  // Statut du dossier et résultat des contrôles sanctions / PEP
+  .status { display: flex; justify-content: space-between; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin: 14px 0 4px; font-size: 14px; }
+  .checklist { display: grid; gap: 8px; margin: 12px 0; }
+  .checklist div { display: flex; justify-content: space-between; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 14px; }
+  .pill { font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
+  .pill.wait { background: var(--warn-bg); color: var(--warn); }
+  .pill.ko { background: var(--err-bg); color: var(--err); }
+  .pill.ok { background: var(--ok-bg); color: var(--ok); }
+
+  // Panneau de test (bouchon US-B7)
+  .tag { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .badge.test { background: var(--warn-bg); color: var(--warn); display: inline-block; }
+  .scenario-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .scenario-grid button { font: inherit; font-size: 13px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--fg); padding: 9px 8px; cursor: pointer; }
+  .scenario-grid button[aria-pressed="true"] { border-color: var(--accent); background: var(--note-bg); color: var(--note-fg); }
+  @media (max-width: 400px) { .scenario-grid { grid-template-columns: 1fr; } }
+
   .notice { font-size: 13.5px; border-radius: 12px; padding: 12px 14px; margin: 12px 0; }
   .notice.info { background: var(--note-bg); color: var(--note-fg); }
   .notice.warn { background: var(--warn-bg); color: var(--warn); }
