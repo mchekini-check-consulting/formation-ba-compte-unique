@@ -12,7 +12,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
-// Identifiant de connexion d'un client (table créée par db/migration/V3__connexion.sql)
+// Identifiant de connexion d'un client (table créée par db/migration/V4__connexion.sql)
 @Entity
 @Table(name = "identifiant_connexion")
 public class IdentifiantConnexion {
