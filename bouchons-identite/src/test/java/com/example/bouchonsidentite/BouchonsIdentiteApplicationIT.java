@@ -18,6 +18,9 @@ import com.example.bouchonsidentite.document.StatutVerificationDocument;
 import com.example.bouchonsidentite.document.VerificationDocumentRepository;
 import com.example.bouchonsidentite.document.VerificationDocumentRequete;
 import com.example.bouchonsidentite.document.VerificationDocumentService;
+import com.example.bouchonsidentite.docusign.AppelDocusignRepository;
+import com.example.bouchonsidentite.docusign.DocusignService;
+import com.example.bouchonsidentite.docusign.ResultatDocusign;
 import com.example.bouchonsidentite.selfie.ResultatSelfie;
 import com.example.bouchonsidentite.selfie.VerificationSelfieRepository;
 import com.example.bouchonsidentite.selfie.VerificationSelfieRequete;
@@ -46,8 +49,29 @@ class BouchonsIdentiteApplicationIT {
 	@Autowired
 	private VerificationSelfieRepository verificationsSelfie;
 
+	@Autowired
+	private DocusignService docusign;
+
+	@Autowired
+	private AppelDocusignRepository appelsDocusign;
+
 	@Test
 	void contextLoads() {
+	}
+
+	// CU-89 : chaque appel au bouchon Docusign est tracé (date, code reçu, résultat).
+	@Test
+	void appelsDocusignTraces() {
+		var enveloppe = docusign.envoyerEnveloppe("dossier-it");
+		var reponse = docusign.saisirCode(enveloppe.enveloppeId(), "000000");
+
+		assertThat(reponse.resultat()).isEqualTo(ResultatDocusign.CODE_FAUX);
+		assertThat(appelsDocusign.findAll()).anySatisfy(appel -> {
+			assertThat(appel.getEnveloppeId()).isEqualTo(enveloppe.enveloppeId());
+			assertThat(appel.getCodeRecu()).isEqualTo("000000");
+			assertThat(appel.getResultat()).isEqualTo(ResultatDocusign.CODE_FAUX);
+			assertThat(appel.getAppeleLe()).isNotNull();
+		});
 	}
 
 	@Test

@@ -56,6 +56,20 @@ export interface VerificationSelfieReponse {
   message: string | null;
 }
 
+/** CU-89 : réponse du bouchon Docusign (codes de test 111111, 000000, 999999). */
+export type ResultatDocusign =
+  | 'ENVELOPPE_ENVOYEE'
+  | 'SIGNATURE_VALIDE'
+  | 'CODE_FAUX'
+  | 'CODE_EXPIRE'
+  | 'ANNULATION_DEMANDEE';
+
+export interface ReponseDocusign {
+  enveloppeId: string;
+  resultat: ResultatDocusign;
+  message: string;
+}
+
 /** CUB-8 : sans réponse des listes sanctions/PEP sous 5 secondes, la vérification est impossible. */
 export const DELAI_SANCTIONS_MS = 5000;
 
@@ -79,6 +93,25 @@ export class BouchonsIdentiteService {
     return this.http.post<VerificationDocumentReponse>(
       `${this.base}/stripe-identity/verifications-document`,
       { dossierId, recto: piece, verso: piece, saisie },
+    );
+  }
+
+  /** CU-89 : enveloppe de signature créée et code SMS « envoyé » (rien n'est réellement envoyé). */
+  envoyerEnveloppe(dossierId: string): Observable<ReponseDocusign> {
+    return this.http.post<ReponseDocusign>(`${this.base}/docusign/enveloppes`, { dossierId });
+  }
+
+  saisirCode(enveloppeId: string, code: string): Observable<ReponseDocusign> {
+    return this.http.post<ReponseDocusign>(
+      `${this.base}/docusign/enveloppes/${encodeURIComponent(enveloppeId)}/code`,
+      { code },
+    );
+  }
+
+  annulerSignature(enveloppeId: string): Observable<ReponseDocusign> {
+    return this.http.post<ReponseDocusign>(
+      `${this.base}/docusign/enveloppes/${encodeURIComponent(enveloppeId)}/annulation`,
+      {},
     );
   }
 

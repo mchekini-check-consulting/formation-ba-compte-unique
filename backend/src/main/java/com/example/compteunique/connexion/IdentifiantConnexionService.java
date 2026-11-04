@@ -1,6 +1,7 @@
 package com.example.compteunique.connexion;
 
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
@@ -16,6 +17,9 @@ import com.example.compteunique.logging.Loggable;
 @Loggable
 public class IdentifiantConnexionService {
 
+	/** CU-13 : un identifiant déjà en base est régénéré, jusqu'à 5 tentatives. */
+	static final int TENTATIVES_MAX = 5;
+
 	private final IdentifiantConnexionRepository identifiants;
 	private final PasswordEncoder hacheur;
 
@@ -24,17 +28,26 @@ public class IdentifiantConnexionService {
 		this.hacheur = hacheur;
 	}
 
+	/** Identifiant de 8 chiffres, EN_ATTENTE_ACTIVATION, sans mot de passe. */
 	public IdentifiantConnexion creer() {
-		String identifiant = SecretsAleatoires.nouvelIdentifiant();
-		while (identifiants.existsByIdentifiant(identifiant)) {
-			identifiant = SecretsAleatoires.nouvelIdentifiant();
+		for (int tentative = 0; tentative < TENTATIVES_MAX; tentative++) {
+			String identifiant = SecretsAleatoires.nouvelIdentifiant();
+			if (!identifiants.existsByIdentifiant(identifiant)) {
+				return identifiants.save(new IdentifiantConnexion(identifiant));
+			}
 		}
-		return identifiants.save(new IdentifiantConnexion(identifiant));
+		throw new IdentifiantIndisponibleException();
 	}
 
 	@Transactional
 	public void definirMotDePasse(Long identifiantConnexionId, String motDePasse) {
-		List<String> regles = PolitiqueMotDePasse.reglesNonRespectees(motDePasse);
+		definirMotDePasse(identifiantConnexionId, motDePasse, List.of());
+	}
+
+	/** @param interdits adresse e-mail et noms de la cliente (CU-14) */
+	@Transactional
+	public void definirMotDePasse(Long identifiantConnexionId, String motDePasse, Collection<String> interdits) {
+		List<String> regles = PolitiqueMotDePasse.reglesNonRespectees(motDePasse, interdits);
 		if (!regles.isEmpty()) {
 			throw new MotDePasseNonConformeException(regles);
 		}

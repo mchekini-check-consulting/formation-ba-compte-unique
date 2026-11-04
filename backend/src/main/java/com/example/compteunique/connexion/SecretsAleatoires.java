@@ -12,9 +12,8 @@ final class SecretsAleatoires {
 
 	private static final SecureRandom ALEATOIRE = new SecureRandom();
 	private static final int OCTETS_JETON = 32;
-	private static final int LONGUEUR_IDENTIFIANT = 12;
-	// Sans 0, O, 1, I ni L, qui se confondent à la lecture.
-	private static final String ALPHABET_IDENTIFIANT = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+	/** CU-13 (US-08) : identifiant de connexion = nombre de 8 chiffres. */
+	private static final int IDENTIFIANTS_POSSIBLES = 100_000_000;
 
 	private SecretsAleatoires() {
 	}
@@ -26,11 +25,7 @@ final class SecretsAleatoires {
 	}
 
 	static String nouvelIdentifiant() {
-		StringBuilder identifiant = new StringBuilder(LONGUEUR_IDENTIFIANT);
-		for (int i = 0; i < LONGUEUR_IDENTIFIANT; i++) {
-			identifiant.append(ALPHABET_IDENTIFIANT.charAt(ALEATOIRE.nextInt(ALPHABET_IDENTIFIANT.length())));
-		}
-		return identifiant.toString();
+		return String.format("%08d", ALEATOIRE.nextInt(IDENTIFIANTS_POSSIBLES));
 	}
 
 	static String empreinte(String jeton) {

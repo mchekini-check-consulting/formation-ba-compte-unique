@@ -2,6 +2,7 @@ package com.example.compteunique.connexion;
 
 import java.time.Duration;
 import java.time.OffsetDateTime;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -44,6 +45,15 @@ public class JetonService {
 				.orElseThrow(JetonInvalideException::new);
 		trouve.marquerUtilise(maintenant);
 		return trouve.getIdentifiantConnexionId();
+	}
+
+	/** Jeton tel qu'enregistré, même expiré ou déjà utilisé, sans le consommer (CU-14). */
+	@Transactional(readOnly = true)
+	public Optional<Jeton> trouver(String jeton, TypeJeton type) {
+		if (jeton == null || jeton.isBlank()) {
+			return Optional.empty();
+		}
+		return jetons.findByJetonHacheAndType(SecretsAleatoires.empreinte(jeton), type);
 	}
 
 	public String lien(TypeJeton type, String jeton) {

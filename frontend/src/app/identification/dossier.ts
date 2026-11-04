@@ -10,6 +10,14 @@ import { Identite, versIso } from './regles';
 
 export type ResultatControle = 'OK' | 'NOK';
 
+export type StatutDossier =
+  | 'EN_COURS_DE_VERIFICATION'
+  | 'ACCEPTE'
+  | 'ANNULE'
+  | 'CONVENTION_SIGNEE'
+  | 'CREATION_A_RELANCER'
+  | 'COMPTE_OUVERT';
+
 /** Résultat des contrôles sanctions et PEP, affiché à la cliente et enregistré en base. */
 export interface Controles {
   sanctions: ResultatControle;
@@ -18,7 +26,7 @@ export interface Controles {
 
 export interface DossierReponse {
   reference: string;
-  statut: 'EN_COURS_DE_VERIFICATION' | 'ACCEPTE' | 'ANNULE';
+  statut: StatutDossier;
   indiceAmericain: boolean;
   residenceFrancaise: boolean;
   controleSanctions: ResultatControle | null;

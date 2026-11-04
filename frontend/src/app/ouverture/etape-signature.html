@@ -1,0 +1,65 @@
+<section class="ident carte">
+  <h2>Signer ma convention de compte</h2>
+  <p class="muted">Lisez votre convention, puis signez-la avec le code reçu par SMS.</p>
+
+  @if (signature(); as s) {
+    <div class="convention" tabindex="0" aria-label="Convention de compte courant">
+      <pre>{{ s.convention }}</pre>
+    </div>
+    <p class="muted petit">Empreinte du document : <span class="mono">{{ s.empreinteDocument.slice(0, 16) }}…</span></p>
+
+    @switch (s.etat) {
+      @case ('A_SIGNER') {
+        <div class="actions">
+          <button type="button" class="pbtn ghost" (click)="retour.emit()">Retour</button>
+          <button type="button" class="pbtn" [disabled]="enCours()" (click)="recevoirCode()">Recevoir mon code par SMS</button>
+        </div>
+      }
+      @case ('EXPIREE') {
+        @if (message()) {
+          <div class="notice warn" role="alert">{{ message() }}</div>
+        }
+        <div class="actions">
+          <button type="button" class="pbtn ghost" [disabled]="enCours()" (click)="demanderAnnulation()">Annuler la signature</button>
+          <button type="button" class="pbtn" [disabled]="enCours() || !s.nouveauCodePossible" (click)="recevoirCode()">Recevoir un nouveau code</button>
+        </div>
+      }
+      @default {
+        <div class="field">
+          <label for="code-signature">Code de signature reçu par SMS *</label>
+          <input id="code-signature" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6 chiffres" [value]="code()" (input)="saisirCode($event)">
+          <div class="hint">Valable 5 minutes. Trois erreurs annulent l'opération de signature.</div>
+        </div>
+        @if (message()) {
+          <div class="notice err" role="alert">{{ message() }}</div>
+        }
+        <div class="bouchon">
+          <span class="lab">Prototype : codes du bouchon Docusign</span>
+          <ul>
+            @for (c of codesDeTest; track c.code) {
+              <li><span class="mono">{{ c.code }}</span> : {{ c.libelle }}</li>
+            }
+          </ul>
+        </div>
+        <div class="actions">
+          <button type="button" class="pbtn ghost" [disabled]="enCours()" (click)="demanderAnnulation()">Annuler la signature</button>
+          <button type="button" class="pbtn" [disabled]="enCours()" (click)="signer()">{{ enCours() ? 'Signature en cours…' : 'Signer' }}</button>
+        </div>
+      }
+    }
+
+    @if (confirmationAnnulation()) {
+      <div class="notice warn" role="alertdialog" aria-label="Confirmer l'annulation">
+        <p>Annuler la signature annule aussi votre demande d'ouverture en ligne. Confirmez-vous ?</p>
+        <div class="actions">
+          <button type="button" class="pbtn ghost" (click)="garderLaSignature()">Non, continuer la signature</button>
+          <button type="button" class="pbtn" [disabled]="enCours()" (click)="confirmerAnnulation()">Oui, annuler</button>
+        </div>
+      </div>
+    }
+  } @else if (message()) {
+    <div class="notice err" role="alert">{{ message() }}</div>
+  } @else {
+    <p class="muted">Chargement de votre convention…</p>
+  }
+</section>

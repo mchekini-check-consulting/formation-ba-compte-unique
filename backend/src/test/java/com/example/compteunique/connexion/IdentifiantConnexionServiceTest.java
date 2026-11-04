@@ -29,7 +29,7 @@ class IdentifiantConnexionServiceTest {
 	void creerGenereUnIdentifiantEnAttenteSansMotDePasse() {
 		when(identifiants.save(any(IdentifiantConnexion.class))).thenAnswer(invocation -> invocation.getArgument(0));
 		IdentifiantConnexion cree = service.creer();
-		assertThat(cree.getIdentifiant()).matches("[A-Z2-9]{12}");
+		assertThat(cree.getIdentifiant()).matches("\\d{8}");
 		assertThat(cree.getStatut()).isEqualTo(StatutIdentifiant.EN_ATTENTE_ACTIVATION);
 		assertThat(cree.getMotDePasseHache()).isNull();
 	}
@@ -40,6 +40,24 @@ class IdentifiantConnexionServiceTest {
 		when(identifiants.save(any(IdentifiantConnexion.class))).thenAnswer(invocation -> invocation.getArgument(0));
 		service.creer();
 		verify(identifiants, times(2)).existsByIdentifiant(anyString());
+	}
+
+	// CU-13 : au-delà de 5 identifiants déjà en base, la création échoue.
+	@Test
+	void creerEchoueApres5IdentifiantsDejaPris() {
+		when(identifiants.existsByIdentifiant(anyString())).thenReturn(true);
+		assertThrows(IdentifiantIndisponibleException.class, service::creer);
+		verify(identifiants, times(IdentifiantConnexionService.TENTATIVES_MAX)).existsByIdentifiant(anyString());
+		verify(identifiants, never()).save(any());
+	}
+
+	// CU-14 : le mot de passe ne doit pas contenir l'e-mail ni le nom de la cliente.
+	@Test
+	void definirMotDePasseRefuseLeNomDeLaCliente() {
+		MotDePasseNonConformeException refus = assertThrows(MotDePasseNonConformeException.class,
+				() -> service.definirMotDePasse(1L, "Dupont-2026!x", PolitiqueMotDePasse.interditsDe("a@b.fr", "Dupont")));
+		assertThat(refus.getRegles()).containsExactly(PolitiqueMotDePasse.CONTIENT_EMAIL_OU_NOM);
+		verify(identifiants, never()).findById(any());
 	}
 
 	@Test
@@ -58,7 +76,7 @@ class IdentifiantConnexionServiceTest {
 		MotDePasseNonConformeException refus = assertThrows(MotDePasseNonConformeException.class,
 				() -> service.definirMotDePasse(1L, "court"));
 		assertThat(refus.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-		assertThat(refus.getRegles()).contains("Au moins 12 caractères");
+		assertThat(refus.getRegles()).contains(PolitiqueMotDePasse.TROP_COURT);
 		verify(identifiants, never()).findById(any());
 	}
 

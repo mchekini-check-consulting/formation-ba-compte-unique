@@ -51,7 +51,7 @@ describe('ConnexionPage', () => {
     expect(page.querySelector<HTMLInputElement>('input[name=motDePasse]')!.value).toBe('');
   });
 
-  it("ajoute l'invitation à utiliser le lien reçu par e-mail", async () => {
+  it("ajoute l'invitation à utiliser le lien reçu par SMS", async () => {
     const fixture = TestBed.createComponent(ConnexionPage);
     await fixture.whenStable();
     const page = fixture.nativeElement as HTMLElement;

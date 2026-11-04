@@ -63,7 +63,7 @@ class ConnexionControllerTest {
 	void unCompteEnAttenteRecoitLeMemeMessageAvecInvitation() {
 		ResponseEntity<RefusConnexion> reponse = controller.refus(new ConnexionRefuseeException(true));
 		assertEquals("Identifiant ou mot de passe incorrect", reponse.getBody().message());
-		assertThat(reponse.getBody().invitation()).contains("lien", "e-mail");
+		assertThat(reponse.getBody().invitation()).contains("lien", "SMS");
 	}
 
 }
