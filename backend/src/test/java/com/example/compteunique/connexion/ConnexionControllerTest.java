@@ -63,7 +63,9 @@ class ConnexionControllerTest {
 	void unCompteEnAttenteRecoitLeMemeMessageAvecInvitation() {
 		ResponseEntity<RefusConnexion> reponse = controller.refus(new ConnexionRefuseeException(true));
 		assertEquals("Identifiant ou mot de passe incorrect", reponse.getBody().message());
-		assertThat(reponse.getBody().invitation()).contains("lien", "SMS");
+		// Texte exact du ticket CU-15.
+		assertEquals("Votre espace n’est pas encore activé. Utilisez le lien d’activation reçu par SMS.",
+				reponse.getBody().invitation());
 	}
 
 }

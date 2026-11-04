@@ -19,7 +19,7 @@ public class ConnexionController {
 
 	static final String COOKIE_SESSION = "SESSION_CLIENT";
 	static final String MESSAGE_REFUS = "Identifiant ou mot de passe incorrect";
-	static final String INVITATION_ACTIVATION = "Utilisez le lien d'activation reçu par SMS pour définir votre mot de passe.";
+	static final String INVITATION_ACTIVATION = "Votre espace n’est pas encore activé. Utilisez le lien d’activation reçu par SMS.";
 
 	private final ConnexionService connexion;
 
