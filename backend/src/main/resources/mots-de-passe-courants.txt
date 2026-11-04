@@ -1,0 +1,31 @@
+# CU-14 (US-09) : mots de passe courants refusés, sans tenir compte des majuscules ni des accents.
+# Liste provisoire : à remplacer par la liste fournie par le RSSI (un mot de passe par ligne).
+Motdepasse123!
+Motdepasse1234!
+MotDePasse2024!
+MotDePasse2025!
+MotDePasse2026!
+Password1234!
+Password123456!
+P@ssword12345
+P@ssw0rd12345
+Azertyuiop123!
+Azertyuiop1!
+Azerty123456!
+Qwertyuiop123!
+Qwerty123456!
+Bonjour12345!
+Soleil123456!
+Motdepasse!2026
+Abcdef123456!
+Welcome12345!
+Bienvenue2026!
+Bienvenue123!
+Changeme12345!
+Admin1234567!
+Jetaime12345!
+Football12345!
+Marseille2026!
+Paris2026Paris!
+1234567890Aa!
+Azerty!123456

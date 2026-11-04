@@ -57,6 +57,21 @@ Enregistré : résultat, score, statut du dossier, date.
 Chaque réponse indique aussi `suite` (`POURSUIVRE`, `REPRENDRE`, `REESSAYER`,
 `REESSAYER_PLUS_TARD`, `ANNULER`), `statutDossier` et le `message` à afficher.
 
+## Signature Docusign (CU-89)
+
+Simule l'enveloppe de signature, l'envoi du code SMS et le résultat, sans aucun appel à
+Docusign ni envoi de SMS.
+
+| Appel | Réponse |
+|---|---|
+| `POST /docusign/enveloppes` `{dossierId}` | `ENVELOPPE_ENVOYEE` et un `enveloppeId` (le code SMS est « envoyé ») |
+| `POST /docusign/enveloppes/{enveloppeId}/code` `{code: "111111"}` | `SIGNATURE_VALIDE` |
+| `POST /docusign/enveloppes/{enveloppeId}/code` `{code: "000000"}` (et tout autre code à 6 chiffres) | `CODE_FAUX` |
+| `POST /docusign/enveloppes/{enveloppeId}/code` `{code: "999999"}` | `CODE_EXPIRE` |
+| `POST /docusign/enveloppes/{enveloppeId}/annulation` | `ANNULATION_DEMANDEE` |
+
+Enregistré : chaque appel (date, dossier, enveloppe, code reçu, résultat).
+
 ## En local
 
 - Base : `docker compose up -d` (PostgreSQL sur le port **5433**, base `bouchons_identite`)

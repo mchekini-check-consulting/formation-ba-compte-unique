@@ -1,7 +1,9 @@
 package com.example.compteunique.dossier;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.UUID;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -23,6 +25,10 @@ import com.example.compteunique.dossier.Categories.TypePiece;
 @Table(name = "dossier")
 @SuppressWarnings("PMD.TooManyFields") // une colonne par champ de l'écran « Mon identité »
 public class Dossier {
+
+	/** CU-13 : premier essai de création + 3 relances automatiques. */
+	public static final int CREATION_ESSAIS_MAX = 4;
+	public static final Duration DELAI_RELANCE = Duration.ofMinutes(1);
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -115,6 +121,16 @@ public class Dossier {
 	@Column(nullable = false, length = 30)
 	private StatutDossier statut;
 
+	/** CU-13 : profil technique, attribué à la signature, jamais montré à la cliente. */
+	@Column(name = "customer_id", unique = true)
+	private UUID customerId;
+
+	@Column(name = "creation_tentatives", nullable = false)
+	private int creationTentatives;
+
+	@Column(name = "creation_prochaine_le")
+	private OffsetDateTime creationProchaineLe;
+
 	protected Dossier() {
 	}
 
@@ -165,6 +181,71 @@ public class Dossier {
 		controleLe = maintenant;
 		statut = sanctions == ResultatControle.OK && pep == ResultatControle.OK
 				? StatutDossier.EN_COURS_DE_VERIFICATION : StatutDossier.ANNULE;
+	}
+
+	/** CU-12 : convention prête à signer = identité enregistrée et contrôles sanctions et PEP OK. */
+	public boolean estPretASigner() {
+		return statut == StatutDossier.EN_COURS_DE_VERIFICATION && controleSanctions == ResultatControle.OK
+				&& controlePep == ResultatControle.OK;
+	}
+
+	/** CU-12 : la signature fait passer le dossier à « Convention signée » ; le customer_id est attribué. */
+	public void conventionSignee(OffsetDateTime maintenant) {
+		statut = StatutDossier.CONVENTION_SIGNEE;
+		if (customerId == null) {
+			customerId = UUID.randomUUID();
+		}
+		creationTentatives = 0;
+		// La création est lancée tout de suite après la signature ; filet de sécurité si elle
+		// n'a pas pu l'être (arrêt du service) : les relances automatiques la reprendront.
+		creationProchaineLe = maintenant.plus(DELAI_RELANCE);
+	}
+
+	public void annuler() {
+		statut = StatutDossier.ANNULE;
+		creationProchaineLe = null;
+	}
+
+	/** CU-13 : compte et identifiant de connexion créés. */
+	public void compteOuvert() {
+		statut = StatutDossier.COMPTE_OUVERT;
+		creationProchaineLe = null;
+	}
+
+	/**
+	 * CU-13 : création en échec, relancée jusqu'à 3 fois à 1 minute d'intervalle, puis « Création à
+	 * relancer ». definitif : échec qui ne se corrigera pas en relançant (identifiants épuisés).
+	 */
+	public void creationEchouee(OffsetDateTime maintenant, boolean definitif) {
+		if (statut != StatutDossier.CONVENTION_SIGNEE) {
+			return;
+		}
+		creationTentatives++;
+		if (definitif || creationTentatives >= CREATION_ESSAIS_MAX) {
+			statut = StatutDossier.CREATION_A_RELANCER;
+			creationProchaineLe = null;
+		} else {
+			creationProchaineLe = maintenant.plus(DELAI_RELANCE);
+		}
+	}
+
+	/** CU-13 : relance manuelle d'un dossier « Création à relancer », avec le même customer_id. */
+	public void relancerCreation(OffsetDateTime maintenant) {
+		statut = StatutDossier.CONVENTION_SIGNEE;
+		creationTentatives = 0;
+		creationProchaineLe = maintenant.plus(DELAI_RELANCE);
+	}
+
+	public UUID getCustomerId() {
+		return customerId;
+	}
+
+	public int getCreationTentatives() {
+		return creationTentatives;
+	}
+
+	public OffsetDateTime getCreationProchaineLe() {
+		return creationProchaineLe;
 	}
 
 	public Long getId() {

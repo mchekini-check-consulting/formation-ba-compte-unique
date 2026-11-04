@@ -1,5 +1,5 @@
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Type } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
@@ -9,11 +9,21 @@ import { EtapePiece } from '../identification/etape-piece';
 import { EtapeQuestions } from '../identification/etape-questions';
 import { EtapeSelfie } from '../identification/etape-selfie';
 import { IDENTITE_EXEMPLE } from '../identification/exemple';
+import { EtapeCompteOuvert } from '../ouverture/etape-compte-ouvert';
+import { EtapeSignature } from '../ouverture/etape-signature';
+import { CLE_DOSSIER_EN_SIGNATURE } from '../ouverture/ouverture';
 import { Landing } from './landing';
 
-// Étapes 1 à 4 branchées sur bouchons-identite : leurs écrans sont testés à part, ici on
-// simule seulement leur résultat.
-const ETAPES_IDENTIFICATION: Type<unknown>[] = [EtapeIdentite, EtapePiece, EtapeSelfie, EtapeQuestions];
+// Étapes 1 à 6 branchées sur les backends : leurs écrans sont testés à part, ici on simule
+// seulement leur résultat.
+const ETAPES_IDENTIFICATION: Type<unknown>[] = [
+  EtapeIdentite,
+  EtapePiece,
+  EtapeSelfie,
+  EtapeQuestions,
+  EtapeSignature,
+  EtapeCompteOuvert,
+];
 
 describe('Landing', () => {
   let fixture: ComponentFixture<Landing>;
@@ -27,7 +37,7 @@ describe('Landing', () => {
   const etapeIdentification = () =>
     ETAPES_IDENTIFICATION.map((type) => fixture.debugElement.query(By.directive(type))).find(Boolean)
       ?.componentInstance;
-  // Passe l'étape affichée : résultat simulé pour les étapes 1 à 4, clic pour les suivantes.
+  // Passe l'étape affichée : résultat simulé.
   const avancer = async () => {
     const etape = etapeIdentification();
     if (etape) {
@@ -40,6 +50,7 @@ describe('Landing', () => {
 
   beforeEach(async () => {
     vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+    localStorage.clear();
     await TestBed.configureTestingModule({
       imports: [Landing],
       providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
@@ -134,8 +145,8 @@ describe('Landing', () => {
     for (let etape = 1; etape < 6; etape++) {
       await avancer();
     }
-    expect(etapeVisible()?.textContent).toContain('Votre compte courant est ouvert');
-    await cliquer('.pv.on .pbtn');
+    expect(etapeVisible()?.textContent).toContain('Votre convention est signée');
+    await avancer();
     expect(page.querySelector('.hero')).not.toBeNull();
   });
 
@@ -182,6 +193,33 @@ describe('Landing', () => {
       ['Politique de protection des données', '/protection-des-donnees'],
       ['Accessibilité', '/accessibilite'],
     ]);
+  });
+
+  it("reprend la signature au même endroit après une fermeture de l'espace (CU-12)", async () => {
+    localStorage.setItem(CLE_DOSSIER_EN_SIGNATURE, 'd-repris');
+    await cliquer('.top .btn.p');
+    TestBed.inject(HttpTestingController)
+      .expectOne('/api/backend/dossiers/d-repris/signature')
+      .flush({ etat: 'ENVOYEE', enveloppeId: 'e', codesFaux: 1, essaisRestants: 2, convention: '', empreinteDocument: '' });
+    await fixture.whenStable();
+    expect(page.querySelector('#pstep')?.textContent).toContain('Étape 5 sur 6');
+  });
+
+  it('repart de zéro si la signature gardée est terminée ou introuvable', async () => {
+    localStorage.setItem(CLE_DOSSIER_EN_SIGNATURE, 'd-fini');
+    await cliquer('.top .btn.p');
+    TestBed.inject(HttpTestingController).expectOne('/api/backend/dossiers/d-fini/signature').flush({ etat: 'SIGNEE' });
+    await fixture.whenStable();
+    expect(page.querySelector('#pstep')?.textContent).toContain('Étape 1 sur 6');
+    expect(localStorage.getItem(CLE_DOSSIER_EN_SIGNATURE)).toBeNull();
+    await cliquer('.pbar a');
+    localStorage.setItem(CLE_DOSSIER_EN_SIGNATURE, 'd-inconnu');
+    await cliquer('.top .btn.p');
+    TestBed.inject(HttpTestingController)
+      .expectOne('/api/backend/dossiers/d-inconnu/signature')
+      .flush('', { status: 404, statusText: 'Not Found' });
+    await fixture.whenStable();
+    expect(page.querySelector('#pstep')?.textContent).toContain('Étape 1 sur 6');
   });
 
   it("repart de l'étape 1 à chaque ouverture", async () => {

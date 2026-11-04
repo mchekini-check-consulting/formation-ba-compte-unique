@@ -110,6 +110,12 @@
   // Choix du résultat simulé (prototype)
   .bouchon { margin-top: 16px; padding: 12px; border: 1px dashed var(--line); border-radius: 12px; font-size: 12.5px; color: var(--muted); }
   .bouchon label { display: block; margin-bottom: 6px; font-weight: 600; }
+  .bouchon ul { margin: 6px 0 0; padding-left: 18px; }
+
+  // Signature de la convention (CU-12) et compte ouvert (CU-13)
+  .convention { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--bg); margin-top: 12px; }
+  .convention pre { white-space: pre-wrap; overflow-wrap: anywhere; font-family: inherit; font-size: 13.5px; line-height: 1.55; margin: 0; }
+  .envoi { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
 
   .design-note { font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--line); margin-top: 14px; padding-top: 10px; }
 

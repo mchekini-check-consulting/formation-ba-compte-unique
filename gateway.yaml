@@ -32,6 +32,7 @@ gatewayConfig: |
             - https://frontend.{{ .project }}.{{ .env }}.{{ .domain }}
           accessControlAllowMethods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
           accessControlAllowHeaders: [Content-Type, Authorization]
+          accessControlAllowCredentials: true
           accessControlMaxAge: 600
           addVaryHeader: true
     services:

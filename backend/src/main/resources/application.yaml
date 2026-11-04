@@ -12,6 +12,16 @@ spring:
     hibernate:
       ddl-auto: validate   # le schéma vient uniquement des migrations Flyway
 
+app:
+  liens:
+    # Adresse de base des liens envoyés par e-mail ou SMS ; par environnement dans helm.yaml
+    # (CU-87 : toujours celle de l'environnement, jamais celle de la production en test).
+    adresse-base: ${LIENS_ADRESSE_BASE:http://localhost:4200}
+  messages:
+    # CU-87 : en test (local, dev, qualif), e-mails et SMS capturés et affichés sur
+    # /test/emails et /test/sms au lieu d'être envoyés ; false en preprod et prod (helm.yaml).
+    capture: ${MESSAGES_CAPTURE:true}
+
 logging:
   level:
     root: ${LOG_LEVEL:INFO}

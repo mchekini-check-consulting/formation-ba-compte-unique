@@ -45,6 +45,9 @@ public class DossierService {
 		if (dossier.getStatut() == StatutDossier.ANNULE) {
 			throw new ResponseStatusException(HttpStatus.CONFLICT, "dossier annulé");
 		}
+		if (dossier.getStatut() != StatutDossier.EN_COURS_DE_VERIFICATION) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "convention déjà signée");
+		}
 		dossier.renseignerIdentite(identite, OffsetDateTime.now(horloge));
 		return DossierReponse.de(dossiers.save(dossier));
 	}

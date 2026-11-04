@@ -27,7 +27,13 @@ public final class Categories {
 	}
 
 	public enum StatutDossier {
-		EN_COURS_DE_VERIFICATION, ACCEPTE, ANNULE
+		EN_COURS_DE_VERIFICATION, ACCEPTE, ANNULE,
+		/** CU-12 : convention signée ; déclenche la création du compte (CU-13). */
+		CONVENTION_SIGNEE,
+		/** CU-13 : création du compte en échec après les relances automatiques, à relancer. */
+		CREATION_A_RELANCER,
+		/** CU-13 : compte courant et identifiant de connexion créés. */
+		COMPTE_OUVERT
 	}
 
 }

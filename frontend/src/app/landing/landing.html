@@ -19,7 +19,7 @@
   <main>
     @if (!parcoursOuvert()) {
       <div class="top">
-        <a class="btn o" href="#">Me connecter</a>
+        <a class="btn o" routerLink="/connexion">Me connecter</a>
         <a class="btn p" href="#parcours" (click)="ouvrirParcours($event)">Ouvrir mon compte</a>
       </div>
 
@@ -289,34 +289,18 @@
                 <app-etape-questions (valide)="suivant()" (annule)="annuler($event)" (retour)="precedent()" />
               </div>
             }
+            @case (5) {
+              <div class="pv on">
+                <app-etape-signature [dossierId]="dossierId" (valide)="suivant()" (annule)="annuler($event)" (retour)="precedent()" />
+              </div>
+            }
+            @case (6) {
+              <div class="pv on">
+                <app-etape-compte-ouvert [dossierId]="dossierId" (valide)="suivant()" />
+              </div>
+            }
           }
         }
-
-        <div class="pv" [class.on]="etape() === 5">
-          <h2>Signer ma convention de compte</h2>
-          <p class="lead">Lisez votre convention, puis signez-la électroniquement.</p>
-          <div class="pbox">
-            <div class="info">Convention de compte courant : frais, conditions d'utilisation et droits. Un exemplaire vous sera remis après signature.</div>
-            <div class="fld"><label for="code">Code de signature reçu par SMS *</label><input id="code" placeholder="6 chiffres"><div class="hint">Valable 5 minutes. Trois erreurs annulent l'opération de signature.</div></div>
-          </div>
-          <div class="pnav"><button type="button" class="pbtn ghost" (click)="precedent()">Retour</button><button type="button" class="pbtn" (click)="suivant()">Signer</button></div>
-        </div>
-
-        <div class="pv" [class.on]="etape() === 6">
-          <h2>Votre compte courant est ouvert</h2>
-          <p class="lead">Félicitations. Voici ce qui se passe maintenant.</p>
-          <div class="pbox">
-            <div class="mock">
-              <div class="row"><span>Compte courant</span><span style="color: #00775f">Ouvert</span></div>
-              <div class="row"><span>IBAN</span><span>FR76 •••• •••• 1234</span></div>
-              <div class="row"><span>Solde</span><span>0 €</span></div>
-            </div>
-            <div class="info" style="margin-top: 18px"><strong>Votre identifiant</strong> vous a été envoyé par e-mail.</div>
-            <div class="warnb"><strong>Votre lien d'activation</strong> vous est également envoyé par e-mail. Il est valable 24 heures et à usage unique. Passé ce délai, vous pouvez demander un nouveau lien.</div>
-            <div class="info"><strong>Livret A :</strong> vous pourrez l'ouvrir depuis votre espace client, une fois votre compte courant activé.</div>
-          </div>
-          <div class="pnav"><button type="button" class="pbtn" (click)="suivant()">Terminer</button></div>
-        </div>
       </div>
     }
   </main>

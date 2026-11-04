@@ -1,0 +1,51 @@
+<section class="ident carte">
+  @if (ouverture(); as o) {
+    @switch (o.statutDossier) {
+      @case ('COMPTE_OUVERT') {
+        <h2>Votre compte courant est ouvert</h2>
+        <p class="muted">Félicitations. Voici ce qui se passe maintenant.</p>
+        <div class="checklist" aria-label="Votre compte">
+          <div><span>Compte courant</span><span class="pill ok">Ouvert</span></div>
+          <div><span>IBAN</span><span class="mono">{{ o.ibanMasque }}</span></div>
+          <div><span>Solde</span><span class="mono">0 €</span></div>
+        </div>
+        <div class="notice info envoi">
+          <span>Votre identifiant vous a été envoyé par e-mail à {{ o.emailMasque }}.</span>
+          @if (enEchec(o.envoiEmail)) {
+            <button type="button" class="pbtn ghost" [disabled]="renvoiBloque().EMAIL" (click)="renvoyer('EMAIL')">Renvoyer mon identifiant</button>
+          }
+        </div>
+        <div class="notice info envoi">
+          <span>Votre lien d'activation vous a été envoyé par SMS au {{ o.mobileMasque }}.</span>
+          @if (enEchec(o.envoiSms)) {
+            <button type="button" class="pbtn ghost" [disabled]="renvoiBloque().SMS" (click)="renvoyer('SMS')">Renvoyer mon lien</button>
+          }
+        </div>
+        @if (confirmationRenvoi()) {
+          <div class="notice warn" role="status">{{ confirmationRenvoi() }}</div>
+        }
+      }
+      @case ('CREATION_A_RELANCER') {
+        <h2>Votre compte est en cours de création</h2>
+        <div class="notice warn" role="status">La création de votre compte a pris du retard. Elle sera relancée par nos équipes ; vous recevrez votre identifiant par e-mail et votre lien d'activation par SMS.</div>
+      }
+      @default {
+        <h2>Votre convention est signée</h2>
+        <p class="muted">Création de votre compte courant en cours…</p>
+      }
+    }
+  } @else if (message()) {
+    <h2>Votre convention est signée</h2>
+    <div class="notice err" role="alert">{{ message() }}</div>
+  } @else {
+    <h2>Votre convention est signée</h2>
+    <p class="muted">Création de votre compte courant en cours…</p>
+  }
+
+  <div class="notice warn">Votre <strong>lien d'activation</strong> est valable 24 heures et à usage unique. Il vous permet de définir votre mot de passe. Passé ce délai, vous pouvez demander un nouveau lien.</div>
+  <div class="notice info"><strong>Livret A :</strong> vous pourrez l'ouvrir depuis votre espace client, une fois votre compte courant activé.</div>
+
+  <div class="actions">
+    <button type="button" class="pbtn" (click)="valide.emit()">Terminer</button>
+  </div>
+</section>

@@ -1,0 +1,25 @@
+<main class="connexion">
+  <a routerLink="/">← Retour au site</a>
+  <h1>Connexion à votre espace</h1>
+
+  <form (submit)="connecter($event, identifiant, motDePasse)">
+    <label>
+      Identifiant
+      <input #identifiant name="identifiant" autocomplete="username" required />
+    </label>
+    <label>
+      Mot de passe
+      <input #motDePasse name="motDePasse" type="password" autocomplete="current-password" required />
+    </label>
+    <button type="submit" [disabled]="enCours()">Me connecter</button>
+  </form>
+
+  @if (erreur()) {
+    <div role="alert" class="erreur">
+      <p>{{ erreur() }}</p>
+      @if (invitation()) {
+        <p>{{ invitation() }}</p>
+      }
+    </div>
+  }
+</main>

@@ -44,6 +44,17 @@
 			<scope>runtime</scope>
 		</dependency>
 
+		<!-- Hachage des mots de passe en Argon2id (sans activer Spring Security) -->
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-crypto</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.bouncycastle</groupId>
+			<artifactId>bcprov-jdk18on</artifactId>
+			<version>1.86</version>
+		</dependency>
+
 		<!-- Logging applicatif : JSON sur stdout (logback-spring.xml) + AOP couche service -->
 		<dependency>
 			<groupId>net.logstash.logback</groupId>
@@ -89,6 +100,12 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<!-- En local (spring-boot:run) uniquement : comptes de test en plus des migrations -->
+					<environmentVariables>
+						<SPRING_FLYWAY_LOCATIONS>classpath:db/migration,classpath:db/demo</SPRING_FLYWAY_LOCATIONS>
+					</environmentVariables>
+				</configuration>
 			</plugin>
 			<!-- Couverture des tests unitaires : target/site/jacoco/jacoco.xml (lu par Sonar) -->
 			<plugin>
