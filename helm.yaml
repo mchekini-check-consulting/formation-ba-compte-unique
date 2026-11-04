@@ -13,7 +13,7 @@ applications:
     # remplace tout jusqu'à la fin de la ligne.
     tag:
       dev: b53fe29
-      qualif: cf53008
+      qualif: b53fe29
       preprod: ""
       prod: ""
     containerPort: 8080
@@ -55,7 +55,7 @@ applications:
     # remplace tout jusqu'à la fin de la ligne.
     tag:
       dev: b53fe29
-      qualif: 938f0ea
+      qualif: b53fe29
       preprod: ""
       prod: ""
     containerPort: 8080
@@ -74,7 +74,7 @@ applications:
     # remplace tout jusqu'à la fin de la ligne.
     tag:
       dev: b53fe29
-      qualif: ""
+      qualif: b53fe29
       preprod: ""
       prod: ""
     containerPort: 8080
