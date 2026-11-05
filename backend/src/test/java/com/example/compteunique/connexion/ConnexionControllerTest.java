@@ -3,7 +3,10 @@ package com.example.compteunique.connexion;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Optional;
@@ -15,7 +18,9 @@ import org.springframework.http.ResponseEntity;
 
 import com.example.compteunique.connexion.ConnexionController.DemandeConnexion;
 import com.example.compteunique.connexion.ConnexionController.RefusConnexion;
+import com.example.compteunique.connexion.ConnexionController.SessionEnCours;
 import com.example.compteunique.connexion.ConnexionController.SessionOuverte;
+import com.example.compteunique.connexion.ConnexionService.EtatSession;
 
 class ConnexionControllerTest {
 
@@ -40,15 +45,38 @@ class ConnexionControllerTest {
 	}
 
 	@Test
-	void sessionValideRenvoieLIdentifiant() {
-		when(connexion.identifiantDeLaSession("jeton")).thenReturn(Optional.of("ABC"));
-		assertEquals(new SessionOuverte("ABC"), controller.session("jeton").getBody());
+	void sessionValideRenvoieLIdentifiantEtLeTempsRestantSansProlonger() {
+		when(connexion.etatSession("jeton")).thenReturn(Optional.of(new EtatSession("ABC", 420)));
+		assertEquals(new SessionEnCours("ABC", 420), controller.session("jeton").getBody());
+		verify(connexion, never()).activite(any());
 	}
 
 	@Test
 	void sessionAbsenteRenvoie401() {
-		when(connexion.identifiantDeLaSession(null)).thenReturn(Optional.empty());
+		when(connexion.etatSession(null)).thenReturn(Optional.empty());
 		assertEquals(HttpStatus.UNAUTHORIZED, controller.session(null).getStatusCode());
+	}
+
+	@Test
+	void uneActiviteProlongeLaSession() {
+		when(connexion.activite("jeton")).thenReturn(Optional.of(new EtatSession("ABC", 600)));
+		assertEquals(new SessionEnCours("ABC", 600), controller.activite("jeton").getBody());
+	}
+
+	@Test
+	void uneActiviteSurUneSessionFermeeRenvoie401() {
+		when(connexion.activite("jeton")).thenReturn(Optional.empty());
+		assertEquals(HttpStatus.UNAUTHORIZED, controller.activite("jeton").getStatusCode());
+	}
+
+	@Test
+	void laDeconnexionRevoqueLaSessionEtSupprimeLeCookie() {
+		ResponseEntity<Void> reponse = controller.deconnecter("jeton");
+
+		verify(connexion).deconnecter("jeton");
+		assertEquals(HttpStatus.NO_CONTENT, reponse.getStatusCode());
+		assertThat(reponse.getHeaders().getFirst(HttpHeaders.SET_COOKIE))
+				.contains("SESSION_CLIENT=;", "Max-Age=0", "HttpOnly", "Secure", "SameSite=Strict", "Path=/");
 	}
 
 	@Test

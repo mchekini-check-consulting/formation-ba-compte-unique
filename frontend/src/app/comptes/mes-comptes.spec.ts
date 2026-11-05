@@ -3,15 +3,24 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { vi } from 'vitest';
+import { of } from 'rxjs';
+import { SuiviSession } from '../session/suivi-session';
 import { MesComptes } from './mes-comptes';
 
 describe('MesComptes', () => {
   let http: HttpTestingController;
+  // CU-17 : suivi de la session simulé (testé dans suivi-session.spec.ts).
+  const suivi = { ouvrir: vi.fn(() => of({ identifiant: 'ABC', expireDansSecondes: 600 })), arreter: vi.fn() };
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [MesComptes],
-      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: SuiviSession, useValue: suivi },
+      ],
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
   });
@@ -51,5 +60,15 @@ describe('MesComptes', () => {
     const page = await afficher('', { status: 500, statusText: 'Erreur' });
     expect(page.textContent).toContain('Vos comptes sont momentanément indisponibles.');
     expect(navigation).not.toHaveBeenCalled();
+  });
+
+  it("compte l'ouverture de la page comme une action et arrête le suivi en la quittant (CU-17)", async () => {
+    suivi.ouvrir.mockClear();
+    suivi.arreter.mockClear();
+    const fixture = TestBed.createComponent(MesComptes);
+    http.expectOne('/api/backend/comptes').flush([]);
+    expect(suivi.ouvrir).toHaveBeenCalledTimes(1);
+    fixture.destroy();
+    expect(suivi.arreter).toHaveBeenCalledTimes(1);
   });
 });

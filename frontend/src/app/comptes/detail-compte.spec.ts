@@ -3,10 +3,14 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { vi } from 'vitest';
+import { of } from 'rxjs';
+import { SuiviSession } from '../session/suivi-session';
 import { DetailCompte } from './detail-compte';
 
 describe('DetailCompte', () => {
   let http: HttpTestingController;
+  // CU-17 : suivi de la session simulé (testé dans suivi-session.spec.ts).
+  const suivi = { ouvrir: vi.fn(() => of({ identifiant: 'ABC', expireDansSecondes: 600 })), arreter: vi.fn() };
 
   async function preparer(id: string | null) {
     await TestBed.configureTestingModule({
@@ -15,6 +19,7 @@ describe('DetailCompte', () => {
         provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
+        { provide: SuiviSession, useValue: suivi },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap(id === null ? {} : { id }) } } },
       ],
     }).compileComponents();

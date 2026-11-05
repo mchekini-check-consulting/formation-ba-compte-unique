@@ -1,26 +1,37 @@
+import { DOCUMENT } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { CarteCompte } from '../comptes/carte-compte';
-import { Compte, ComptesService } from '../comptes/comptes';
-import { ConnexionService } from '../connexion';
+import { Compte, ComptesService, formaterDate, formaterSolde, libelleStatut } from '../comptes/comptes';
+import { SuiviSession, formaterRestant } from '../session/suivi-session';
+import { CREDITS, EPARGNE, Produit } from './produits';
 
 type EtatComptes = { lu: false } | { lu: true; erreur: boolean; comptes: Compte[] };
 
-// Espace de la cliente connectée (CU-15) avec son compte courant (CU-19, maquette de l'espace
-// client). Sans session valide, retour à la connexion. Le solde est relu à chaque ouverture.
+const DUREE_ANNONCE_MS = 3200;
+
+// Espace de la cliente connectée, d'après la maquette « Espace client Hi-Tech Bank » : compte
+// courant (CU-19), tous les produits ouverts à la souscription, déconnexion et fermeture de la
+// session après 10 minutes sans activité (CU-17). Sans session active, retour à la connexion.
+// Les parcours pas encore développés (souscription, versement...) l'annoncent simplement.
 @Component({
   selector: 'app-espace',
   imports: [CarteCompte, RouterLink],
   templateUrl: './espace.html',
-  styleUrl: './espace.scss',
 })
 export class Espace {
   private readonly router = inject(Router);
+  private readonly document = inject(DOCUMENT);
   private readonly comptes = inject(ComptesService);
+  private readonly suivi = inject(SuiviSession);
   private readonly etat = signal<EtatComptes>({ lu: false });
+  private minuteurAnnonce: ReturnType<typeof setTimeout> | null = null;
 
+  protected readonly epargne: Produit[] = EPARGNE;
+  protected readonly credits: Produit[] = CREDITS;
   protected readonly identifiant = signal('');
+  protected readonly annonce = signal('');
   protected readonly lu = computed(() => this.etat().lu);
   protected readonly compte = computed(() => {
     const etat = this.etat();
@@ -30,17 +41,58 @@ export class Espace {
     const etat = this.etat();
     return etat.lu && !etat.erreur && etat.comptes.length === 0;
   });
+  /** Solde affichable, null s'il est indisponible (erreur de lecture ou solde refusé). */
+  protected readonly solde = computed(() => {
+    const centimes = this.compte()?.soldeCentimes;
+    return centimes === null || centimes === undefined ? null : formaterSolde(centimes);
+  });
+  protected readonly miseAJour = computed(() => {
+    const date = this.compte()?.soldeMisAJourLe;
+    return date ? formaterDate(date) : null;
+  });
+  protected readonly statut = computed(() => {
+    const compte = this.compte();
+    return compte && this.solde() ? libelleStatut(compte.statut) : null;
+  });
+  protected readonly cloture = computed(() => this.compte()?.statut === 'CLOTURE');
+  protected readonly restant = computed(() => {
+    const secondes = this.suivi.restant();
+    return secondes === null ? null : formaterRestant(secondes);
+  });
 
   constructor() {
-    inject(ConnexionService)
-      .session()
-      .subscribe({
-        next: (session) => {
-          this.identifiant.set(session.identifiant);
-          this.lireComptes();
-        },
-        error: () => this.versConnexion(),
-      });
+    inject(DestroyRef).onDestroy(() => {
+      this.suivi.arreter();
+      if (this.minuteurAnnonce) clearTimeout(this.minuteurAnnonce);
+    });
+    this.suivi.ouvrir().subscribe({
+      next: (session) => {
+        this.identifiant.set(session.identifiant);
+        this.lireComptes();
+      },
+      error: () => undefined,
+    });
+  }
+
+  protected deconnecter(): void {
+    this.suivi.deconnecter();
+  }
+
+  /** Liens « #rubrique » du menu : défilement dans la page, sans quitter l'espace. */
+  protected suivreAncre(event: MouseEvent): void {
+    const lien = (event.target as Element | null)?.closest?.('a[href^="#"]');
+    const cible = lien ? this.document.getElementById(lien.getAttribute('href')!.slice(1)) : null;
+    if (cible) {
+      event.preventDefault();
+      cible.scrollIntoView?.({ behavior: 'smooth' });
+    }
+  }
+
+  /** Parcours pas encore développé : on l'annonce, sans rien faire d'autre. */
+  protected annoncer(texte: string): void {
+    this.annonce.set(texte);
+    if (this.minuteurAnnonce) clearTimeout(this.minuteurAnnonce);
+    this.minuteurAnnonce = setTimeout(() => this.annonce.set(''), DUREE_ANNONCE_MS);
   }
 
   private lireComptes(): void {
@@ -48,15 +100,11 @@ export class Espace {
       next: (comptes) => this.etat.set({ lu: true, erreur: false, comptes }),
       error: (erreur: HttpErrorResponse) => {
         if (erreur.status === 401) {
-          this.versConnexion();
+          void this.router.navigateByUrl('/connexion');
         } else {
           this.etat.set({ lu: true, erreur: true, comptes: [] });
         }
       },
     });
-  }
-
-  private versConnexion(): void {
-    void this.router.navigateByUrl('/connexion');
   }
 }
