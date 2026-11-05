@@ -6,6 +6,13 @@
   <h2>Me connecter</h2>
   <p class="sub">Entrez les informations de votre espace client.</p>
 
+  @if (sessionExpiree && !erreur()) {
+    <div role="status" class="msg warn">
+      <b>Session expirée</b>
+      <p>Votre session a été fermée après 10 minutes sans activité. Reconnectez-vous pour continuer.</p>
+    </div>
+  }
+
   @if (erreur()) {
     <div role="alert" class="msg err">
       <b>Connexion impossible</b>

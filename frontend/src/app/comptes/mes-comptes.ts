@@ -1,7 +1,8 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { Compte, ComptesService, libelleStatut } from './comptes';
+import { SuiviSession } from '../session/suivi-session';
 
 // CU-20 : liste des comptes dont la cliente est titulaire. Sans session, retour à la connexion.
 @Component({
@@ -41,6 +42,10 @@ export class MesComptes {
   protected readonly libelleStatut = libelleStatut;
 
   constructor() {
+    // CU-17 : ouvrir la page est une action de la cliente ; le suivi s'arrête quand elle la quitte.
+    const suivi = inject(SuiviSession);
+    suivi.ouvrir().subscribe({ error: () => undefined });
+    inject(DestroyRef).onDestroy(() => suivi.arreter());
     inject(ComptesService)
       .mesComptes()
       .subscribe({

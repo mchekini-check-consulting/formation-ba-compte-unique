@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { Router, provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { vi } from 'vitest';
 import { ConnexionPage } from './connexion-page';
 
@@ -104,5 +104,29 @@ describe('ConnexionPage', () => {
     await fixture.whenStable();
     expect(champ.type).toBe('password');
     expect(oeil.textContent).toContain('Afficher');
+  });
+
+  it('affiche « Session expirée » après 10 minutes sans activité (CU-17)', async () => {
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [ConnexionPage],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({ motif: 'expiree' }) } } },
+      ],
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(ConnexionPage);
+    await fixture.whenStable();
+    const message = (fixture.nativeElement as HTMLElement).querySelector('[role=status]');
+    expect(message?.textContent).toContain('Session expirée');
+  });
+
+  it("n'affiche pas « Session expirée » sur une connexion ordinaire", async () => {
+    const fixture = TestBed.createComponent(ConnexionPage);
+    await fixture.whenStable();
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Session expirée');
   });
 });

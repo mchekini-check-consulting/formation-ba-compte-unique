@@ -62,6 +62,34 @@ class ConnexionIT {
 				resultat.jetonSession())).isZero();
 	}
 
+	// CU-17 : activité, expiration et déconnexion enregistrées en base.
+	@Test
+	void activiteExpirationEtDeconnexion() {
+		IdentifiantConnexion compte = identifiants.creer();
+		identifiants.definirMotDePasse(compte.getId(), CONFORME);
+		String expiree = connexion.connecter(compte.getIdentifiant(), CONFORME).jetonSession();
+		String deconnectee = connexion.connecter(compte.getIdentifiant(), CONFORME).jetonSession();
+		String empreinteExpiree = SecretsAleatoires.empreinte(expiree);
+
+		base.update("update session_client set derniere_activite_le = now() - interval '9 minutes' where jeton_hache = ?",
+				empreinteExpiree);
+		assertThat(connexion.activite(expiree)).isPresent();
+		assertThat(base.queryForObject(
+				"select derniere_activite_le > now() - interval '1 minute' from session_client where jeton_hache = ?",
+				Boolean.class, empreinteExpiree)).isTrue();
+
+		base.update("update session_client set derniere_activite_le = now() - interval '10 minutes' where jeton_hache = ?",
+				empreinteExpiree);
+		assertThat(connexion.idDeLaSession(expiree)).isEmpty();
+		assertThat(base.queryForObject("select revoquee_le is not null from session_client where jeton_hache = ?",
+				Boolean.class, empreinteExpiree)).isTrue();
+
+		connexion.deconnecter(deconnectee);
+		assertThat(connexion.etatSession(deconnectee)).isEmpty();
+		assertThat(base.queryForObject("select revoquee_le is not null from session_client where jeton_hache = ?",
+				Boolean.class, SecretsAleatoires.empreinte(deconnectee))).isTrue();
+	}
+
 	@Test
 	void lesComptesDeTestNeSontPasDansLesMigrations() {
 		assertThat(base.queryForObject("select count(*) from identifiant_connexion where identifiant like 'TEST%'",

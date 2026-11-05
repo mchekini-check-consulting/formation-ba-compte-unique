@@ -1,8 +1,9 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CarteCompte } from './carte-compte';
 import { Compte, ComptesService } from './comptes';
+import { SuiviSession } from '../session/suivi-session';
 
 // CU-20 : un compte de la cliente. Tout refus (autre cliente, compte inexistant, panne) affiche
 // le même message, sans aucune information sur le compte. Sans session, retour à la connexion.
@@ -33,6 +34,10 @@ export class DetailCompte {
   protected readonly inaccessible = signal(false);
 
   constructor() {
+    // CU-17 : ouvrir la page est une action de la cliente ; le suivi s'arrête quand elle la quitte.
+    const suivi = inject(SuiviSession);
+    suivi.ouvrir().subscribe({ error: () => undefined });
+    inject(DestroyRef).onDestroy(() => suivi.arreter());
     const id = inject(ActivatedRoute).snapshot.paramMap.get('id') ?? '';
     inject(ComptesService)
       .consulter(id)

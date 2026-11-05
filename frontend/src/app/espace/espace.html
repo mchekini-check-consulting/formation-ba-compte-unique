@@ -1,46 +1,329 @@
 @if (identifiant()) {
-  <div class="espace">
+  <div class="espace" (click)="suivreAncre($event)">
     <aside>
       <div class="logo">Hi-Tech<span>Bank</span></div>
-      <nav>
+      <nav aria-label="Mon espace">
+        <a href="#accueil" aria-current="page"><i></i>Accueil</a>
         <div class="sep">Mes comptes</div>
-        <a routerLink="/espace" aria-current="page"><i></i>Compte courant</a>
+        <a href="#compte"><i></i>Compte courant</a>
         <a routerLink="/comptes"><i></i>Mes comptes</a>
+        <a href="#epargne"><i></i>Épargne et placements</a>
+        <a href="#credits"><i></i>Crédits</a>
+        <a href="#patrimoine"><i></i>Mon patrimoine</a>
+        <div class="sep">Pour aller plus loin</div>
+        <a href="#optimisation"><i></i>Optimisation et conseil</a>
+        <a href="#simulateurs"><i></i>Simulateurs</a>
+        <a href="#documents"><i></i>Mes documents</a>
+        <a href="#infos"><i></i>Mes informations et sécurité</a>
+        <a href="#bientot"><i></i>Bientôt</a>
       </nav>
+      <a class="cta" href="#epargne">Souscrire un produit</a>
     </aside>
+
+    <div class="mnav">
+      <div class="logo">Hi-Tech<span>Bank</span></div>
+      <nav class="row" aria-label="Mon espace (mobile)">
+        <a href="#accueil">Accueil</a>
+        <a href="#compte">Compte courant</a>
+        <a href="#epargne">Épargne</a>
+        <a href="#credits">Crédits</a>
+        <a href="#patrimoine">Patrimoine</a>
+        <a href="#optimisation">Conseil</a>
+        <a href="#documents">Documents</a>
+        <a href="#infos">Informations</a>
+      </nav>
+    </div>
+
     <main>
       <div class="top">
-        <div class="hello">Connectée avec l'identifiant <b>{{ identifiant() }}</b></div>
+        <div class="hello">Bonjour, identifiant <b>{{ identifiant() }}</b></div>
+        <div class="right">
+          @if (restant(); as temps) {
+            <span class="minuteur" title="Repère indicatif : la session se ferme après 10 minutes sans activité">
+              Fermeture automatique dans <b>{{ temps }}</b>
+            </span>
+          }
+          <button class="btn o sm" type="button" (click)="annoncer('Messagerie : bientôt disponible.')">Messages</button>
+          <button class="btn p sm deconnexion" type="button" (click)="deconnecter()">Me déconnecter</button>
+        </div>
       </div>
-      <section class="block">
-        <div class="wrap feature">
+
+      <!-- ACCUEIL -->
+      <div id="accueil" class="hero">
+        <div class="wrap">
           <div>
-            @if (sansCompte()) {
-              <div class="noacct">
-                <span class="tag">Pas encore de compte</span>
-                <div>
-                  <h3>Ouvrez votre compte courant</h3>
-                  <p>Ouverture en environ 30 minutes, sans versement initial.</p>
-                  <a class="btn" routerLink="/">Ouvrir mon compte</a>
-                </div>
-              </div>
-            } @else if (lu()) {
-              <app-carte-compte [compte]="compte()" />
-            }
+            <div class="eyebrow">Mon espace</div>
+            <h1>Bonjour, tout votre argent au même endroit.</h1>
+            <p>
+              Votre compte, votre épargne, vos placements et vos crédits. Vous voyez votre situation et pouvez souscrire un
+              nouveau produit en quelques minutes.
+            </p>
+            <div class="actions">
+              <button class="btn m" type="button" (click)="annoncer('Versement : bientôt disponible.')">Faire un versement</button>
+              <a class="btn o" href="#epargne">Souscrire un produit</a>
+            </div>
           </div>
-          <div>
-            <div class="eyebrow">Mes comptes · Compte courant</div>
-            <h2>Votre compte du quotidien, à jour</h2>
-            <p class="lead">Solde et date de mise à jour, pour suivre votre situation au quotidien.</p>
-            <ul>
-              <li><span class="check">✓</span><span><b>Solde en euros</b>, affiché avec deux décimales.</span></li>
-              <li><span class="check">✓</span><span><b>Date de mise à jour</b> visible à chaque consultation.</span></li>
-              <li><span class="check">✓</span><span><b>Vos seuls comptes</b> : personne d'autre ne voit votre solde.</span></li>
-              <li><span class="check">✓</span><span><b>Pas de découvert</b> : le solde ne passe jamais en négatif.</span></li>
-            </ul>
+          @if (lu() && !sansCompte()) {
+            <div class="hero-art" aria-hidden="true">
+              <div class="float a">
+                <div class="k">Solde du compte courant</div>
+                @if (solde(); as montant) {
+                  <div class="v">{{ montant }}</div>
+                  @if (miseAJour(); as date) {
+                    <div class="s">Mis à jour le {{ date }}</div>
+                  }
+                } @else {
+                  <div class="v err">Votre solde est momentanément indisponible</div>
+                }
+              </div>
+              @if (statut()) {
+                <div class="float c">
+                  <div class="k">Statut du compte</div>
+                  <div class="pill-ligne"><span class="pill" [class.off]="cloture()">{{ cloture() ? 'Compte clôturé' : 'Compte ouvert' }}</span></div>
+                </div>
+              }
+              <div class="float b">
+                <div class="k">Patrimoine brut</div>
+                <div class="v petit">{{ solde() ?? '—' }}</div>
+                <div class="s">Votre compte courant, pour l'instant</div>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      @if (lu() && !sansCompte()) {
+        <div class="proof">
+          <div><strong>{{ solde() ?? '—' }}</strong><span>solde du compte courant</span></div>
+          <div><strong class="petit">{{ miseAJour()?.slice(0, 10) ?? '—' }}</strong><span>dernière mise à jour</span></div>
+          <div><strong class="petit">{{ statut() ?? '—' }}</strong><span>statut du compte</span></div>
+          <div><strong class="petit">0 €</strong><span>de découvert autorisé</span></div>
+        </div>
+      }
+
+      <!-- COMPTE COURANT -->
+      <section class="block" id="compte">
+        <div class="wrap">
+          <div class="feature">
+            <div>
+              @if (sansCompte()) {
+                <div class="noacct">
+                  <span class="tag t-blue">Pas encore de compte</span>
+                  <div>
+                    <h3>Ouvrez votre compte courant</h3>
+                    <p>Ouverture en environ 30 minutes, sans versement initial.</p>
+                    <a class="btn m" routerLink="/">Ouvrir mon compte</a>
+                  </div>
+                </div>
+              } @else if (lu()) {
+                <app-carte-compte [compte]="compte()" />
+              }
+            </div>
+            <div>
+              <div class="eyebrow">Mes comptes · Compte courant</div>
+              <h2>Votre compte du quotidien, à jour</h2>
+              <p class="lead">Solde, date de mise à jour et opérations, pour gérer vos paiements au quotidien.</p>
+              <ul>
+                <li><span class="check">✓</span><span><b>Solde en euros</b>, affiché avec deux décimales.</span></li>
+                <li><span class="check">✓</span><span><b>Date de mise à jour</b> visible à chaque consultation.</span></li>
+                <li><span class="check">✓</span><span><b>Vos seuls comptes</b> : personne d'autre ne voit votre solde.</span></li>
+                <li><span class="check">✓</span><span><b>Pas de découvert</b> : le solde ne passe jamais en négatif.</span></li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="tiles" aria-label="Actions du compte">
+            <button class="tile" type="button" (click)="annoncer('Versement : bientôt disponible.')">
+              <b>Faire un versement</b><span>Par virement instantané depuis un compte à votre nom.</span>
+            </button>
+            <button class="tile" type="button" (click)="annoncer('Ajout d\'un compte externe : bientôt disponible.')">
+              <b>Ajouter un compte</b><span>Un compte d'une autre banque, à votre nom.</span>
+            </button>
+            <button class="tile" type="button" (click)="annoncer('Virement programmé : bientôt disponible.')">
+              <b>Programmer un virement</b><span>Une épargne automatique, mensuelle ou plus espacée.</span>
+            </button>
+            <button class="tile" type="button" (click)="annoncer('Clôture du compte : bientôt disponible.')">
+              <b>Clôturer mon compte</b><span>Le solde est transféré avant la clôture.</span>
+            </button>
           </div>
         </div>
       </section>
+
+      <!-- EPARGNE : tous les produits -->
+      <section class="block alt" id="epargne">
+        <div class="wrap">
+          <div class="eyebrow">Épargne et placements</div>
+          <h2>Épargner et faire fructifier, à votre rythme</h2>
+          <p class="lead">
+            Tous nos produits d'épargne sont ouverts à la souscription depuis votre espace. Le minimum d'ouverture et le
+            plafond sont affichés sur chaque carte.
+          </p>
+          <div class="cards">
+            @for (produit of epargne; track produit.nom) {
+              <div class="card produit">
+                <div class="art" [class]="'art ' + produit.teinte" aria-hidden="true"><span></span></div>
+                <div class="body">
+                  <span class="tag" [class]="'tag t-' + produit.teinte">{{ produit.categorie }}</span>
+                  <h3>{{ produit.nom }}</h3>
+                  <p>{{ produit.description }}</p>
+                  @if (produit.taux) {
+                    <span class="rate"><b>{{ produit.taux }}</b> {{ produit.tauxDetail }}</span>
+                  }
+                  <span class="min">{{ produit.minimum }}</span>
+                  <div class="foot">
+                    <span class="note">{{ produit.note }}</span>
+                    <button class="btn p sm" type="button" (click)="annoncer('Souscription ' + produit.nom + ' : bientôt disponible.')">
+                      Souscrire
+                    </button>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      </section>
+
+      <!-- CREDITS -->
+      <section class="block" id="credits">
+        <div class="wrap">
+          <div class="eyebrow">Crédits</div>
+          <h2>Financer un projet, en toute clarté</h2>
+          <p class="lead">
+            Chaque crédit est simulé avant engagement : mensualité, coût total et taux d'endettement. Aucune décision sans
+            votre accord.
+          </p>
+          <div class="cards">
+            @for (produit of credits; track produit.nom) {
+              <div class="card produit">
+                <div class="art" [class]="'art ' + produit.teinte" aria-hidden="true"><span></span></div>
+                <div class="body">
+                  <span class="tag" [class]="'tag t-' + produit.teinte">{{ produit.categorie }}</span>
+                  <h3>{{ produit.nom }}</h3>
+                  <p>{{ produit.description }}</p>
+                  <div class="foot">
+                    <button class="go" type="button" (click)="annoncer('Simulation ' + produit.nom + ' : bientôt disponible.')">
+                      Simuler mon projet →
+                    </button>
+                    <button class="btn p sm" type="button" (click)="annoncer('Demande de ' + produit.nom + ' : bientôt disponible.')">
+                      Faire une demande
+                    </button>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      </section>
+
+      <!-- PATRIMOINE -->
+      <section class="block alt" id="patrimoine">
+        <div class="wrap patri">
+          <div>
+            <div class="eyebrow">Mon patrimoine</div>
+            <h2>Une vue complète de ce que vous possédez</h2>
+            <p class="lead">Épargne, placements et compte courant apparaissent ensemble, avec vos crédits en cours.</p>
+          </div>
+          <div class="donut-box">
+            <div class="legend">
+              <div><span><i class="navy"></i>Épargne</span><b>Aucun produit</b></div>
+              <div><span><i class="mint"></i>Placements</span><b>Aucun produit</b></div>
+              <div><span><i class="amber"></i>Compte courant</span><b>{{ sansCompte() ? 'Aucun compte' : (solde() ?? '—') }}</b></div>
+              <div class="total"><span>Crédit restant dû</span><b>Aucun crédit</b></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- OPTIMISATION -->
+      <section class="block" id="optimisation">
+        <div class="wrap">
+          <div class="dark">
+            <div class="eyebrow">Optimisation et conseil</div>
+            <h2>Des pistes qui vous ressemblent, et vous décidez</h2>
+            <p class="lead">
+              Un moteur d'optimisation, assisté par IA, analyse votre situation et propose des pistes. Les règles de
+              recommandation sont validées par notre conformité.
+            </p>
+            <div class="opt-grid">
+              <div><span class="tag t-mint">Règles validées</span><h4>Des recommandations encadrées</h4><p>Chaque piste indique la règle appliquée, ses avantages et ses limites.</p></div>
+              <div><span class="tag t-blue">Personnalisé</span><h4>Adapté à votre profil</h4><p>Revenus, charges, objectifs et horizon, avec votre accord.</p></div>
+              <div><span class="tag t-amber">Vous décidez</span><h4>Vous gardez la main</h4><p>Chaque piste est une information, à votre rythme.</p></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SIMULATEURS -->
+      <section class="block alt" id="simulateurs">
+        <div class="wrap">
+          <div class="eyebrow">Simulateurs</div>
+          <h2>Simulez avant de vous engager</h2>
+          <p class="lead">Testez vos projets sans rien modifier. Les hypothèses restent visibles, et les résultats sont indicatifs.</p>
+          <div class="sim-row">
+            <div class="sim"><span class="tag t-rose">Crédit</span><h4>Simulateur de crédit</h4><p>Mensualité, coût total et durée, avec le taux et l'assurance utilisés.</p><button class="go" type="button" (click)="annoncer('Simulateur de crédit : bientôt disponible.')">Simuler un crédit →</button></div>
+            <div class="sim"><span class="tag t-violet">Retraite</span><h4>Simulateur PER</h4><p>Capital projeté à la retraite, avec versements mensuels et frais d'entrée de 0 %.</p><button class="go" type="button" (click)="annoncer('Simulateur PER : bientôt disponible.')">Simuler mon PER →</button></div>
+            <div class="sim"><span class="tag t-blue">Placement</span><h4>Simulateur assurance-vie</h4><p>Intérêts du fonds en euros, crédités une fois par an, et effet des frais.</p><button class="go" type="button" (click)="annoncer('Simulateur assurance-vie : bientôt disponible.')">Simuler mon assurance-vie →</button></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- DOCUMENTS -->
+      <section class="block" id="documents">
+        <div class="wrap">
+          <div class="eyebrow">Mes documents</div>
+          <h2>Vos contrats et relevés</h2>
+          <p class="lead">Les documents signés et les récapitulatifs restent consultables, même après la clôture d'un produit.</p>
+          <div class="docs">
+            <div class="doc"><div><b>Convention de compte courant</b><span>Signée à l'ouverture de votre compte · horodatage conservé</span></div><button class="btn o sm" type="button" (click)="annoncer('Consultation des documents : bientôt disponible.')">Consulter</button></div>
+            <div class="doc"><div><b>Relevé de compte courant</b><span>Dernier relevé disponible à la fin du mois</span></div><button class="btn o sm" type="button" (click)="annoncer('Consultation des relevés : bientôt disponible.')">Consulter</button></div>
+            <div class="doc"><div><b>Attestation de non-détention de Livret A</b><span>Demandée à l'ouverture d'un Livret A</span></div><button class="btn o sm" type="button" (click)="annoncer('Attestation générée à l\'ouverture d\'un Livret A.')">Consulter</button></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- INFORMATIONS ET SECURITE -->
+      <section class="block alt" id="infos">
+        <div class="wrap">
+          <div class="eyebrow">Mon espace</div>
+          <h2>Mes informations et ma sécurité</h2>
+          <p class="lead">Les informations de votre dossier sont vérifiées à l'ouverture. Pour les modifier, contactez votre conseiller.</p>
+          <div class="cards">
+            <div class="card"><div class="body"><span class="tag t-violet">Identité</span><h3>Identifiant {{ identifiant() }}</h3><p>Identité vérifiée à l'ouverture de votre compte.</p></div></div>
+            <div class="card"><div class="body"><span class="tag t-blue">Contact</span><h3>E-mail et mobile</h3><p>Ils servent à vous envoyer vos identifiants et vos codes.</p><div class="foot"><button class="go" type="button" (click)="annoncer('Contact du conseiller : bientôt disponible.')">Contacter mon conseiller →</button></div></div></div>
+            <div class="card"><div class="body"><span class="tag t-amber">Sécurité</span><h3>Mot de passe et session</h3><p>Session fermée automatiquement après 10 minutes sans activité.</p><div class="foot"><button class="go" type="button" (click)="annoncer('Changement de mot de passe : bientôt disponible.')">Changer mon mot de passe →</button></div></div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="block" id="bientot">
+        <div class="wrap">
+          <div class="soon">
+            <span class="tag t-amber">Bientôt</span>
+            <div>
+              <h3>Tous vos comptes, même ceux d'une autre banque</h3>
+              <p>Dans une prochaine étape, vous pourrez ajouter les comptes détenus ailleurs, avec votre accord explicite. Votre vue deviendra encore plus complète.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="final">
+        <div class="wrap">
+          <h2>Un nouveau projet ?</h2>
+          <p>Épargne, placements et crédits sont ouverts à la souscription depuis votre espace, à côté de votre compte courant.</p>
+          <a class="btn m" href="#epargne">Voir tous les produits</a>
+        </div>
+      </div>
+
+      <footer>
+        <a routerLink="/mentions-legales">Mentions légales</a>
+        <a routerLink="/protection-des-donnees">Politique de protection des données</a>
+        <a routerLink="/accessibilite">Accessibilité</a>
+      </footer>
     </main>
+
+    @if (annonce()) {
+      <div class="toast" role="status">{{ annonce() }}</div>
+    }
   </div>
 }
