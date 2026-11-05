@@ -19,12 +19,16 @@ import java.util.stream.Collectors;
 // - CU-14 (US-09) : 12 caractères minimum, refus des mots de la liste des mots courants
 //   (mots-de-passe-courants.txt, à remplacer par la liste fournie par le RSSI) et de ceux qui
 //   contiennent l'adresse e-mail ou le nom de la cliente ;
-// - CU-15 (maquette de l'étape 3) : majuscule, minuscule, chiffre et caractère spécial.
+// - CU-15 (maquette de l'étape 3) : majuscule, minuscule, chiffre et caractère spécial ;
+// - complément de l'US-09 : confirmation identique, contrôlée seulement si les règles sont
+//   respectées (le message des règles s'affiche quelle que soit la confirmation).
 public final class PolitiqueMotDePasse {
 
 	public static final String TROP_COURT = "Votre mot de passe doit contenir au moins 12 caractères";
 	public static final String TROP_COURANT = "Ce mot de passe est trop courant";
 	public static final String CONTIENT_EMAIL_OU_NOM = "Votre mot de passe ne doit pas contenir votre e-mail ni votre nom";
+	public static final String CONFIRMATION_VIDE = "Veuillez confirmer votre mot de passe";
+	public static final String CONFIRMATION_DIFFERENTE = "Les deux mots de passe ne correspondent pas";
 
 	private static final int LONGUEUR_MINIMALE = 12;
 	/** Un nom ou un début d'e-mail plus court n'est pas recherché (« Li » refuserait trop de mots). */
@@ -67,6 +71,18 @@ public final class PolitiqueMotDePasse {
 			regles.add("Au moins un caractère spécial");
 		}
 		return regles;
+	}
+
+	/** Règles d'abord ; si elles sont toutes respectées, la confirmation. */
+	static List<String> reglesNonRespectees(String motDePasse, String confirmation, Collection<String> interdits) {
+		List<String> regles = reglesNonRespectees(motDePasse, interdits);
+		if (!regles.isEmpty()) {
+			return regles;
+		}
+		if (confirmation == null || confirmation.isEmpty()) {
+			return List.of(CONFIRMATION_VIDE);
+		}
+		return confirmation.equals(motDePasse) ? List.of() : List.of(CONFIRMATION_DIFFERENTE);
 	}
 
 	/** E-mail complet, partie avant le « @ », nom de naissance et nom d'usage. */

@@ -56,6 +56,12 @@ public class JetonService {
 		return jetons.findByJetonHacheAndType(SecretsAleatoires.empreinte(jeton), type);
 	}
 
+	/** CU-46 : nombre de jetons créés pour ce client et ce type depuis une date. */
+	@Transactional(readOnly = true)
+	public long nombreCreesDepuis(Long identifiantConnexionId, TypeJeton type, OffsetDateTime depuis) {
+		return jetons.countByIdentifiantConnexionIdAndTypeAndCreeLeAfter(identifiantConnexionId, type, depuis);
+	}
+
 	public String lien(TypeJeton type, String jeton) {
 		return adresseBase + type.getChemin() + "?jeton=" + jeton;
 	}

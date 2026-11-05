@@ -21,8 +21,8 @@ export class ActivationService {
     return this.http.post<{ etat: EtatActivation }>(`${this.url}/etat`, { jeton });
   }
 
-  activer(jeton: string, motDePasse: string): Observable<{ etat: EtatActivation }> {
-    return this.http.post<{ etat: EtatActivation }>(this.url, { jeton, motDePasse });
+  activer(jeton: string, motDePasse: string, confirmation: string): Observable<{ etat: EtatActivation }> {
+    return this.http.post<{ etat: EtatActivation }>(this.url, { jeton, motDePasse, confirmation });
   }
 
   nouveauLien(jeton: string): Observable<Refus> {

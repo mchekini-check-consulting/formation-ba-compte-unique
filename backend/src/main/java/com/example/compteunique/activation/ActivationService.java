@@ -78,10 +78,10 @@ public class ActivationService {
 
 	/**
 	 * Mot de passe conforme : enregistré haché (Argon2id), identifiant ACTIF, lien marqué utilisé.
-	 * Mot de passe refusé : le lien reste valide.
+	 * Mot de passe refusé ou confirmation différente : le lien reste valide.
 	 */
 	@Transactional
-	public EtatActivation activer(String jeton, String motDePasse) {
+	public EtatActivation activer(String jeton, String motDePasse, String confirmation) {
 		Jeton trouve = jetons.trouver(jeton, TypeJeton.ACTIVATION).orElseThrow(JetonInvalideException::new);
 		if (estActif(trouve)) {
 			throw new EspaceDejaActiveException();
@@ -91,7 +91,7 @@ public class ActivationService {
 		}
 		Long identifiantId = trouve.getIdentifiantConnexionId();
 		// Contrôle du mot de passe d'abord : s'il est refusé, le lien n'est pas consommé.
-		identifiantService.definirMotDePasse(identifiantId, motDePasse, interdits(identifiantId));
+		identifiantService.definirMotDePasse(identifiantId, motDePasse, confirmation, interdits(identifiantId));
 		jetons.utiliser(jeton, TypeJeton.ACTIVATION);
 		return EtatActivation.ACTIVE;
 	}
@@ -114,8 +114,8 @@ public class ActivationService {
 				.isPresent();
 	}
 
-	/** Adresse e-mail et noms de la cliente, que le mot de passe ne doit pas contenir. */
-	private List<String> interdits(Long identifiantId) {
+	/** Adresse e-mail et noms de la cliente, que le mot de passe ne doit pas contenir (aussi pour CU-46). */
+	public List<String> interdits(Long identifiantId) {
 		return comptes.findByIdentifiantConnexionId(identifiantId)
 				.map(Compte::getDossierId)
 				.flatMap(dossiers::findById)

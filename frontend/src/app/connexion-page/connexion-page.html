@@ -1,25 +1,67 @@
-<main class="connexion">
-  <a routerLink="/">← Retour au site</a>
-  <h1>Connexion à votre espace</h1>
-
-  <form (submit)="connecter($event, identifiant, motDePasse)">
-    <label>
-      Identifiant
-      <input #identifiant name="identifiant" autocomplete="username" required />
-    </label>
-    <label>
-      Mot de passe
-      <input #motDePasse name="motDePasse" type="password" autocomplete="current-password" required />
-    </label>
-    <button type="submit" [disabled]="enCours()">Me connecter</button>
-  </form>
+<app-acces-layout
+  titre="Bienvenue dans votre espace, tout votre argent au même endroit."
+  texte="Connectez-vous avec votre identifiant à 8 chiffres et votre mot de passe. Votre identifiant vous a été envoyé par e-mail à l'ouverture de votre compte."
+  [points]="points"
+>
+  <h2>Me connecter</h2>
+  <p class="sub">Entrez les informations de votre espace client.</p>
 
   @if (erreur()) {
-    <div role="alert" class="erreur">
+    <div role="alert" class="msg err">
+      <b>Connexion impossible</b>
       <p>{{ erreur() }}</p>
       @if (invitation()) {
         <p>{{ invitation() }}</p>
       }
     </div>
   }
-</main>
+
+  <form (submit)="connecter($event, identifiant, motDePasse)">
+    <div class="field">
+      <label for="identifiant">Identifiant de connexion</label>
+      <div class="input">
+        <input
+          #identifiant
+          id="identifiant"
+          name="identifiant"
+          autocomplete="username"
+          placeholder="8 chiffres"
+          aria-describedby="identifiant-aide"
+          required
+        />
+      </div>
+      <span class="hint" id="identifiant-aide">8 chiffres, envoyés par e-mail à l'ouverture de votre compte.</span>
+    </div>
+
+    <div class="field">
+      <label for="motDePasse">Mot de passe</label>
+      <div class="input">
+        <input
+          #motDePasse
+          id="motDePasse"
+          name="motDePasse"
+          [type]="visible() ? 'text' : 'password'"
+          autocomplete="current-password"
+          placeholder="Votre mot de passe"
+          required
+        />
+        <button class="eye" type="button" aria-controls="motDePasse" [attr.aria-pressed]="visible()" (click)="visible.set(!visible())">
+          {{ visible() ? 'Masquer' : 'Afficher' }}
+        </button>
+      </div>
+    </div>
+
+    <button class="btn" type="submit" [disabled]="enCours()">Me connecter</button>
+  </form>
+
+  <div class="row">
+    <a routerLink="/mot-de-passe-oublie">Mot de passe oublié ?</a>
+  </div>
+
+  <div class="divider"></div>
+  <p class="newacc">Pas encore de compte ? <a routerLink="/">Ouvrir mon compte</a></p>
+  <p class="foot-note">
+    Pour votre sécurité, ne communiquez jamais votre mot de passe. Hi-Tech Bank ne vous le demandera jamais par téléphone,
+    par SMS ou par e-mail.
+  </p>
+</app-acces-layout>
