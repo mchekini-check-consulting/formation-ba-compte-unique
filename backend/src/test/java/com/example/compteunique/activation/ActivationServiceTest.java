@@ -90,7 +90,7 @@ class ActivationServiceTest {
 
 	@Test
 	void motDePasseConformeEnregistreHacheIdentifiantActifEtLienUtilise() {
-		assertThat(service.activer(JETON, CONFORME)).isEqualTo(EtatActivation.ACTIVE);
+		assertThat(service.activer(JETON, CONFORME, CONFORME)).isEqualTo(EtatActivation.ACTIVE);
 		assertThat(identifiant.getMotDePasseHache()).startsWith("$argon2id$").doesNotContain(CONFORME);
 		assertThat(identifiant.getStatut()).isEqualTo(StatutIdentifiant.ACTIF);
 		verify(jetons).utiliser(JETON, TypeJeton.ACTIVATION);
@@ -98,7 +98,7 @@ class ActivationServiceTest {
 
 	private void refuse(String motDePasse, String message) {
 		MotDePasseNonConformeException refus = assertThrows(MotDePasseNonConformeException.class,
-				() -> service.activer(JETON, motDePasse));
+				() -> service.activer(JETON, motDePasse, motDePasse));
 		assertThat(refus.getRegles()).first().isEqualTo(message);
 		ActivationController controleur = new ActivationController(service);
 		assertThat(controleur.motDePasseRefuse(refus).getBody().message()).isEqualTo(message);
@@ -123,18 +123,33 @@ class ActivationServiceTest {
 		refuse("Xx-marie.dupont-26", "Votre mot de passe ne doit pas contenir votre e-mail ni votre nom");
 	}
 
+	// Complément de l'US-09 : confirmation différente ou vide refusée par le serveur, même si
+	// l'écran a été contourné ; le lien reste valable pour corriger la saisie.
+	@Test
+	void confirmationDifferenteRefuseeEtLienToujoursValable() {
+		MotDePasseNonConformeException refus = assertThrows(MotDePasseNonConformeException.class,
+				() -> service.activer(JETON, CONFORME, "Abcdefghij1?"));
+		assertThat(refus.getRegles()).containsExactly("Les deux mots de passe ne correspondent pas");
+		assertThrows(MotDePasseNonConformeException.class, () -> service.activer(JETON, CONFORME, ""));
+		verify(jetons, never()).utiliser(anyString(), any());
+		assertThat(identifiant.getMotDePasseHache()).isNull();
+		assertThat(service.etat(JETON)).isEqualTo(EtatActivation.VALIDE);
+		assertThat(service.activer(JETON, CONFORME, CONFORME)).isEqualTo(EtatActivation.ACTIVE);
+		verify(jetons).utiliser(JETON, TypeJeton.ACTIVATION);
+	}
+
 	@Test
 	void lienExpireOuDejaUtiliseAfficheLienExpire() {
 		when(jetons.trouver(JETON, TypeJeton.ACTIVATION)).thenReturn(Optional.of(jeton(CREE.minus(Duration.ofHours(24)))));
 		assertThat(service.etat(JETON)).isEqualTo(EtatActivation.EXPIRE);
-		assertThrows(JetonInvalideException.class, () -> service.activer(JETON, CONFORME));
+		assertThrows(JetonInvalideException.class, () -> service.activer(JETON, CONFORME, CONFORME));
 		assertThat(new ActivationController(service).lienExpire().getBody().message()).isEqualTo("Lien expiré");
 	}
 
 	@Test
 	void lienInconnuAfficheLienExpire() {
 		assertThat(service.etat("inconnu")).isEqualTo(EtatActivation.EXPIRE);
-		assertThrows(JetonInvalideException.class, () -> service.activer("inconnu", CONFORME));
+		assertThrows(JetonInvalideException.class, () -> service.activer("inconnu", CONFORME, CONFORME));
 	}
 
 	@Test
@@ -156,7 +171,7 @@ class ActivationServiceTest {
 		identifiant.definirMotDePasse("hache", OffsetDateTime.now(HORLOGE));
 		assertThat(service.etat(JETON)).isEqualTo(EtatActivation.DEJA_ACTIVE);
 		EspaceDejaActiveException refus = assertThrows(EspaceDejaActiveException.class,
-				() -> service.activer(JETON, CONFORME));
+				() -> service.activer(JETON, CONFORME, CONFORME));
 		assertThat(refus.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
 		assertThat(new ActivationController(service).dejaActive().getBody().message())
 				.isEqualTo("Votre espace est déjà activé");
@@ -166,10 +181,10 @@ class ActivationServiceTest {
 	void controleurDelegueAuServiceSansJamaisMontrerLeJeton() {
 		ActivationController controleur = new ActivationController(service);
 		assertThat(controleur.etat(new Lien(JETON)).etat()).isEqualTo(EtatActivation.VALIDE);
-		assertThat(controleur.activer(new DemandeActivation(JETON, CONFORME)).etat()).isEqualTo(EtatActivation.ACTIVE);
+		assertThat(controleur.activer(new DemandeActivation(JETON, CONFORME, CONFORME)).etat()).isEqualTo(EtatActivation.ACTIVE);
 		assertThat(controleur.nouveauLien(new Lien("inconnu")).message()).contains("nouveau lien");
 		assertThat(new Lien(JETON).toString()).doesNotContain(JETON);
-		assertThat(new DemandeActivation(JETON, CONFORME).toString()).doesNotContain(JETON, CONFORME);
+		assertThat(new DemandeActivation(JETON, CONFORME, CONFORME).toString()).doesNotContain(JETON, CONFORME);
 		assertThat(PolitiqueMotDePasse.interditsDe("a@b.fr")).isEqualTo(List.of("a@b.fr", "a"));
 	}
 

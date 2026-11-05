@@ -2,7 +2,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
-import { ActivationPage, MESSAGE_TROP_COURT } from './activation-page';
+import { MESSAGE_TROP_COURT } from '../mot-de-passe/saisie-mot-de-passe';
+import { ActivationPage } from './activation-page';
 
 describe('ActivationPage (CU-14)', () => {
   let fixture: ComponentFixture<ActivationPage>;
@@ -33,8 +34,9 @@ describe('ActivationPage (CU-14)', () => {
     requete.flush({ etat });
     await fixture.whenStable();
   };
-  const valider = async (motDePasse: string) => {
+  const valider = async (motDePasse: string, confirmation = motDePasse) => {
     page.querySelector<HTMLInputElement>('input[name="motDePasse"]')!.value = motDePasse;
+    page.querySelector<HTMLInputElement>('input[name="confirmation"]')!.value = confirmation;
     page.querySelector('form')!.dispatchEvent(new Event('submit'));
     await fixture.whenStable();
   };
@@ -44,13 +46,13 @@ describe('ActivationPage (CU-14)', () => {
   it("affiche la page « Activer mon espace » sans consommer le lien, puis l'active", async () => {
     await creer('j1');
     await ouvrir('VALIDE');
-    expect(page.querySelector('h1')?.textContent).toContain('Activer mon espace');
+    expect(page.querySelector('.card h2')?.textContent).toContain('Activer mon espace');
     await valider('Abcdefghij1!');
     const activation = http.expectOne({ method: 'POST', url: '/api/backend/activation' });
-    expect(activation.request.body).toEqual({ jeton: 'j1', motDePasse: 'Abcdefghij1!' });
+    expect(activation.request.body).toEqual({ jeton: 'j1', motDePasse: 'Abcdefghij1!', confirmation: 'Abcdefghij1!' });
     activation.flush({ etat: 'ACTIVE' });
     await fixture.whenStable();
-    expect(page.querySelector('h1')?.textContent).toContain('Votre espace est activé');
+    expect(page.querySelector('.card h2')?.textContent).toContain('Votre espace est activé');
     expect(page.querySelector('a.bouton')?.getAttribute('href')).toBe('/connexion');
   });
 
@@ -76,7 +78,7 @@ describe('ActivationPage (CU-14)', () => {
   it('affiche « Lien expiré » et envoie un nouveau lien', async () => {
     await creer('j1');
     await ouvrir('EXPIRE');
-    expect(page.querySelector('h1')?.textContent).toContain('Lien expiré');
+    expect(page.querySelector('.card h2')?.textContent).toContain('Lien expiré');
     page.querySelector<HTMLButtonElement>('button')!.click();
     await fixture.whenStable();
     const demande = http.expectOne('/api/backend/activation/nouveau-lien');
@@ -89,7 +91,7 @@ describe('ActivationPage (CU-14)', () => {
   it('affiche « Votre espace est déjà activé » avec un lien vers la connexion', async () => {
     await creer('j1');
     await ouvrir('DEJA_ACTIVE');
-    expect(page.querySelector('h1')?.textContent).toContain('Votre espace est déjà activé');
+    expect(page.querySelector('.card h2')?.textContent).toContain('Votre espace est déjà activé');
     expect(page.querySelector('a.bouton')?.getAttribute('href')).toBe('/connexion');
   });
 
@@ -99,7 +101,7 @@ describe('ActivationPage (CU-14)', () => {
     await valider('Abcdefghij1!');
     http.expectOne('/api/backend/activation').flush({ message: 'Lien expiré' }, { status: 410, statusText: 'Gone' });
     await fixture.whenStable();
-    expect(page.querySelector('h1')?.textContent).toContain('Lien expiré');
+    expect(page.querySelector('.card h2')?.textContent).toContain('Lien expiré');
   });
 
   it('signale un espace déjà activé ou un service indisponible à la validation', async () => {
@@ -112,12 +114,12 @@ describe('ActivationPage (CU-14)', () => {
     await valider('Abcdefghij1!');
     http.expectOne('/api/backend/activation').flush({}, { status: 409, statusText: 'Conflict' });
     await fixture.whenStable();
-    expect(page.querySelector('h1')?.textContent).toContain('déjà activé');
+    expect(page.querySelector('.card h2')?.textContent).toContain('déjà activé');
   });
 
   it('considère un lien sans jeton comme expiré, et signale un service indisponible', async () => {
     await creer(null);
-    expect(page.querySelector('h1')?.textContent).toContain('Lien expiré');
+    expect(page.querySelector('.card h2')?.textContent).toContain('Lien expiré');
     page.querySelector<HTMLButtonElement>('button')!.click();
     http.expectOne('/api/backend/activation/nouveau-lien').flush('', { status: 500, statusText: 'Erreur' });
     await fixture.whenStable();

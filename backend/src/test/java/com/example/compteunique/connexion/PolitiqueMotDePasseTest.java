@@ -30,6 +30,31 @@ class PolitiqueMotDePasseTest {
 				.containsExactly("Au moins un caractère spécial");
 	}
 
+	// Complément de l'US-09 : saisie et confirmation du mot de passe.
+	@Test
+	void confirmationIdentiqueAcceptee() {
+		assertThat(PolitiqueMotDePasse.reglesNonRespectees("Abcdefghij1!", "Abcdefghij1!", MARIE)).isEmpty();
+	}
+
+	@Test
+	void confirmationDifferenteOuVideRefusee() {
+		assertThat(PolitiqueMotDePasse.reglesNonRespectees("Abcdefghij1!", "Abcdefghij1?", MARIE))
+				.containsExactly("Les deux mots de passe ne correspondent pas");
+		assertThat(PolitiqueMotDePasse.reglesNonRespectees("Abcdefghij1!", "", MARIE))
+				.containsExactly("Veuillez confirmer votre mot de passe");
+		assertThat(PolitiqueMotDePasse.reglesNonRespectees("Abcdefghij1!", null, MARIE))
+				.containsExactly("Veuillez confirmer votre mot de passe");
+	}
+
+	@Test
+	void reglesSignaleesQuelleQueSoitLaConfirmation() {
+		assertThat(PolitiqueMotDePasse.reglesNonRespectees("Court1!", "autre", MARIE)).first()
+				.isEqualTo(PolitiqueMotDePasse.TROP_COURT);
+		assertThat(PolitiqueMotDePasse.reglesNonRespectees("Motdepasse123!", "", MARIE))
+				.contains(PolitiqueMotDePasse.TROP_COURANT)
+				.doesNotContain(PolitiqueMotDePasse.CONFIRMATION_VIDE);
+	}
+
 	// CU-14 : « Votre mot de passe doit contenir au moins 12 caractères »
 	@Test
 	void moinsDe12CaracteresRefuseAvecLeMessageDeCu14() {

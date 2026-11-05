@@ -77,4 +77,32 @@ describe('ConnexionPage', () => {
     await fixture.whenStable();
     expect(page.querySelector('[role=alert]')?.textContent).toContain('réessayez plus tard');
   });
+
+  it('affiche la maquette : titre, arguments et liens utiles', async () => {
+    const fixture = TestBed.createComponent(ConnexionPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    expect(page.querySelector('.card h2')?.textContent).toBe('Me connecter');
+    expect(page.querySelectorAll('.points li').length).toBe(3);
+    expect(page.querySelector('.row a')?.getAttribute('href')).toBe('/mot-de-passe-oublie');
+    expect(page.querySelector('.newacc a')?.getAttribute('href')).toBe('/');
+  });
+
+  it('affiche puis masque le mot de passe sans rien envoyer', async () => {
+    const fixture = TestBed.createComponent(ConnexionPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    const champ = page.querySelector<HTMLInputElement>('input[name=motDePasse]')!;
+    const oeil = page.querySelector<HTMLButtonElement>('button.eye')!;
+    expect(champ.type).toBe('password');
+    oeil.click();
+    await fixture.whenStable();
+    expect(champ.type).toBe('text');
+    expect(oeil.textContent).toContain('Masquer');
+    expect(oeil.getAttribute('aria-pressed')).toBe('true');
+    oeil.click();
+    await fixture.whenStable();
+    expect(champ.type).toBe('password');
+    expect(oeil.textContent).toContain('Afficher');
+  });
 });

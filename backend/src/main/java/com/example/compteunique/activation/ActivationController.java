@@ -17,7 +17,7 @@ import com.example.compteunique.connexion.MotDePasseNonConformeException;
 // CU-14 : page « Activer mon espace » (lien reçu par SMS). Le jeton circule dans le corps des
 // requêtes, jamais dans l'adresse : il n'apparaît pas dans les journaux.
 // POST /activation/etat {jeton}                 : VALIDE, EXPIRE ou DEJA_ACTIVE (le lien n'est pas consommé)
-// POST /activation {jeton, motDePasse}          : définit le mot de passe
+// POST /activation {jeton, motDePasse, confirmation} : définit le mot de passe
 // POST /activation/nouveau-lien {jeton}         : nouveau lien par SMS
 // Via le gateway : https://gateway.<dépôt>.<env>.check-consulting.net/backend/activation/...
 @RestController
@@ -42,7 +42,7 @@ public class ActivationController {
 
 	}
 
-	public record DemandeActivation(String jeton, String motDePasse) {
+	public record DemandeActivation(String jeton, String motDePasse, String confirmation) {
 
 		// Ni le jeton ni le mot de passe ne doivent apparaître dans un log.
 		@Override
@@ -65,7 +65,7 @@ public class ActivationController {
 
 	@PostMapping
 	public Etat activer(@RequestBody DemandeActivation demande) {
-		return new Etat(activation.activer(demande.jeton(), demande.motDePasse()));
+		return new Etat(activation.activer(demande.jeton(), demande.motDePasse(), demande.confirmation()));
 	}
 
 	@PostMapping("/nouveau-lien")

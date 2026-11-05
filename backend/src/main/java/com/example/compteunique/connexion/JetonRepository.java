@@ -12,6 +12,10 @@ public interface JetonRepository extends JpaRepository<Jeton, Long> {
 
 	Optional<Jeton> findByJetonHacheAndType(String jetonHache, TypeJeton type);
 
+	/** CU-46 : nombre de liens créés depuis une date (limite de demandes par heure). */
+	long countByIdentifiantConnexionIdAndTypeAndCreeLeAfter(Long identifiantConnexionId, TypeJeton type,
+			OffsetDateTime depuis);
+
 	@Modifying
 	@Query("""
 			update Jeton j set j.invalideLe = :date

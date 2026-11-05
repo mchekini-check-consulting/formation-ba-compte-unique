@@ -1,0 +1,83 @@
+// Styles des écrans d'accès à l'espace (connexion, activation, mot de passe oublié,
+// réinitialisation), d'après la maquette « Connexion Hi-Tech Bank ». Fichier global : ils
+// sont partagés par plusieurs composants ; tout est rangé sous .acces pour ne pas toucher aux
+// autres écrans.
+.acces {
+  --ink: #0f1b33; --muted: #5d6887; --line: #e5eaf3; --soft: #f5f8fd; --white: #fff;
+  --navy: #0b2545; --blue2: #163a66; --mint: #00b894; --title: #0b2545; --accent: #0f7f6e;
+  --err: #b42318; --err-bg: #fdecea; --warn-bg: #fff3dc; --warn-ink: #8a5300; --info-bg: #e3ebf5; --info-ink: #2c4a6e;
+
+  display: block;
+  min-height: 100vh;
+  padding: 0 16px;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--ink);
+  background: var(--soft);
+
+  &, * { box-sizing: border-box; }
+  :focus-visible { outline: 3px solid var(--mint); outline-offset: 2px; }
+
+  header { max-width: 1080px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; padding: 22px 0; gap: 12px; }
+  .logo { font-weight: 800; font-size: 20px; color: var(--title); letter-spacing: -.01em; text-decoration: none; }
+  .logo span { color: var(--mint); }
+  .help { font-size: 14px; color: var(--muted); text-decoration: none; }
+  .help:hover { color: var(--ink); }
+
+  main { max-width: 1080px; margin: 0 auto; display: grid; grid-template-columns: 1.05fr .95fr; gap: 48px; align-items: center; padding: 24px 0 56px; }
+
+  .intro h1 { font-size: 46px; line-height: 1.08; letter-spacing: -.03em; color: var(--title); margin: 12px 0 16px; text-wrap: balance; }
+  .intro p { font-size: 17px; line-height: 1.6; color: var(--muted); max-width: 520px; }
+  .eyebrow { font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+  .points { list-style: none; padding: 0; margin: 28px 0 0; display: grid; gap: 12px; }
+  .points li { display: flex; gap: 12px; font-size: 15px; line-height: 1.5; }
+  .check { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; background: #dffaf3; color: #00775f; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 13px; }
+
+  .card { background: var(--white); border: 1px solid var(--line); border-radius: 24px; padding: 34px; box-shadow: 0 30px 60px rgba(11, 37, 69, .12); }
+  .card h2 { margin: 0 0 6px; font-size: 24px; color: var(--title); letter-spacing: -.01em; }
+  .card .sub { margin: 0 0 24px; font-size: 14.5px; color: var(--muted); line-height: 1.5; }
+
+  .field { display: grid; gap: 7px; margin-bottom: 18px; }
+  .field label { font-size: 14px; font-weight: 700; }
+  .hint { font-size: 12.5px; color: var(--muted); }
+  .input { display: flex; align-items: center; border: 1.5px solid var(--line); border-radius: 14px; background: var(--white); }
+  .input:focus-within { border-color: var(--mint); box-shadow: 0 0 0 4px rgba(0, 184, 148, .18); }
+  .input input { flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; font-size: 16px; padding: 14px 16px; color: var(--ink); outline: none; letter-spacing: .04em; }
+  .input input::placeholder { color: var(--muted); letter-spacing: 0; }
+  .eye { border: 0; background: none; color: var(--title); font: inherit; font-weight: 700; font-size: 13px; padding: 0 16px; cursor: pointer; }
+
+  .regles { margin: 0 0 18px; padding-left: 18px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+
+  .msg { padding: 13px 15px; border-radius: 14px; font-size: 14px; line-height: 1.5; margin: 0 0 18px; }
+  .msg p { margin: 0; }
+  .msg b { display: block; margin-bottom: 2px; }
+  .msg.err { background: var(--err-bg); color: var(--err); }
+  .msg.warn { background: var(--warn-bg); color: var(--warn-ink); }
+  .msg.info { background: var(--info-bg); color: var(--info-ink); }
+
+  .btn { display: block; width: 100%; border: 0; cursor: pointer; font: inherit; font-weight: 800; font-size: 16px; padding: 15px 20px; border-radius: 14px; text-align: center; text-decoration: none; background: linear-gradient(120deg, var(--navy), var(--blue2)); color: #fff; box-shadow: 0 12px 26px rgba(11, 37, 69, .25); }
+  .btn:hover { transform: translateY(-1px); }
+  .btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+
+  .row { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 18px; font-size: 14px; }
+  .row a, .newacc a { color: var(--accent); font-weight: 700; text-decoration: none; }
+  .row a:hover, .newacc a:hover { text-decoration: underline; }
+  .divider { border-top: 1px solid var(--line); margin: 24px 0 18px; }
+  .newacc { font-size: 14px; color: var(--muted); text-align: center; line-height: 1.6; margin: 0; }
+  .foot-note { margin: 18px 0 0; font-size: 12.5px; color: var(--muted); line-height: 1.5; text-align: center; }
+
+  @media (prefers-color-scheme: dark) {
+    --ink: #eef3fb; --muted: #a9b6cf; --line: #23324f; --soft: #0f1b33; --white: #0b1830; --title: #fff; --accent: #7fe3cc;
+    color-scheme: dark;
+    .eye { color: #7fe3cc; }
+  }
+
+  @media (max-width: 880px) {
+    main { grid-template-columns: 1fr; gap: 28px; padding-top: 8px; }
+    .intro h1 { font-size: 34px; }
+  }
+
+  @media (max-width: 480px) {
+    .card { padding: 26px 20px; }
+    .intro h1 { font-size: 30px; }
+  }
+}
