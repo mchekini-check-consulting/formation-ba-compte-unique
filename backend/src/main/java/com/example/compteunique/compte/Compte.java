@@ -1,7 +1,7 @@
 package com.example.compteunique.compte;
 
-import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.Optional;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -18,6 +18,7 @@ import jakarta.persistence.Table;
 public class Compte {
 
 	public static final String ACTIF = "ACTIF";
+	public static final String CLOTURE = "CLOTURE";
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -35,8 +36,11 @@ public class Compte {
 	@Column(name = "numero_compte", nullable = false, unique = true, length = 11, updatable = false)
 	private String numeroCompte;
 
-	@Column(nullable = false, precision = 15, scale = 2)
-	private BigDecimal solde;
+	@Column(name = "solde_centimes", nullable = false)
+	private long soldeCentimes;
+
+	@Column(name = "solde_mis_a_jour_le", nullable = false)
+	private OffsetDateTime soldeMisAJourLe;
 
 	@Column(nullable = false, length = 20)
 	private String statut;
@@ -55,7 +59,8 @@ public class Compte {
 		this.customerId = customerId;
 		this.iban = iban.valeur();
 		this.numeroCompte = iban.numeroCompte();
-		this.solde = BigDecimal.ZERO;
+		this.soldeCentimes = 0;
+		this.soldeMisAJourLe = ouvertLe;
 		this.statut = ACTIF;
 		this.ouvertLe = ouvertLe;
 		this.identifiantConnexionId = identifiantConnexionId;
@@ -81,8 +86,29 @@ public class Compte {
 		return numeroCompte;
 	}
 
-	public BigDecimal getSolde() {
-		return solde;
+	public long getSoldeCentimes() {
+		return soldeCentimes;
+	}
+
+	public OffsetDateTime getSoldeMisAJourLe() {
+		return soldeMisAJourLe;
+	}
+
+	public boolean isCloture() {
+		return CLOTURE.equals(statut);
+	}
+
+	/** CU-19 : 0 si le compte est clôturé ; vide si le solde est négatif, jamais affiché. */
+	public Optional<Long> getSoldeAffichable() {
+		if (isCloture()) {
+			return Optional.of(0L);
+		}
+		return soldeCentimes < 0 ? Optional.empty() : Optional.of(soldeCentimes);
+	}
+
+	/** CU-19 : compte ouvert, à 0, dont le solde n'a jamais changé depuis l'ouverture. */
+	public boolean isSansVersement() {
+		return ACTIF.equals(statut) && soldeCentimes == 0 && soldeMisAJourLe.isEqual(ouvertLe);
 	}
 
 	public String getStatut() {

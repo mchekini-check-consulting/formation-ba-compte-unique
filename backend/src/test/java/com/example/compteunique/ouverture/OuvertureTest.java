@@ -10,7 +10,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -114,7 +113,7 @@ class OuvertureTest {
 	void conventionSigneeCreeLeCompteEtLIdentifiantPuisEnvoieLesDeuxMessages() {
 		ouverture.conventionSignee(new ConventionSigneeEvent(ID));
 		assertThat(compte.getIban()).isEqualTo(Iban.de("12345678901").valeur());
-		assertThat(compte.getSolde()).isEqualByComparingTo(BigDecimal.ZERO);
+		assertThat(compte.getSoldeCentimes()).isZero();
 		assertThat(compte.getStatut()).isEqualTo("ACTIF");
 		assertThat(compte.getCustomerId()).isEqualTo(dossier.getCustomerId());
 		assertThat(compte.getIdentifiantConnexionId()).isEqualTo(7L);

@@ -1,0 +1,46 @@
+@if (identifiant()) {
+  <div class="espace">
+    <aside>
+      <div class="logo">Hi-Tech<span>Bank</span></div>
+      <nav>
+        <div class="sep">Mes comptes</div>
+        <a routerLink="/espace" aria-current="page"><i></i>Compte courant</a>
+        <a routerLink="/comptes"><i></i>Mes comptes</a>
+      </nav>
+    </aside>
+    <main>
+      <div class="top">
+        <div class="hello">Connectée avec l'identifiant <b>{{ identifiant() }}</b></div>
+      </div>
+      <section class="block">
+        <div class="wrap feature">
+          <div>
+            @if (sansCompte()) {
+              <div class="noacct">
+                <span class="tag">Pas encore de compte</span>
+                <div>
+                  <h3>Ouvrez votre compte courant</h3>
+                  <p>Ouverture en environ 30 minutes, sans versement initial.</p>
+                  <a class="btn" routerLink="/">Ouvrir mon compte</a>
+                </div>
+              </div>
+            } @else if (lu()) {
+              <app-carte-compte [compte]="compte()" />
+            }
+          </div>
+          <div>
+            <div class="eyebrow">Mes comptes · Compte courant</div>
+            <h2>Votre compte du quotidien, à jour</h2>
+            <p class="lead">Solde et date de mise à jour, pour suivre votre situation au quotidien.</p>
+            <ul>
+              <li><span class="check">✓</span><span><b>Solde en euros</b>, affiché avec deux décimales.</span></li>
+              <li><span class="check">✓</span><span><b>Date de mise à jour</b> visible à chaque consultation.</span></li>
+              <li><span class="check">✓</span><span><b>Vos seuls comptes</b> : personne d'autre ne voit votre solde.</span></li>
+              <li><span class="check">✓</span><span><b>Pas de découvert</b> : le solde ne passe jamais en négatif.</span></li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+}
