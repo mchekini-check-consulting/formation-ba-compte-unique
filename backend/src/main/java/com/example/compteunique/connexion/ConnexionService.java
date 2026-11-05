@@ -49,12 +49,19 @@ public class ConnexionService {
 
 	@Transactional(readOnly = true)
 	public Optional<String> identifiantDeLaSession(String jetonSession) {
+		return idDeLaSession(jetonSession)
+				.flatMap(identifiants::findById)
+				.map(IdentifiantConnexion::getIdentifiant);
+	}
+
+	/** Identifiant technique de la cliente connectée, vide si la session est absente ou inconnue. */
+	@Transactional(readOnly = true)
+	public Optional<Long> idDeLaSession(String jetonSession) {
 		if (jetonSession == null) {
 			return Optional.empty();
 		}
 		return sessions.findByJetonHache(SecretsAleatoires.empreinte(jetonSession))
-				.flatMap(session -> identifiants.findById(session.getIdentifiantConnexionId()))
-				.map(IdentifiantConnexion::getIdentifiant);
+				.map(SessionClient::getIdentifiantConnexionId);
 	}
 
 	private void refuserApresComparaison(String motDePasse, boolean activationAttendue) {

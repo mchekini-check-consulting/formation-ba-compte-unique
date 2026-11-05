@@ -99,4 +99,12 @@ class ConnexionServiceTest {
 		assertEquals(Optional.empty(), service.identifiantDeLaSession("inconnu"));
 	}
 
+	@Test
+	void uneSessionConnueRenvoieLIdTechniqueDeLaCliente() {
+		when(sessions.findByJetonHache(SecretsAleatoires.empreinte("jeton")))
+				.thenReturn(Optional.of(new SessionClient(1L, "empreinte", OffsetDateTime.now())));
+		assertEquals(Optional.of(1L), service.idDeLaSession("jeton"));
+		assertEquals(Optional.empty(), service.idDeLaSession(null));
+	}
+
 }

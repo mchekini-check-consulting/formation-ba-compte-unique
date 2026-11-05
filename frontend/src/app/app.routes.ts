@@ -1,5 +1,7 @@
 import { Routes } from '@angular/router';
 import { ActivationPage } from './activation/activation-page';
+import { DetailCompte } from './comptes/detail-compte';
+import { MesComptes } from './comptes/mes-comptes';
 import { ConnexionPage } from './connexion-page/connexion-page';
 import { Espace } from './espace/espace';
 import { ItemsPage } from './items-page/items-page';
@@ -16,6 +18,8 @@ export const routes: Routes = [
   { path: 'mot-de-passe-oublie', component: MotDePasseOublie },
   { path: 'reinitialisation', component: ReinitialisationPage },
   { path: 'espace', component: Espace },
+  { path: 'comptes', component: MesComptes },
+  { path: 'comptes/:id', component: DetailCompte },
   { path: 'items', component: ItemsPage },
   { path: 'test/emails', component: MessagesTest, data: { canal: 'emails' } },
   { path: 'test/sms', component: MessagesTest, data: { canal: 'sms' } },
