@@ -81,6 +81,21 @@ export class Landing {
     });
   }
 
+  /**
+   * CU-83 : pendant le parcours, les rubriques du site ne sont pas affichées. Un lien du menu
+   * (« #compte »...) ramène donc au site, puis à la rubrique, au lieu de ne rien faire.
+   */
+  protected allerALaRubrique(event: MouseEvent): void {
+    const lien = (event.target as Element | null)?.closest?.('a[href^="#"]');
+    if (!lien || !this.parcoursOuvert()) {
+      return;
+    }
+    event.preventDefault();
+    const rubrique = lien.getAttribute('href')!.slice(1);
+    this.parcoursOuvert.set(false);
+    afterNextRender(() => document.getElementById(rubrique)?.scrollIntoView?.(), { injector: this.injector });
+  }
+
   protected fermerParcours(event?: Event): void {
     event?.preventDefault();
     this.parcoursOuvert.set(false);

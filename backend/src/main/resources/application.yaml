@@ -30,6 +30,14 @@ app:
     # CU-87 : en test (local, dev, qualif), e-mails et SMS capturés et affichés sur
     # /test/emails et /test/sms au lieu d'être envoyés ; false en preprod et prod (helm.yaml).
     capture: ${MESSAGES_CAPTURE:true}
+  connexion:
+    # CU-48 : blocage d'une adresse IP après 20 échecs en 15 minutes. Désactivé en dev et qualif
+    # (helm.yaml) : les postes de recette partagent la même adresse. Toujours actif en preprod et prod.
+    limite-adresse-ip: ${CONNEXION_LIMITE_ADRESSE_IP:true}
+  test:
+    # CU-167 : journal de sécurité consultable sur /test/journal-securite en test (local, dev,
+    # qualif) ; false en preprod et prod (helm.yaml).
+    journal-consultable: ${JOURNAL_CONSULTABLE:true}
 
 logging:
   level:

@@ -4,13 +4,15 @@ import { Injectable, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
 import { ConnexionService, SessionEnCours } from '../connexion';
+import { MOTIF_EXPIREE, motifDeFermeture } from './motifs';
+
+export { MOTIF_EXPIREE, MOTIF_SESSION_EXPIREE } from './motifs';
 
 /** Au plus un signalement d'activité au serveur par intervalle (le dernier n'est jamais perdu). */
 export const INTERVALLE_ACTIVITE_MS = 15_000;
 /** Relecture de la session (sans la prolonger) : une déconnexion ailleurs est vue au plus tard ici. */
 export const INTERVALLE_VERIFICATION_MS = 60_000;
 export const CANAL_SESSION = 'compte-unique-session';
-export const MOTIF_EXPIREE = 'expiree';
 
 const EVENEMENTS_ACTIVITE = ['click', 'keydown', 'input'] as const;
 
@@ -61,7 +63,7 @@ export class SuiviSession {
         },
         error: (erreur: HttpErrorResponse) => {
           if (erreur.status === 401) {
-            this.fermer(null);
+            this.fermer(motifDeFermeture(erreur));
           }
         },
       }),
@@ -134,7 +136,7 @@ export class SuiviSession {
       error: (erreur: HttpErrorResponse) => {
         this.signalementEnCours = false;
         if (erreur.status === 401) {
-          this.fermer(this.restantCalcule() <= 0 ? MOTIF_EXPIREE : null);
+          this.fermer(this.restantCalcule() <= 0 ? MOTIF_EXPIREE : motifDeFermeture(erreur));
         }
       },
     });
@@ -163,7 +165,7 @@ export class SuiviSession {
       },
       error: (erreur: HttpErrorResponse) => {
         if (erreur.status === 401) {
-          this.fermer(echeanceAtteinte ? MOTIF_EXPIREE : null);
+          this.fermer(echeanceAtteinte ? MOTIF_EXPIREE : motifDeFermeture(erreur));
         }
       },
     });

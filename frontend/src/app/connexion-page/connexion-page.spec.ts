@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { vi } from 'vitest';
-import { ConnexionPage } from './connexion-page';
+import { ConnexionPage, messageDeRefus, reessayerDans } from './connexion-page';
 
 describe('ConnexionPage', () => {
   let http: HttpTestingController;
@@ -145,5 +145,70 @@ describe('ConnexionPage', () => {
     const fixture = TestBed.createComponent(ConnexionPage);
     await fixture.whenStable();
     expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Session expirée');
+  });
+
+  async function arriverAvecLeMotif(motif: string) {
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [ConnexionPage],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({ motif }) } } },
+      ],
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(ConnexionPage);
+    await fixture.whenStable();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  // CU-169 : session révoquée ou expirée côté serveur pendant la navigation.
+  it('affiche « Session expirée » quand le serveur a fermé la session (CU-169)', async () => {
+    const message = (await arriverAvecLeMotif('session_expiree')).querySelector('[role=status]');
+    expect(message?.querySelector('b')?.textContent).toBe('Session expirée');
+    expect(message?.textContent).toContain('Votre session a été fermée. Reconnectez-vous pour continuer.');
+    expect(message?.textContent).not.toContain('10 minutes');
+  });
+
+  it("n'affiche pas « Session expirée » avec un motif inconnu", async () => {
+    expect((await arriverAvecLeMotif('autre')).textContent).not.toContain('Session expirée');
+  });
+
+  // CU-171 : la durée restante du blocage vient du backend (reessayerDansSecondes).
+  it.each([
+    ['Trop de tentatives depuis votre connexion. Réessayez plus tard.', 754, 'Trop de tentatives depuis votre connexion. Réessayez dans 13 minutes.'],
+    ['Trop de tentatives. Réessayez dans 5 minutes.', 170, 'Trop de tentatives. Réessayez dans 3 minutes.'],
+    ['Trop de tentatives. Réessayez dans 5 minutes.', 30, 'Trop de tentatives. Réessayez dans 1 minute.'],
+  ])('CU-171 : « %s » avec %i secondes restantes devient « %s »', async (message, secondes, attendu) => {
+    const fixture = TestBed.createComponent(ConnexionPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    soumettre(page);
+    http
+      .expectOne('/api/backend/connexion')
+      .flush({ message, invitation: null, reessayerDansSecondes: secondes }, { status: 429, statusText: 'Too Many Requests' });
+    await fixture.whenStable();
+    expect(page.querySelector('[role=alert] p')?.textContent).toBe(attendu);
+  });
+});
+
+describe('messageDeRefus (CU-171)', () => {
+  it.each([null, undefined, 0, -5, Number.NaN])('sans durée exploitable (%s), garde le message du backend', (secondes) => {
+    expect(messageDeRefus({ message: 'Trop de tentatives. Réessayez plus tard.', invitation: null, reessayerDansSecondes: secondes })).toBe(
+      'Trop de tentatives. Réessayez plus tard.',
+    );
+  });
+
+  it('ajoute la consigne à un message qui n’en a pas', () => {
+    expect(messageDeRefus({ message: 'Trop de tentatives.', invitation: null, reessayerDansSecondes: 900 })).toBe(
+      'Trop de tentatives. Réessayez dans 15 minutes.',
+    );
+  });
+
+  it('arrondit à la minute supérieure, au moins 1', () => {
+    expect(reessayerDans(1)).toBe('Réessayez dans 1 minute.');
+    expect(reessayerDans(61)).toBe('Réessayez dans 2 minutes.');
   });
 });

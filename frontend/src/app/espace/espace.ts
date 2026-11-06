@@ -1,9 +1,9 @@
 import { DOCUMENT } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { CarteCompte } from '../comptes/carte-compte';
-import { Compte, ComptesService, formaterDate, formaterSolde, libelleStatut } from '../comptes/comptes';
+import { Compte, ComptesService, formaterDate, libelleStatut, soldeAffichable } from '../comptes/comptes';
 import { SuiviSession, formaterRestant } from '../session/suivi-session';
 import { CREDITS, EPARGNE, Produit } from './produits';
 
@@ -21,7 +21,6 @@ const DUREE_ANNONCE_MS = 3200;
   templateUrl: './espace.html',
 })
 export class Espace {
-  private readonly router = inject(Router);
   private readonly document = inject(DOCUMENT);
   private readonly comptes = inject(ComptesService);
   private readonly suivi = inject(SuiviSession);
@@ -42,10 +41,7 @@ export class Espace {
     return etat.lu && !etat.erreur && etat.comptes.length === 0;
   });
   /** Solde affichable, null s'il est indisponible (erreur de lecture ou solde refusé). */
-  protected readonly solde = computed(() => {
-    const centimes = this.compte()?.soldeCentimes;
-    return centimes === null || centimes === undefined ? null : formaterSolde(centimes);
-  });
+  protected readonly solde = computed(() => soldeAffichable(this.compte()));
   protected readonly miseAJour = computed(() => {
     const date = this.compte()?.soldeMisAJourLe;
     return date ? formaterDate(date) : null;
@@ -99,9 +95,8 @@ export class Espace {
     this.comptes.mesComptes().subscribe({
       next: (comptes) => this.etat.set({ lu: true, erreur: false, comptes }),
       error: (erreur: HttpErrorResponse) => {
-        if (erreur.status === 401) {
-          void this.router.navigateByUrl('/connexion');
-        } else {
+        // 401 : retour à la connexion par l'intercepteur sessionFermee (CU-169).
+        if (erreur.status !== 401) {
           this.etat.set({ lu: true, erreur: true, comptes: [] });
         }
       },

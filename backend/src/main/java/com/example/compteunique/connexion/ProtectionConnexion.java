@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.example.compteunique.compte.EvenementSecurite;
@@ -14,6 +15,9 @@ import com.example.compteunique.securite.JournalSecurite;
 // CU-16 (US-11) et CU-48 : limitation des tentatives de connexion, par identifiant saisi
 // (3 erreurs consécutives → 5 minutes) et par adresse IP (20 échecs en 15 minutes → 15 minutes).
 // Appelé par ConnexionService, dans la transaction de la tentative.
+// CU-48 (recette) : la limite par adresse IP se désactive hors production
+// (app.connexion.limite-adresse-ip, CONNEXION_LIMITE_ADRESSE_IP dans helm.yaml) : en dev et qualif,
+// tous les testeurs partagent souvent la même adresse. La limite par identifiant reste active.
 @Service
 @Loggable
 public class ProtectionConnexion {
@@ -36,28 +40,30 @@ public class ProtectionConnexion {
 	private final BlocageAdresseIpRepository blocagesAdresse;
 	private final JournalSecuriteRepository evenements;
 	private final JournalSecurite journal;
+	private final boolean limiteAdresseIp;
 
 	public ProtectionConnexion(BlocageIdentifiantRepository blocagesIdentifiant,
 			BlocageAdresseIpRepository blocagesAdresse, JournalSecuriteRepository evenements,
-			JournalSecurite journal) {
+			JournalSecurite journal, @Value("${app.connexion.limite-adresse-ip:true}") boolean limiteAdresseIp) {
 		this.blocagesIdentifiant = blocagesIdentifiant;
 		this.blocagesAdresse = blocagesAdresse;
 		this.evenements = evenements;
 		this.journal = journal;
+		this.limiteAdresseIp = limiteAdresseIp;
 	}
 
 	/**
 	 * CU-48 critères 1 à 4 : refuse la tentative si l'adresse est bloquée, ou si elle a déjà 20
 	 * échecs dans les 15 dernières minutes (la tentative déclenche alors le blocage). Sans adresse
-	 * connue (hors demande HTTP), pas de limitation par adresse.
+	 * connue (hors demande HTTP) ou limite désactivée (dev, qualif), pas de limitation par adresse.
 	 */
 	public void verifierAdresse(String adresseIp, String identifiantSaisi, OffsetDateTime maintenant) {
-		if (adresseIp == null) {
+		if (!limiteAdresseIp || adresseIp == null) {
 			return;
 		}
 		BlocageAdresseIp blocage = blocagesAdresse.findById(adresseIp).orElse(null);
 		if (blocage != null && blocage.estBloquee(maintenant)) {
-			refuserAdresse(identifiantSaisi, maintenant);
+			refuserAdresse(identifiantSaisi, maintenant, Duration.between(maintenant, blocage.getBloqueJusquAu()));
 		}
 		long echecs = evenements.countByAdresseIpAndEvenementAndMotifInAndSurvenuLeAfter(adresseIp,
 				EvenementSecurite.CONNEXION_ECHOUEE, MOTIFS_ECHEC, maintenant.minus(FENETRE_ADRESSE_IP));
@@ -70,14 +76,14 @@ public class ProtectionConnexion {
 			}
 			journal.enregistrer(EvenementSecurite.authentification(EvenementSecurite.BLOCAGE_ADRESSE_IP,
 					identifiantSaisi, null, ADRESSE_IP_BLOQUEE, maintenant));
-			refuserAdresse(identifiantSaisi, maintenant);
+			refuserAdresse(identifiantSaisi, maintenant, DUREE_BLOCAGE_ADRESSE_IP);
 		}
 	}
 
-	private void refuserAdresse(String identifiantSaisi, OffsetDateTime maintenant) {
+	private void refuserAdresse(String identifiantSaisi, OffsetDateTime maintenant, Duration restant) {
 		journal.enregistrer(EvenementSecurite.authentification(EvenementSecurite.CONNEXION_ECHOUEE, identifiantSaisi,
 				null, ADRESSE_IP_BLOQUEE, maintenant));
-		throw TropDeTentativesException.adresseIp();
+		throw TropDeTentativesException.adresseIp(restant);
 	}
 
 	/**

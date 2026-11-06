@@ -1,9 +1,10 @@
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { vi } from 'vitest';
 import { of } from 'rxjs';
+import { sessionFermee } from '../session/session-fermee';
 import { SuiviSession } from '../session/suivi-session';
 import { MesComptes } from './mes-comptes';
 
@@ -17,7 +18,7 @@ describe('MesComptes', () => {
       imports: [MesComptes],
       providers: [
         provideRouter([]),
-        provideHttpClient(),
+        provideHttpClient(withInterceptors([sessionFermee])),
         provideHttpClientTesting(),
         { provide: SuiviSession, useValue: suivi },
       ],
@@ -50,9 +51,17 @@ describe('MesComptes', () => {
   });
 
   it('renvoie vers la connexion si la cliente n’est pas connectée', async () => {
-    const navigation = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
-    await afficher('', { status: 401, statusText: 'Unauthorized' });
-    expect(navigation).toHaveBeenCalledWith('/connexion');
+    const navigation = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    const page = await afficher('', { status: 401, statusText: 'Unauthorized' });
+    expect(navigation).toHaveBeenCalledWith(['/connexion'], {});
+    expect(page.textContent).not.toContain('momentanément indisponibles');
+  });
+
+  // CU-169 : session révoquée ou expirée côté serveur.
+  it('renvoie vers la connexion avec « Session expirée » si la session a été fermée', async () => {
+    const navigation = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    await afficher({ motif: 'EXPIREE' }, { status: 401, statusText: 'Unauthorized' });
+    expect(navigation).toHaveBeenCalledWith(['/connexion'], { queryParams: { motif: 'session_expiree' } });
   });
 
   it('affiche un message en cas de panne, sans renvoyer vers la connexion', async () => {

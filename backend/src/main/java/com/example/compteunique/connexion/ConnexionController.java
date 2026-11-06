@@ -59,7 +59,13 @@ public class ConnexionController {
 	public record SessionOuverte(String identifiant) {
 	}
 
-	public record RefusConnexion(String message, String invitation) {
+	/** reessayerDansSecondes : seulement pour un blocage (429), durée restante (CU-171). */
+	public record RefusConnexion(String message, String invitation, Long reessayerDansSecondes) {
+
+		public RefusConnexion(String message, String invitation) {
+			this(message, invitation, null);
+		}
+
 	}
 
 	/** CU-17 : session en cours et secondes restantes avant sa fermeture faute d'activité. */
@@ -128,10 +134,17 @@ public class ConnexionController {
 		return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new RefusConnexion(MESSAGE_REFUS, invitation));
 	}
 
-	/** CU-16 et CU-48 : blocage de l'identifiant ou de l'adresse IP. */
+	/**
+	 * CU-16 et CU-48 : blocage de l'identifiant ou de l'adresse IP. CU-171 : durée restante en
+	 * secondes, dans l'en-tête standard Retry-After et dans le corps (l'écran lit le corps : le
+	 * gateway n'expose pas les en-têtes au navigateur).
+	 */
 	@ExceptionHandler(TropDeTentativesException.class)
 	public ResponseEntity<RefusConnexion> tropDeTentatives(TropDeTentativesException refus) {
-		return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(new RefusConnexion(refus.getMessage(), null));
+		long secondes = refus.getRestantSecondes();
+		return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+				.header(HttpHeaders.RETRY_AFTER, String.valueOf(secondes))
+				.body(new RefusConnexion(refus.getMessage(), null, secondes));
 	}
 
 	/** CU-48 critère 8 : journal de sécurité indisponible, la connexion est refusée. */

@@ -173,6 +173,28 @@ describe('SuiviSession', () => {
     expect(navigation).toHaveBeenCalledWith(['/connexion'], {});
   });
 
+  // CU-169 : session révoquée ou expirée côté serveur avant la fin du compte à rebours.
+  it('une action refusée pour session expirée ou révoquée renvoie vers la connexion avec « Session expirée »', () => {
+    ouvrir();
+    vi.advanceTimersByTime(20_000);
+    cliquer();
+    http.expectOne(ACTIVITE).flush({ motif: 'EXPIREE' }, NON_CONNECTEE);
+    expect(navigation).toHaveBeenCalledWith(['/connexion'], { queryParams: { motif: 'session_expiree' } });
+  });
+
+  it('une relecture refusée pour session révoquée renvoie vers la connexion avec « Session expirée »', () => {
+    ouvrir();
+    vi.advanceTimersByTime(60_000);
+    http.expectOne({ method: 'GET', url: SESSION }).flush({ motif: 'EXPIREE' }, NON_CONNECTEE);
+    expect(navigation).toHaveBeenCalledWith(['/connexion'], { queryParams: { motif: 'session_expiree' } });
+  });
+
+  it("l'ouverture d'une page avec une session révoquée renvoie vers la connexion avec « Session expirée »", () => {
+    suivi.ouvrir().subscribe({ error: () => undefined });
+    http.expectOne(ACTIVITE).flush({ motif: 'EXPIREE' }, NON_CONNECTEE);
+    expect(navigation).toHaveBeenCalledWith(['/connexion'], { queryParams: { motif: 'session_expiree' } });
+  });
+
   it("sans session, l'ouverture renvoie vers la connexion", () => {
     let refus = false;
     suivi.ouvrir().subscribe({ error: () => (refus = true) });
