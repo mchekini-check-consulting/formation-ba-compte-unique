@@ -18,9 +18,16 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.compteunique.securite.JournalIndisponibleException;
 
-// POST /connexion {identifiant, motDePasse} : ouvre la session (cookie) ; GET /connexion/session : session en cours ;
-// POST /connexion/session/activite : action de la cliente ; POST /connexion/deconnexion (CU-17).
-// Refus : 401 identifiants refusés, 429 trop de tentatives (CU-16, CU-48), 503 journal indisponible (CU-48).
+/**
+ * Connexion à l'espace client.
+ * <ul>
+ * <li>POST /connexion (identifiant et mot de passe) : ouvre la session, portée par un cookie ;</li>
+ * <li>GET /connexion/session : session en cours ;</li>
+ * <li>POST /connexion/session/activite : action de la cliente ;</li>
+ * <li>POST /connexion/deconnexion : fermeture de la session (CU-17).</li>
+ * </ul>
+ * Refus : 401 identifiants refusés, 429 trop de tentatives (CU-16, CU-48), 503 journal indisponible (CU-48).
+ */
 @RestController
 @RequestMapping("/connexion")
 public class ConnexionController {

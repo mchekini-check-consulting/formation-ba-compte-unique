@@ -44,19 +44,12 @@ public class ActivationService {
 	private final DossierRepository dossiers;
 	private final EnvoisIdentifiants envois;
 	private final JournalSecurite journal;
-	private final Clock horloge;
+	private Clock horloge = Clock.systemDefaultZone();
 
 	@Autowired
 	public ActivationService(JetonService jetons, IdentifiantConnexionRepository identifiants,
 			IdentifiantConnexionService identifiantService, CompteRepository comptes, DossierRepository dossiers,
 			EnvoisIdentifiants envois, JournalSecurite journal) {
-		this(jetons, identifiants, identifiantService, comptes, dossiers, envois, journal, Clock.systemDefaultZone());
-	}
-
-	@SuppressWarnings("PMD.ExcessiveParameterList")
-	ActivationService(JetonService jetons, IdentifiantConnexionRepository identifiants,
-			IdentifiantConnexionService identifiantService, CompteRepository comptes, DossierRepository dossiers,
-			EnvoisIdentifiants envois, JournalSecurite journal, Clock horloge) {
 		this.jetons = jetons;
 		this.identifiants = identifiants;
 		this.identifiantService = identifiantService;
@@ -64,7 +57,12 @@ public class ActivationService {
 		this.dossiers = dossiers;
 		this.envois = envois;
 		this.journal = journal;
-		this.horloge = horloge;
+	}
+
+	/** Tests : horloge simulée (l'horloge système est utilisée sinon). */
+	ActivationService avecHorloge(Clock horlogeSimulee) {
+		this.horloge = horlogeSimulee;
+		return this;
 	}
 
 	/** Ouverture du lien : sans le consommer. */

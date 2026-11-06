@@ -66,7 +66,7 @@ class ActivationServiceTest {
 	private final EnvoisIdentifiants envois = mock(EnvoisIdentifiants.class);
 	private final JournalSecurite journal = mock(JournalSecurite.class);
 	private final ActivationService service = new ActivationService(jetons, identifiants, identifiantService, comptes,
-			dossiers, envois, journal, HORLOGE);
+			dossiers, envois, journal).avecHorloge(HORLOGE);
 
 	private final IdentifiantConnexion identifiant = new IdentifiantConnexion("12345678");
 
