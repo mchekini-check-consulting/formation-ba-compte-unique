@@ -271,22 +271,22 @@
           @switch (etape()) {
             @case (1) {
               <div class="pv on">
-                <app-etape-identite [dossierId]="dossierId" [initiale]="identite()" (valide)="identiteValidee($event)" (annule)="annuler($event.message, $event.controles)" (retour)="precedent()" />
+                <app-etape-identite [dossierId]="dossierId" [initiale]="identite()" (valide)="identiteValidee($event)" (annule)="annuler($event.message, $event.controles)" (reprise)="reprendreLeDossier($event)" (retour)="precedent()" />
               </div>
             }
             @case (2) {
               <div class="pv on">
-                <app-etape-piece [dossierId]="dossierId" [identite]="identite()!" (valide)="suivant()" (annule)="annuler($event)" (retour)="precedent()" />
+                <app-etape-piece [dossierId]="dossierId" [identite]="identite()!" (valide)="suivant()" (annule)="annulerParControle($event)" (retour)="precedent()" />
               </div>
             }
             @case (3) {
               <div class="pv on">
-                <app-etape-selfie [dossierId]="dossierId" (valide)="suivant()" (annule)="annuler($event)" (retour)="precedent()" />
+                <app-etape-selfie [dossierId]="dossierId" (valide)="suivant()" (annule)="annulerParControle($event)" (retour)="precedent()" />
               </div>
             }
             @case (4) {
               <div class="pv on">
-                <app-etape-questions (valide)="suivant()" (annule)="annuler($event)" (retour)="precedent()" />
+                <app-etape-questions (valide)="suivant()" (annule)="annulerParControle($event)" (retour)="precedent()" />
               </div>
             }
             @case (5) {

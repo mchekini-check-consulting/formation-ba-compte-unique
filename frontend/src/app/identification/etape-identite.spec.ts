@@ -1,6 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { AnnulationControles, EtapeIdentite } from './etape-identite';
 import { IDENTITE_EXEMPLE } from './exemple';
 import { Identite, MESSAGE_ANNULATION } from './regles';
@@ -57,7 +58,7 @@ describe('EtapeIdentite', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [EtapeIdentite],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(EtapeIdentite);
@@ -189,6 +190,87 @@ describe('EtapeIdentite', () => {
     http.expectOne(IDENTITE).flush('', { status: 500, statusText: 'Erreur' });
     await fixture.whenStable();
     http.expectNone(SANCTIONS);
+    expect(page.querySelector('h2')?.textContent).toBe('Vérification impossible');
+  });
+
+  // CU-9 : refus d'une nouvelle ouverture pour une personne déjà connue.
+  const refuser = async (refus: object) => {
+    saisir(IDENTITE_EXEMPLE);
+    await valider();
+    http.expectOne(IDENTITE).flush(refus, { status: 409, statusText: 'Conflict' });
+    await fixture.whenStable();
+    http.expectNone(SANCTIONS);
+  };
+
+  it('CU-9 : compte activé, message et lien vers la connexion, sans contrôle', async () => {
+    const message = 'Vous avez déjà un espace client. Connectez-vous avec votre identifiant.';
+    await refuser({ code: 'ESPACE_EXISTANT', message, reprise: null, conseiller: null });
+    expect(page.querySelector('[role=alert]')?.textContent).toBe(message);
+    expect(page.querySelector('a')?.getAttribute('href')).toBe('/connexion');
+    expect(page.querySelector('button')).toBeNull();
+    expect(validee).toBeUndefined();
+  });
+
+  it("CU-9 : compte pas encore activé, message d'activation sans lien", async () => {
+    const message = 'Votre espace n’est pas encore activé. Ouvrez le lien d’activation reçu par SMS.';
+    await refuser({ code: 'ACTIVATION_ATTENDUE', message, reprise: null, conseiller: null });
+    expect(page.querySelector('[role=alert]')?.textContent).toBe(message);
+    expect(page.querySelector('a, button')).toBeNull();
+  });
+
+  it('CU-9 : ouverture annulée par contrôle, message et coordonnées du conseiller, sans motif', async () => {
+    await refuser({
+      code: 'OUVERTURE_ANNULEE',
+      message: 'Votre demande d’ouverture en ligne est annulée. Pour ouvrir un compte à la banque, contactez un conseiller.',
+      reprise: null,
+      conseiller: 'Service client 01 23 45 67 89',
+    });
+    expect(page.querySelector('.conseiller')?.textContent).toBe('Service client 01 23 45 67 89');
+    expect(page.textContent).not.toContain('Motif');
+  });
+
+  it('CU-9 : ouverture en cours, « Reprendre » enregistre la saisie sur le dossier existant et continue', async () => {
+    let reprise: unknown;
+    fixture.componentInstance.reprise.subscribe((r) => (reprise = r));
+    await refuser({
+      code: 'OUVERTURE_EN_COURS',
+      message: 'Vous avez déjà une ouverture de compte en cours. Reprenez-la.',
+      reprise: { reference: 'dossier-existant', etape: 'IDENTITE' },
+      conseiller: null,
+    });
+    expect(page.querySelector('h2')?.textContent).toBe('Ouverture déjà en cours');
+
+    page.querySelector<HTMLButtonElement>('button.pbtn')!.click();
+    await fixture.whenStable();
+
+    expect(reprise).toEqual({ reference: 'dossier-existant', etape: 'IDENTITE' });
+    http.expectOne('/api/backend/dossiers/dossier-existant/identite').flush({ ...DOSSIER, reference: 'dossier-existant' });
+    http.expectOne(SANCTIONS).flush({ resultat: 'AUCUNE_CORRESPONDANCE', suite: 'POURSUIVRE', message: null });
+    http.expectOne('/api/backend/dossiers/dossier-existant/controles').flush(DOSSIER);
+    await fixture.whenStable();
+    expect(validee).toEqual(IDENTITE_EXEMPLE);
+  });
+
+  it("CU-9 : un dossier qui attend la banque se reprend au suivi de l'ouverture, sans nouvelle saisie", async () => {
+    let reprise: unknown;
+    fixture.componentInstance.reprise.subscribe((r) => (reprise = r));
+    await refuser({
+      code: 'OUVERTURE_EN_COURS',
+      message: 'Vous avez déjà une ouverture de compte en cours. Reprenez-la.',
+      reprise: { reference: 'dossier-signe', etape: 'OUVERTURE' },
+      conseiller: null,
+    });
+    page.querySelector<HTMLButtonElement>('button.pbtn')!.click();
+    await fixture.whenStable();
+    expect(reprise).toEqual({ reference: 'dossier-signe', etape: 'OUVERTURE' });
+    http.expectNone('/api/backend/dossiers/dossier-signe/identite');
+  });
+
+  it('un autre conflit que le doublon reste « Vérification impossible »', async () => {
+    saisir(IDENTITE_EXEMPLE);
+    await valider();
+    http.expectOne(IDENTITE).flush('', { status: 409, statusText: 'Conflict' });
+    await fixture.whenStable();
     expect(page.querySelector('h2')?.textContent).toBe('Vérification impossible');
   });
 

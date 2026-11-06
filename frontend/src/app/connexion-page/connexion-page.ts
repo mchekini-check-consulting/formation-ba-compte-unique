@@ -6,6 +6,7 @@ import { ConnexionService, RefusConnexion } from '../connexion';
 import { MOTIF_EXPIREE } from '../session/suivi-session';
 
 const MESSAGE_INDISPONIBLE = 'Connexion impossible pour le moment, réessayez plus tard.';
+const STATUTS_REFUS = [401, 429, 503];
 
 // Écran « Me connecter » (CU-15), d'après la maquette « Connexion Hi-Tech Bank ».
 @Component({
@@ -40,7 +41,9 @@ export class ConnexionPage {
       error: (e: HttpErrorResponse) => {
         this.enCours.set(false);
         motDePasse.value = '';
-        const refus: RefusConnexion | null = e.status === 401 ? e.error : null;
+        // 401 : identifiants refusés ; 429 : trop de tentatives (CU-16, CU-48) ; 503 : journal de
+        // sécurité indisponible (CU-48). Le message vient du backend, texte exact des tickets.
+        const refus: RefusConnexion | null = STATUTS_REFUS.includes(e.status) && e.error?.message ? e.error : null;
         this.erreur.set(refus?.message ?? MESSAGE_INDISPONIBLE);
         this.invitation.set(refus?.invitation ?? '');
       },

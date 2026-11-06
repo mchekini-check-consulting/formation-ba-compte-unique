@@ -1,7 +1,9 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, input, linkedSignal, output, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { map, switchMap } from 'rxjs';
 import { BouchonsIdentiteService, CasDeTest } from './bouchons-identite';
-import { Controles, DossierService, controlesDe } from './dossier';
+import { Controles, DossierService, RefusOuverture, RepriseOuverture, controlesDe } from './dossier';
 import {
   ChampIdentite,
   Erreurs,
@@ -57,6 +59,7 @@ export const CAS_DE_TEST: { code: CasDeTest; libelle: string }[] = [
 // enregistrement du résultat des contrôles et du statut du dossier (backend).
 @Component({
   selector: 'app-etape-identite',
+  imports: [RouterLink],
   templateUrl: './etape-identite.html',
 })
 export class EtapeIdentite {
@@ -69,6 +72,8 @@ export class EtapeIdentite {
   readonly valide = output<Identite>();
   readonly annule = output<AnnulationControles>();
   readonly retour = output<void>();
+  /** CU-9 : la cliente reprend son dossier en cours (référence et étape où le reprendre). */
+  readonly reprise = output<RepriseOuverture>();
 
   protected readonly paysNaissance = PAYS_NAISSANCE;
   protected readonly nationalites = NATIONALITES;
@@ -82,6 +87,10 @@ export class EtapeIdentite {
   protected readonly enCours = signal(false);
   /** Écran 4 : le contrôle sanctions/PEP ou l'enregistrement n'a pas répondu. */
   protected readonly indisponible = signal(false);
+  /** CU-9 : nouvelle ouverture refusée, la personne est déjà connue (réponse du backend). */
+  protected readonly refus = signal<RefusOuverture | null>(null);
+  /** Dossier sur lequel la saisie est enregistrée : celui du parcours, ou le dossier repris (CU-9). */
+  private readonly reference = linkedSignal(() => this.dossierId());
   protected readonly cas = signal<CasDeTest>('CONFORME');
 
   protected maj(champ: ChampIdentite, event: Event): void {
@@ -91,6 +100,28 @@ export class EtapeIdentite {
 
   protected continuer(event: Event): void {
     event.preventDefault();
+    this.envoyer();
+  }
+
+  /**
+   * CU-9 critère 4 : « Reprendre » le dossier en cours de la même personne. S'il attend encore la
+   * cliente, la saisie est enregistrée sur ce dossier et le parcours continue ; sinon le parcours
+   * passe au suivi de l'ouverture. Aucun nouveau dossier n'est créé.
+   */
+  protected reprendre(): void {
+    const reprise = this.refus()?.reprise;
+    if (!reprise) {
+      return;
+    }
+    this.refus.set(null);
+    this.reprise.emit(reprise);
+    if (reprise.etape === 'IDENTITE') {
+      this.reference.set(reprise.reference);
+      this.envoyer();
+    }
+  }
+
+  private envoyer(): void {
     const identite = this.identite();
     const erreurs = validerIdentite(identite);
     this.erreurs.set(erreurs);
@@ -102,7 +133,7 @@ export class EtapeIdentite {
     }
     this.resultat.set(null);
     this.enCours.set(true);
-    const reference = this.dossierId();
+    const reference = this.reference();
     this.dossiers
       .enregistrerIdentite(reference, identite)
       .pipe(
@@ -131,9 +162,16 @@ export class EtapeIdentite {
             this.valide.emit(identite);
           }
         },
-        error: () => {
-          // CUB-8 : pas de relance automatique, le dossier reste « En cours de vérification ».
+        error: (erreur: HttpErrorResponse) => {
           this.enCours.set(false);
+          const refus = erreur.error as RefusOuverture | null;
+          if (erreur.status === 409 && refus?.code && refus.message) {
+            // CU-9 : la personne est déjà connue ; rien n'est révélé du profil ou du dossier existant.
+            this.refus.set(refus);
+            window.scrollTo(0, 0);
+            return;
+          }
+          // CUB-8 : pas de relance automatique, le dossier reste « En cours de vérification ».
           this.indisponible.set(true);
         },
       });

@@ -3,9 +3,11 @@ package com.example.compteunique.ouverture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.time.Duration;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -104,7 +106,7 @@ class OuvertureCompteIT {
 		assertThat(activation.activer(jeton.group(1), MOT_DE_PASSE, MOT_DE_PASSE)).isEqualTo(EtatActivation.ACTIVE);
 		assertThat(activation.etat(jeton.group(1))).isEqualTo(EtatActivation.DEJA_ACTIVE);
 
-		String session = connexion.connecter(identifiant.group(1), MOT_DE_PASSE).jetonSession();
+		String session = connexion.connecter(identifiant.group(1), MOT_DE_PASSE, null).jetonSession();
 		assertThat(connexion.identifiantDeLaSession(session)).contains(identifiant.group(1));
 
 		// CU-46 : mot de passe oublié, puis faute de frappe dans la confirmation et correction
@@ -130,25 +132,16 @@ class OuvertureCompteIT {
 				Integer.class)).isEqualTo(1);
 
 		assertThat(connexion.identifiantDeLaSession(session)).isEmpty();
-		assertThrows(ConnexionRefuseeException.class, () -> connexion.connecter(identifiant.group(1), MOT_DE_PASSE));
-		assertThat(connexion.connecter(identifiant.group(1), NOUVEAU).identifiant()).isEqualTo(identifiant.group(1));
+		assertThrows(ConnexionRefuseeException.class, () -> connexion.connecter(identifiant.group(1), MOT_DE_PASSE, null));
+		assertThat(connexion.connecter(identifiant.group(1), NOUVEAU, null).identifiant()).isEqualTo(identifiant.group(1));
 	}
 
 	/** La demande est traitée en arrière-plan : on attend le nouveau SMS (5 secondes au plus). */
 	private String smsRecuApres(String precedent) {
-		for (int essai = 0; essai < 50; essai++) {
-			String texte = messagerie.dernier(Canal.SMS).orElseThrow().getTexte();
-			if (!texte.equals(precedent)) {
-				return texte;
-			}
-			try {
-				Thread.sleep(100);
-			} catch (InterruptedException e) {
-				Thread.currentThread().interrupt();
-				break;
-			}
-		}
-		throw new AssertionError("SMS de réinitialisation non reçu");
+		return Awaitility.await("SMS de réinitialisation")
+				.atMost(Duration.ofSeconds(5))
+				.pollInterval(Duration.ofMillis(100))
+				.until(() -> messagerie.dernier(Canal.SMS).orElseThrow().getTexte(), texte -> !texte.equals(precedent));
 	}
 
 }

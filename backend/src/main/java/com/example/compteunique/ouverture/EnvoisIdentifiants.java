@@ -42,19 +42,12 @@ public class EnvoisIdentifiants {
 	private final Messagerie messagerie;
 	private final EnvoiMessageRepository envois;
 	private final TransactionTemplate transaction;
-	private final Clock horloge;
+	private Clock horloge = Clock.systemDefaultZone();
 
 	@Autowired
 	public EnvoisIdentifiants(DossierRepository dossiers, CompteRepository comptes,
 			IdentifiantConnexionRepository identifiants, JetonService jetons, Messagerie messagerie,
 			EnvoiMessageRepository envois, PlatformTransactionManager transactions) {
-		this(dossiers, comptes, identifiants, jetons, messagerie, envois, transactions, Clock.systemDefaultZone());
-	}
-
-	@SuppressWarnings("PMD.ExcessiveParameterList")
-	EnvoisIdentifiants(DossierRepository dossiers, CompteRepository comptes,
-			IdentifiantConnexionRepository identifiants, JetonService jetons, Messagerie messagerie,
-			EnvoiMessageRepository envois, PlatformTransactionManager transactions, Clock horloge) {
 		this.dossiers = dossiers;
 		this.comptes = comptes;
 		this.identifiants = identifiants;
@@ -63,7 +56,12 @@ public class EnvoisIdentifiants {
 		this.envois = envois;
 		this.transaction = new TransactionTemplate(transactions);
 		this.transaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
-		this.horloge = horloge;
+	}
+
+	/** Tests : horloge simulée (l'horloge système est utilisée sinon). */
+	EnvoisIdentifiants avecHorloge(Clock horlogeSimulee) {
+		this.horloge = horlogeSimulee;
+		return this;
 	}
 
 	public void envoyerTout(Long dossierId) {
@@ -73,11 +71,12 @@ public class EnvoisIdentifiants {
 
 	/** Un envoi (ou une relance) ; renvoie son résultat. Pour le SMS, un nouveau lien remplace l'ancien. */
 	public ResultatEnvoi envoyer(Long dossierId, Canal canal) {
+		OffsetDateTime maintenant = OffsetDateTime.now(horloge);
 		return transaction.execute(statut -> {
 			// Enregistré seulement une fois la tentative faite : résultat et date sont obligatoires en base.
 			EnvoiMessage envoi = envois.findByDossierIdAndCanal(dossierId, canal)
 					.orElseGet(() -> new EnvoiMessage(dossierId, canal));
-			envoi.tentative(remettre(dossierId, canal), OffsetDateTime.now(horloge));
+			envoi.tentative(remettre(dossierId, canal), maintenant);
 			return envois.save(envoi).getResultat();
 		});
 	}

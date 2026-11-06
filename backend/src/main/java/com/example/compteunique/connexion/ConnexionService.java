@@ -10,15 +10,24 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.compteunique.compte.EvenementSecurite;
 import com.example.compteunique.logging.Loggable;
+import com.example.compteunique.securite.JournalSecurite;
 
 @Service
 @Loggable
 public class ConnexionService {
 
+	/** CU-16 : en dessous, la tentative est incomplète (ni comptée, ni journalisée). */
+	static final int LONGUEUR_IDENTIFIANT = 8;
+	/** Taille de la colonne identifiant : au-delà, aucun identifiant ne peut exister. */
+	private static final int IDENTIFIANT_MAX = 32;
+
 	private final IdentifiantConnexionRepository identifiants;
 	private final SessionClientRepository sessions;
 	private final PasswordEncoder hacheur;
+	private final ProtectionConnexion protection;
+	private final JournalSecurite journal;
 	// Comparé quand il n'y a pas de mot de passe à vérifier : la durée de la réponse ne
 	// révèle pas si l'identifiant existe.
 	private final String empreinteLeurre;
@@ -30,36 +39,76 @@ public class ConnexionService {
 
 	@Autowired
 	public ConnexionService(IdentifiantConnexionRepository identifiants, SessionClientRepository sessions,
-			PasswordEncoder hacheur) {
-		this(identifiants, sessions, hacheur, Clock.systemDefaultZone());
+			PasswordEncoder hacheur, ProtectionConnexion protection, JournalSecurite journal) {
+		this(identifiants, sessions, hacheur, protection, journal, Clock.systemDefaultZone());
 	}
 
 	ConnexionService(IdentifiantConnexionRepository identifiants, SessionClientRepository sessions,
-			PasswordEncoder hacheur, Clock horloge) {
+			PasswordEncoder hacheur, ProtectionConnexion protection, JournalSecurite journal, Clock horloge) {
 		this.identifiants = identifiants;
 		this.sessions = sessions;
 		this.hacheur = hacheur;
+		this.protection = protection;
+		this.journal = journal;
 		this.horloge = horloge;
 		this.empreinteLeurre = hacheur.encode(SecretsAleatoires.nouveauJeton());
 	}
 
-	@Transactional
-	public ResultatConnexion connecter(String identifiant, String motDePasse) {
-		Optional<IdentifiantConnexion> trouve = identifiants.findByIdentifiant(identifiant);
-		if (trouve.isEmpty()) {
-			refuserApresComparaison(motDePasse, false);
-		}
-		IdentifiantConnexion compte = trouve.orElseThrow();
-		if (compte.getStatut() != StatutIdentifiant.ACTIF) {
-			refuserApresComparaison(motDePasse, true);
-		}
-		if (!hacheur.matches(motDePasse, compte.getMotDePasseHache())) {
+	/**
+	 * Connexion, dans cet ordre : tentative incomplète (refusée sans rien compter, CU-16 critère 7),
+	 * adresse IP bloquée (CU-48), identifiant bloqué (CU-16, sans vérifier le mot de passe), puis
+	 * identifiant et mot de passe. Chaque tentative complète est journalisée (CU-48) ; si le journal
+	 * ne peut pas être écrit, la connexion est refusée (JournalIndisponibleException). Les refus
+	 * n'annulent pas la transaction : compteurs et journal sont gardés.
+	 */
+	@Transactional(noRollbackFor = { ConnexionRefuseeException.class, TropDeTentativesException.class })
+	public ResultatConnexion connecter(String identifiantSaisi, String motDePasse, String adresseIp) {
+		if (incomplete(identifiantSaisi, motDePasse)) {
 			throw new ConnexionRefuseeException(false);
 		}
+		String identifiant = identifiantSaisi.length() > IDENTIFIANT_MAX
+				? identifiantSaisi.substring(0, IDENTIFIANT_MAX)
+				: identifiantSaisi;
+		OffsetDateTime maintenant = maintenant();
+		protection.verifierAdresse(adresseIp, identifiant, maintenant);
+		BlocageIdentifiant blocage = protection.verifierIdentifiant(identifiant, maintenant);
+
+		Optional<IdentifiantConnexion> trouve = identifiants.findByIdentifiant(identifiant);
+		String motif = motifDeRefus(trouve, motDePasse);
+		Long identifiantConnexionId = trouve.map(IdentifiantConnexion::getId).orElse(null);
+		if (motif != null) {
+			journal.enregistrer(EvenementSecurite.authentification(EvenementSecurite.CONNEXION_ECHOUEE, identifiant,
+					identifiantConnexionId, motif, maintenant));
+			protection.erreur(blocage, identifiantConnexionId, maintenant);
+			throw new ConnexionRefuseeException(ProtectionConnexion.COMPTE_NON_ACTIVE.equals(motif));
+		}
+		IdentifiantConnexion compte = trouve.orElseThrow();
+		journal.enregistrer(EvenementSecurite.authentification(EvenementSecurite.CONNEXION_REUSSIE, identifiant,
+				identifiantConnexionId, null, maintenant));
+		protection.reussite(blocage);
 		compte.connexionReussie();
 		String jeton = SecretsAleatoires.nouveauJeton();
-		sessions.save(new SessionClient(compte.getId(), SecretsAleatoires.empreinte(jeton), maintenant()));
+		sessions.save(new SessionClient(compte.getId(), SecretsAleatoires.empreinte(jeton), maintenant));
 		return new ResultatConnexion(compte.getIdentifiant(), jeton);
+	}
+
+	private static boolean incomplete(String identifiant, String motDePasse) {
+		return identifiant == null || identifiant.length() < LONGUEUR_IDENTIFIANT || motDePasse == null
+				|| motDePasse.isEmpty();
+	}
+
+	/** Motif du refus, vide si identifiant et mot de passe sont bons. Toujours une comparaison. */
+	private String motifDeRefus(Optional<IdentifiantConnexion> trouve, String motDePasse) {
+		if (trouve.isEmpty()) {
+			hacheur.matches(motDePasse, empreinteLeurre);
+			return ProtectionConnexion.IDENTIFIANT_INCONNU;
+		}
+		if (trouve.get().getStatut() != StatutIdentifiant.ACTIF) {
+			hacheur.matches(motDePasse, empreinteLeurre);
+			return ProtectionConnexion.COMPTE_NON_ACTIVE;
+		}
+		return hacheur.matches(motDePasse, trouve.get().getMotDePasseHache()) ? null
+				: ProtectionConnexion.MOT_DE_PASSE_INCORRECT;
 	}
 
 	@Transactional
@@ -88,7 +137,11 @@ public class ConnexionService {
 	/** CU-17 : déconnexion volontaire ; sans effet si la session est absente ou déjà fermée. */
 	@Transactional
 	public void deconnecter(String jetonSession) {
-		session(jetonSession).ifPresent(session -> session.revoquer(maintenant()));
+		session(jetonSession).filter(session -> !session.estRevoquee()).ifPresent(session -> {
+			OffsetDateTime maintenant = maintenant();
+			session.revoquer(maintenant);
+			journaliserSession(EvenementSecurite.DECONNEXION, session, maintenant);
+		});
 	}
 
 	/** Identifiant technique de la cliente connectée, vide si la session n'est pas active. */
@@ -98,20 +151,31 @@ public class ConnexionService {
 	}
 
 	// CU-17 : toute demande est vérifiée par le serveur, même si l'écran est resté ouvert. Une
-	// session trouvée expirée est révoquée.
+	// session trouvée expirée est révoquée, et son expiration journalisée une seule fois (CU-48).
 	private Optional<SessionClient> sessionActive(String jetonSession) {
 		OffsetDateTime maintenant = maintenant();
 		return session(jetonSession).filter(session -> {
 			if (session.estActive(maintenant)) {
 				return true;
 			}
-			session.revoquer(maintenant);
+			if (!session.estRevoquee()) {
+				session.revoquer(maintenant);
+				journaliserSession(EvenementSecurite.EXPIRATION_SESSION, session, maintenant);
+			}
 			return false;
 		});
 	}
 
+	private void journaliserSession(String type, SessionClient session, OffsetDateTime maintenant) {
+		String identifiant = identifiants.findById(session.getIdentifiantConnexionId())
+				.map(IdentifiantConnexion::getIdentifiant)
+				.orElse(null);
+		journal.enregistrer(EvenementSecurite.authentification(type, identifiant, session.getIdentifiantConnexionId(),
+				null, maintenant));
+	}
+
 	private Optional<SessionClient> session(String jetonSession) {
-		if (jetonSession == null) {
+		if (jetonSession == null || jetonSession.isEmpty()) {
 			return Optional.empty();
 		}
 		return sessions.findByJetonHache(SecretsAleatoires.empreinte(jetonSession));
@@ -125,11 +189,6 @@ public class ConnexionService {
 
 	private OffsetDateTime maintenant() {
 		return OffsetDateTime.now(horloge);
-	}
-
-	private void refuserApresComparaison(String motDePasse, boolean activationAttendue) {
-		hacheur.matches(motDePasse, empreinteLeurre);
-		throw new ConnexionRefuseeException(activationAttendue);
 	}
 
 }

@@ -20,10 +20,13 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import com.example.compteunique.compte.EvenementSecurite;
+import com.example.compteunique.securite.JournalSecurite;
 import com.example.compteunique.activation.ActivationController.DemandeActivation;
 import com.example.compteunique.activation.ActivationController.Lien;
 import com.example.compteunique.compte.Compte;
@@ -61,8 +64,9 @@ class ActivationServiceTest {
 	private final CompteRepository comptes = mock(CompteRepository.class);
 	private final DossierRepository dossiers = mock(DossierRepository.class);
 	private final EnvoisIdentifiants envois = mock(EnvoisIdentifiants.class);
+	private final JournalSecurite journal = mock(JournalSecurite.class);
 	private final ActivationService service = new ActivationService(jetons, identifiants, identifiantService, comptes,
-			dossiers, envois, HORLOGE);
+			dossiers, envois, journal).avecHorloge(HORLOGE);
 
 	private final IdentifiantConnexion identifiant = new IdentifiantConnexion("12345678");
 
@@ -94,6 +98,11 @@ class ActivationServiceTest {
 		assertThat(identifiant.getMotDePasseHache()).startsWith("$argon2id$").doesNotContain(CONFORME);
 		assertThat(identifiant.getStatut()).isEqualTo(StatutIdentifiant.ACTIF);
 		verify(jetons).utiliser(JETON, TypeJeton.ACTIVATION);
+		// CU-48 : activation journalisée, sans mot de passe ni jeton.
+		ArgumentCaptor<EvenementSecurite> evenement = ArgumentCaptor.forClass(EvenementSecurite.class);
+		verify(journal).enregistrer(evenement.capture());
+		assertThat(evenement.getValue().getEvenement()).isEqualTo(EvenementSecurite.ACTIVATION);
+		assertThat(evenement.getValue().getResultat()).isEqualTo(EvenementSecurite.REUSSITE);
 	}
 
 	private void refuse(String motDePasse, String message) {

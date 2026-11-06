@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.example.compteunique.dossier.Categories.MotifAnnulation;
 import com.example.compteunique.dossier.Dossier;
 import com.example.compteunique.dossier.DossierRepository;
 import com.example.compteunique.logging.Loggable;
@@ -70,6 +71,7 @@ public class SignatureService {
 			throw new ResponseStatusException(HttpStatus.CONFLICT, "convention non prête à signer");
 		}
 		OffsetDateTime maintenant = OffsetDateTime.now(horloge);
+		dossier.actionCliente(maintenant);
 		SignatureConvention signature = signatures.findByDossierId(dossier.getId()).orElse(null);
 		if (signature == null) {
 			signature = signatures.save(
@@ -96,13 +98,14 @@ public class SignatureService {
 								&& s.getStatutEnveloppe() == StatutEnveloppe.EXPIREE)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT, "aucune signature en cours"));
 		OffsetDateTime maintenant = OffsetDateTime.now(horloge);
+		dossier.actionCliente(maintenant);
 		if (resultat == ResultatSignature.ANNULATION_DEMANDEE) {
-			annuler(signature, dossier, MOTIF_ANNULATION);
+			annuler(signature, dossier, MOTIF_ANNULATION, maintenant);
 		} else if (signature.getCodesFaux() >= CODES_FAUX_MAX) {
-			annuler(signature, dossier, MOTIF_TENTATIVES);
+			annuler(signature, dossier, MOTIF_TENTATIVES, maintenant);
 		} else if (resultat == ResultatSignature.CODE_EXPIRE
 				|| maintenant.isAfter(signature.getCodeEnvoyeLe().plus(VALIDITE_CODE))) {
-			codeExpire(signature, dossier);
+			codeExpire(signature, dossier, maintenant);
 		} else if (resultat == ResultatSignature.CODE_FAUX) {
 			signature.codeFaux();
 		} else {
@@ -114,17 +117,25 @@ public class SignatureService {
 	}
 
 	/** Premier code expiré : un nouveau code peut être demandé ; code de la relance expiré : annulation. */
-	private static void codeExpire(SignatureConvention signature, Dossier dossier) {
+	private static void codeExpire(SignatureConvention signature, Dossier dossier, OffsetDateTime maintenant) {
 		if (signature.getRelances() < RELANCES_MAX) {
 			signature.codeExpire();
 		} else {
-			annuler(signature, dossier, MOTIF_CODE_EXPIRE);
+			annuler(signature, dossier, MOTIF_CODE_EXPIRE, maintenant);
 		}
 	}
 
-	private static void annuler(SignatureConvention signature, Dossier dossier, String motif) {
+	// CU-9 : une annulation pendant la signature est une annulation par la cliente, qui ne bloque
+	// pas une nouvelle ouverture.
+	private static void annuler(SignatureConvention signature, Dossier dossier, String motif,
+			OffsetDateTime maintenant) {
 		signature.annuler(motif);
-		dossier.annuler();
+		MotifAnnulation motifDossier = switch (motif) {
+			case MOTIF_CODE_EXPIRE -> MotifAnnulation.CODE_EXPIRE;
+			case MOTIF_TENTATIVES -> MotifAnnulation.TROIS_TENTATIVES;
+			default -> MotifAnnulation.DEMANDE_CLIENTE;
+		};
+		dossier.annuler(motifDossier, maintenant);
 	}
 
 	private Dossier dossier(String reference) {

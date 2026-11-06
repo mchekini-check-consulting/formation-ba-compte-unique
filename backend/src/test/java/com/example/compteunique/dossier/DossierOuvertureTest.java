@@ -15,6 +15,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.example.compteunique.dossier.Categories.ResultatControle;
 import com.example.compteunique.dossier.Categories.StatutDossier;
+import com.example.compteunique.dossier.Categories.MotifAnnulation;
 
 // CU-12 et CU-13 : évolution du statut du dossier après les contrôles.
 class DossierOuvertureTest {
@@ -83,14 +84,14 @@ class DossierOuvertureTest {
 		DossierRepository dossiers = mock(DossierRepository.class);
 		when(dossiers.findByReference("a")).thenReturn(Optional.of(ExempleDossier.conventionSignee("a")));
 		ResponseStatusException refus = assertThrows(ResponseStatusException.class,
-				() -> new DossierService(dossiers).renseignerIdentite("a", ExempleIdentite.identite()));
+				() -> new DossierService(dossiers, mock(ControleDoublon.class)).renseignerIdentite("a", ExempleIdentite.identite()));
 		assertThat(refus.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
 	}
 
 	@Test
 	void annulationEffaceLaRelancePrevue() {
 		Dossier dossier = ExempleDossier.conventionSignee("a");
-		dossier.annuler();
+		dossier.annuler(MotifAnnulation.DEMANDE_CLIENTE, MAINTENANT);
 		assertThat(dossier.getStatut()).isEqualTo(StatutDossier.ANNULE);
 		assertThat(dossier.getCreationProchaineLe()).isNull();
 	}

@@ -22,6 +22,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.example.compteunique.dossier.Categories.ResultatControle;
+import com.example.compteunique.dossier.Categories.MotifAnnulation;
 import com.example.compteunique.dossier.Categories.StatutDossier;
 import com.example.compteunique.dossier.Dossier;
 import com.example.compteunique.dossier.DossierRepository;
@@ -123,6 +124,7 @@ class SignatureServiceTest {
 		assertThat(reponse.etat()).isEqualTo("ANNULEE");
 		assertThat(reponse.motifAnnulation()).isEqualTo("Code expiré");
 		assertThat(reponse.statutDossier()).isEqualTo(StatutDossier.ANNULE);
+		assertThat(dossier.getMotifAnnulation()).isEqualTo(MotifAnnulation.CODE_EXPIRE);
 	}
 
 	@Test
@@ -144,6 +146,7 @@ class SignatureServiceTest {
 		SignatureReponse quatrieme = saisir(ResultatSignature.SIGNATURE_VALIDE);
 		assertThat(quatrieme.etat()).isEqualTo("ANNULEE");
 		assertThat(quatrieme.motifAnnulation()).isEqualTo("3 tentatives dépassées");
+		assertThat(dossier.getMotifAnnulation()).isEqualTo(MotifAnnulation.TROIS_TENTATIVES);
 		assertThat(dossier.getStatut()).isEqualTo(StatutDossier.ANNULE);
 		verify(evenements, never()).publishEvent(any());
 	}
@@ -165,6 +168,8 @@ class SignatureServiceTest {
 		SignatureReponse reponse = saisir(ResultatSignature.ANNULATION_DEMANDEE);
 		assertThat(reponse.etat()).isEqualTo("ANNULEE");
 		assertThat(reponse.motifAnnulation()).isEqualTo("Annulation demandée");
+		assertThat(dossier.getMotifAnnulation()).isEqualTo(MotifAnnulation.DEMANDE_CLIENTE);
+		assertThat(dossier.getDerniereActionLe()).isNotNull();
 		assertThat(dossier.getStatut()).isEqualTo(StatutDossier.ANNULE);
 	}
 

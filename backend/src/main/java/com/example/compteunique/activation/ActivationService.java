@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.compteunique.compte.Compte;
 import com.example.compteunique.compte.CompteRepository;
+import com.example.compteunique.compte.EvenementSecurite;
 import com.example.compteunique.connexion.IdentifiantConnexion;
 import com.example.compteunique.connexion.IdentifiantConnexionRepository;
 import com.example.compteunique.connexion.IdentifiantConnexionService;
@@ -25,6 +26,7 @@ import com.example.compteunique.dossier.DossierRepository;
 import com.example.compteunique.logging.Loggable;
 import com.example.compteunique.messagerie.Canal;
 import com.example.compteunique.ouverture.EnvoisIdentifiants;
+import com.example.compteunique.securite.JournalSecurite;
 
 // CU-14 (US-09) : définition du mot de passe à partir du lien d'activation reçu par SMS.
 // Le lien sert uniquement à définir le mot de passe, pas à se connecter. Il est valable
@@ -41,26 +43,26 @@ public class ActivationService {
 	private final CompteRepository comptes;
 	private final DossierRepository dossiers;
 	private final EnvoisIdentifiants envois;
-	private final Clock horloge;
+	private final JournalSecurite journal;
+	private Clock horloge = Clock.systemDefaultZone();
 
 	@Autowired
 	public ActivationService(JetonService jetons, IdentifiantConnexionRepository identifiants,
 			IdentifiantConnexionService identifiantService, CompteRepository comptes, DossierRepository dossiers,
-			EnvoisIdentifiants envois) {
-		this(jetons, identifiants, identifiantService, comptes, dossiers, envois, Clock.systemDefaultZone());
-	}
-
-	@SuppressWarnings("PMD.ExcessiveParameterList")
-	ActivationService(JetonService jetons, IdentifiantConnexionRepository identifiants,
-			IdentifiantConnexionService identifiantService, CompteRepository comptes, DossierRepository dossiers,
-			EnvoisIdentifiants envois, Clock horloge) {
+			EnvoisIdentifiants envois, JournalSecurite journal) {
 		this.jetons = jetons;
 		this.identifiants = identifiants;
 		this.identifiantService = identifiantService;
 		this.comptes = comptes;
 		this.dossiers = dossiers;
 		this.envois = envois;
-		this.horloge = horloge;
+		this.journal = journal;
+	}
+
+	/** Tests : horloge simulée (l'horloge système est utilisée sinon). */
+	ActivationService avecHorloge(Clock horlogeSimulee) {
+		this.horloge = horlogeSimulee;
+		return this;
 	}
 
 	/** Ouverture du lien : sans le consommer. */
@@ -93,6 +95,7 @@ public class ActivationService {
 		// Contrôle du mot de passe d'abord : s'il est refusé, le lien n'est pas consommé.
 		identifiantService.definirMotDePasse(identifiantId, motDePasse, confirmation, interdits(identifiantId));
 		jetons.utiliser(jeton, TypeJeton.ACTIVATION);
+		journaliser(EvenementSecurite.ACTIVATION, identifiantId);
 		return EtatActivation.ACTIVE;
 	}
 
@@ -105,6 +108,13 @@ public class ActivationService {
 				.filter(trouve -> !estActif(trouve))
 				.flatMap(trouve -> comptes.findByIdentifiantConnexionId(trouve.getIdentifiantConnexionId()))
 				.ifPresent(compte -> envois.renvoyer(compte.getDossierId(), Canal.SMS));
+	}
+
+	/** CU-48 : activation journalisée avec l'identifiant de la cliente. */
+	private void journaliser(String type, Long identifiantId) {
+		String identifiant = identifiants.findById(identifiantId).map(IdentifiantConnexion::getIdentifiant).orElse(null);
+		journal.enregistrer(EvenementSecurite.authentification(type, identifiant, identifiantId, null,
+				OffsetDateTime.now(horloge)));
 	}
 
 	private boolean estActif(Jeton jeton) {

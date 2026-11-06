@@ -12,7 +12,7 @@ import com.example.compteunique.dossier.Categories.StatutDossier;
 class DossierControllerTest {
 
 	private final DossierService dossiers = mock(DossierService.class);
-	private final DossierController controller = new DossierController(dossiers);
+	private final DossierController controller = new DossierController(dossiers, "Conseiller test");
 	private final DossierReponse reponse = new DossierReponse("ref", StatutDossier.EN_COURS_DE_VERIFICATION, false,
 			true, null, null, null);
 

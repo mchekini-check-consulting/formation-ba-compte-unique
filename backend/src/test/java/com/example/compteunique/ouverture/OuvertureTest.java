@@ -37,6 +37,7 @@ import com.example.compteunique.connexion.IdentifiantIndisponibleException;
 import com.example.compteunique.connexion.JetonService;
 import com.example.compteunique.connexion.StatutIdentifiant;
 import com.example.compteunique.connexion.TypeJeton;
+import com.example.compteunique.dossier.Categories.MotifAnnulation;
 import com.example.compteunique.dossier.Categories.StatutDossier;
 import com.example.compteunique.dossier.Dossier;
 import com.example.compteunique.dossier.DossierRepository;
@@ -66,7 +67,7 @@ class OuvertureTest {
 	private final CreationCompte creation = new CreationCompte(dossiers, comptes, generateur, identifiantService,
 			HORLOGE);
 	private final EnvoisIdentifiants envoisIdentifiants = new EnvoisIdentifiants(dossiers, comptes, identifiants,
-			jetons, messagerie, envois, transactions, HORLOGE);
+			jetons, messagerie, envois, transactions).avecHorloge(HORLOGE);
 	private final OuvertureService ouverture = new OuvertureService(dossiers, comptes, envois, creation,
 			envoisIdentifiants, HORLOGE);
 
@@ -197,7 +198,7 @@ class OuvertureTest {
 
 	@Test
 	void creationRefuseeSiLaConventionNEstPasSignee() {
-		dossier.annuler();
+		dossier.annuler(MotifAnnulation.DEMANDE_CLIENTE, MAINTENANT);
 		ouverture.ouvrir(ID);
 		verify(comptes, never()).save(any());
 	}

@@ -31,6 +31,7 @@ import com.example.compteunique.dossier.Categories.ResultatControle;
 import com.example.compteunique.dossier.Categories.StatutDossier;
 import com.example.compteunique.dossier.Categories.TypePiece;
 
+
 // CUB-8 : un cas de test par règle d'enregistrement du dossier.
 class DossierServiceTest {
 
@@ -40,7 +41,8 @@ class DossierServiceTest {
 	private static final String REF = "ref-1";
 
 	private final DossierRepository dossiers = mock(DossierRepository.class);
-	private final DossierService service = new DossierService(dossiers, HORLOGE);
+	private final ControleDoublon doublons = mock(ControleDoublon.class);
+	private final DossierService service = new DossierService(dossiers, doublons, HORLOGE);
 
 	private static IdentiteRequete identite() {
 		return ExempleIdentite.identite();
@@ -213,7 +215,7 @@ class DossierServiceTest {
 
 	@Test
 	void constructeurSpringUtiliseLHorlogeSysteme() {
-		DossierService avecHorlogeSysteme = new DossierService(dossiers);
+		DossierService avecHorlogeSysteme = new DossierService(dossiers, doublons);
 		when(dossiers.findByReference(REF)).thenReturn(Optional.empty());
 		assertEquals(REF, avecHorlogeSysteme.renseignerIdentite(REF, identite()).reference());
 	}

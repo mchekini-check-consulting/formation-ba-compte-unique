@@ -15,10 +15,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockHttpServletRequest;
 
 import com.example.compteunique.connexion.ConnexionController.DemandeConnexion;
 import com.example.compteunique.connexion.ConnexionController.RefusConnexion;
 import com.example.compteunique.connexion.ConnexionController.SessionEnCours;
+import com.example.compteunique.connexion.ConnexionController.SessionFermee;
 import com.example.compteunique.connexion.ConnexionController.SessionOuverte;
 import com.example.compteunique.connexion.ConnexionService.EtatSession;
 
@@ -29,9 +31,11 @@ class ConnexionControllerTest {
 
 	@Test
 	void connecterPoseUnCookieProtegeEtNeRenvoiePasLeJeton() {
-		when(connexion.connecter("ABC", "secret")).thenReturn(new ResultatConnexion("ABC", "jeton"));
+		MockHttpServletRequest requete = new MockHttpServletRequest();
+		requete.setRemoteAddr("203.0.113.7");
+		when(connexion.connecter("ABC", "secret", "203.0.113.7")).thenReturn(new ResultatConnexion("ABC", "jeton"));
 
-		ResponseEntity<SessionOuverte> reponse = controller.connecter(new DemandeConnexion("ABC", "secret"));
+		ResponseEntity<SessionOuverte> reponse = controller.connecter(new DemandeConnexion("ABC", "secret"), requete);
 
 		assertEquals(HttpStatus.OK, reponse.getStatusCode());
 		assertEquals(new SessionOuverte("ABC"), reponse.getBody());
@@ -54,7 +58,38 @@ class ConnexionControllerTest {
 	@Test
 	void sessionAbsenteRenvoie401() {
 		when(connexion.etatSession(null)).thenReturn(Optional.empty());
-		assertEquals(HttpStatus.UNAUTHORIZED, controller.session(null).getStatusCode());
+		ResponseEntity<Object> reponse = controller.session(null);
+		assertEquals(HttpStatus.UNAUTHORIZED, reponse.getStatusCode());
+		assertNull(reponse.getBody());
+	}
+
+	// CU-18 critère 4 : un cookie présenté mais refusé (expiré, révoqué, falsifié) → « Session expirée ».
+	@Test
+	void sessionRefuseeAvecUnCookieRenvoieLeMotifExpiree() {
+		when(connexion.etatSession("perime")).thenReturn(Optional.empty());
+		ResponseEntity<Object> reponse = controller.session("perime");
+		assertEquals(HttpStatus.UNAUTHORIZED, reponse.getStatusCode());
+		assertEquals(new SessionFermee("EXPIREE"), reponse.getBody());
+	}
+
+	@Test
+	void unBlocageRenvoie429AvecLeMessageDuTicket() {
+		ResponseEntity<RefusConnexion> reponse = controller
+				.tropDeTentatives(TropDeTentativesException.identifiant(BlocageIdentifiant.DUREE_BLOCAGE));
+		assertEquals(HttpStatus.TOO_MANY_REQUESTS, reponse.getStatusCode());
+		assertEquals("Trop de tentatives. Réessayez dans 5 minutes.", reponse.getBody().message());
+		assertNull(reponse.getBody().invitation());
+
+		assertEquals("Trop de tentatives depuis votre connexion. Réessayez plus tard.",
+				controller.tropDeTentatives(TropDeTentativesException.adresseIp()).getBody().message());
+	}
+
+	@Test
+	void unJournalIndisponibleRenvoie503AvecLeMessageDuTicket() {
+		ResponseEntity<RefusConnexion> reponse = controller.journalIndisponible();
+		assertEquals(HttpStatus.SERVICE_UNAVAILABLE, reponse.getStatusCode());
+		assertEquals("Connexion momentanément impossible. Réessayez dans quelques minutes.",
+				reponse.getBody().message());
 	}
 
 	@Test
