@@ -280,7 +280,7 @@ class ConnexionServiceTest {
 	@Test
 	void uneAdresseBloqueeRefuseMemeDesIdentifiantsValides() {
 		compteActif();
-		doThrow(TropDeTentativesException.adresseIp()).when(protection).verifierAdresse(any(), any(), any());
+		doThrow(TropDeTentativesException.adresseIp(Duration.ofMinutes(15))).when(protection).verifierAdresse(any(), any(), any());
 
 		assertThrows(TropDeTentativesException.class, () -> service.connecter("ABC12345", MOT_DE_PASSE, "10.0.0.1"));
 

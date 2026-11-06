@@ -11,6 +11,11 @@
       <b>Session expirée</b>
       <p>Votre session a été fermée après 10 minutes sans activité. Reconnectez-vous pour continuer.</p>
     </div>
+  } @else if (sessionFermee && !erreur()) {
+    <div role="status" class="msg warn">
+      <b>Session expirée</b>
+      <p>Votre session a été fermée. Reconnectez-vous pour continuer.</p>
+    </div>
   }
 
   @if (erreur()) {

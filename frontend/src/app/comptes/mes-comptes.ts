@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, inject, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { Compte, ComptesService, libelleStatut } from './comptes';
 import { SuiviSession } from '../session/suivi-session';
 
@@ -36,7 +36,6 @@ import { SuiviSession } from '../session/suivi-session';
   `,
 })
 export class MesComptes {
-  private readonly router = inject(Router);
   protected readonly comptes = signal<Compte[] | null>(null);
   protected readonly erreur = signal(false);
   protected readonly libelleStatut = libelleStatut;
@@ -51,9 +50,8 @@ export class MesComptes {
       .subscribe({
         next: (comptes) => this.comptes.set(comptes),
         error: (erreur: HttpErrorResponse) => {
-          if (erreur.status === 401) {
-            void this.router.navigateByUrl('/connexion');
-          } else {
+          // 401 : retour à la connexion par l'intercepteur sessionFermee (CU-169).
+          if (erreur.status !== 401) {
             this.erreur.set(true);
           }
         },

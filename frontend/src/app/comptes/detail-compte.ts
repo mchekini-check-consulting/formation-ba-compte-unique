@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, inject, signal } from '@angular/core';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CarteCompte } from './carte-compte';
 import { Compte, ComptesService } from './comptes';
 import { SuiviSession } from '../session/suivi-session';
@@ -29,7 +29,6 @@ import { SuiviSession } from '../session/suivi-session';
   `,
 })
 export class DetailCompte {
-  private readonly router = inject(Router);
   protected readonly compte = signal<Compte | null>(null);
   protected readonly inaccessible = signal(false);
 
@@ -44,9 +43,8 @@ export class DetailCompte {
       .subscribe({
         next: (compte) => this.compte.set(compte),
         error: (erreur: HttpErrorResponse) => {
-          if (erreur.status === 401) {
-            void this.router.navigateByUrl('/connexion');
-          } else {
+          // 401 : retour à la connexion par l'intercepteur sessionFermee (CU-169).
+          if (erreur.status !== 401) {
             this.inaccessible.set(true);
           }
         },

@@ -37,7 +37,7 @@ class ProtectionConnexionTest {
 	private final JournalSecuriteRepository evenements = mock(JournalSecuriteRepository.class);
 	private final JournalSecurite journal = mock(JournalSecurite.class);
 	private final ProtectionConnexion protection = new ProtectionConnexion(blocagesIdentifiant, blocagesAdresse,
-			evenements, journal);
+			evenements, journal, true);
 
 	private List<EvenementSecurite> evenementsJournalises(int nombre) {
 		ArgumentCaptor<EvenementSecurite> evenement = ArgumentCaptor.forClass(EvenementSecurite.class);
@@ -180,6 +180,38 @@ class ProtectionConnexionTest {
 
 		verify(evenements, never()).countByAdresseIpAndEvenementAndMotifInAndSurvenuLeAfter(anyString(), anyString(),
 				any(), any());
+	}
+
+	// CU-171 : le refus indique le temps restant du blocage, pas sa durée totale.
+	@Test
+	void leRefusDUneAdresseBloqueeIndiqueLeTempsRestant() {
+		when(blocagesAdresse.findById(IP)).thenReturn(Optional.of(new BlocageAdresseIp(IP, T0.plusSeconds(250))));
+
+		TropDeTentativesException refus = assertThrows(TropDeTentativesException.class,
+				() -> protection.verifierAdresse(IP, IDENTIFIANT, T0));
+
+		assertEquals(Duration.ofSeconds(250), refus.getRestant());
+	}
+
+	@Test
+	void unNouveauBlocageDAdresseIndiqueQuinzeMinutes() {
+		echecsRecents(20);
+		TropDeTentativesException refus = assertThrows(TropDeTentativesException.class,
+				() -> protection.verifierAdresse(IP, IDENTIFIANT, T0));
+		assertEquals(Duration.ofMinutes(15), refus.getRestant());
+	}
+
+	// CU-48 (recette) : en dev et qualif, la limite par adresse IP est désactivée.
+	@Test
+	void limiteDesactiveeAucuneVerificationNiBlocageParAdresse() {
+		ProtectionConnexion sansLimite = new ProtectionConnexion(blocagesIdentifiant, blocagesAdresse, evenements,
+				journal, false);
+		when(blocagesAdresse.findById(IP)).thenReturn(Optional.of(new BlocageAdresseIp(IP, T0.plusMinutes(15))));
+		echecsRecents(50);
+
+		sansLimite.verifierAdresse(IP, IDENTIFIANT, T0);
+
+		verifyNoInteractions(blocagesAdresse, evenements, journal);
 	}
 
 	@Test

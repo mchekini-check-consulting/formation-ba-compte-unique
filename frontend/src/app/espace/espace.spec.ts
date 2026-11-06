@@ -1,9 +1,10 @@
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { vi } from 'vitest';
 import { formaterSolde } from '../comptes/comptes';
+import { sessionFermee } from '../session/session-fermee';
 import { Espace } from './espace';
 
 const ACTIVITE = '/api/backend/connexion/session/activite';
@@ -24,7 +25,7 @@ describe('Espace', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [Espace],
-      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideRouter([]), provideHttpClient(withInterceptors([sessionFermee])), provideHttpClientTesting()],
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
   });
@@ -117,10 +118,19 @@ describe('Espace', () => {
     expect(page.querySelector('.noacct')).toBeNull();
   });
 
-  it('renvoie vers la connexion si la session expire avant la lecture du solde', async () => {
-    const navigation = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
-    await ouvrir('', { status: 401, statusText: 'Unauthorized' });
-    expect(navigation).toHaveBeenCalledWith('/connexion');
+  it('renvoie vers la connexion avec « Session expirée » si la session expire avant la lecture du solde', async () => {
+    const navigation = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    await ouvrir({ motif: 'EXPIREE' }, { status: 401, statusText: 'Unauthorized' });
+    expect(navigation).toHaveBeenCalledWith(['/connexion'], { queryParams: { motif: 'session_expiree' } });
+  });
+
+  // CU-160 : compte TEST-CLIENTE-NEGATIF (db/demo) ; la valeur reçue est incohérente.
+  it("n'affiche jamais un solde négatif reçu", async () => {
+    const { page } = await ouvrir([{ ...COMPTE, soldeCentimes: -500 }]);
+    expect(page.querySelector('.solde.err')?.textContent).toBe('Votre solde est momentanément indisponible');
+    expect(page.querySelector('.acct')?.textContent).not.toContain('€');
+    expect(page.querySelector('.float.a .v.err')).not.toBeNull();
+    expect(page.querySelector('.proof')?.textContent).not.toContain('Actif');
   });
 
   it('renvoie vers la connexion sans rien afficher si la session est fermée (retour arrière après déconnexion)', async () => {

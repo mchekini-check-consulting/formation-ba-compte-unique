@@ -1,7 +1,7 @@
 <div class="landing">
   <aside>
     <div class="logo">Hi-Tech<span>Bank</span></div>
-    <nav>
+    <nav (click)="allerALaRubrique($event)">
       <a href="#accueil"><i></i>Accueil</a>
       <div class="sep">Mes produits</div>
       <a href="#compte"><i></i>Compte courant</a>
@@ -248,7 +248,7 @@
     } @else {
       <div class="parcours" id="parcours">
         <div class="pbar">
-          <a href="#" (click)="fermerParcours($event)">← Retour au site</a>
+          <a href="/" (click)="fermerParcours($event)">← Retour au site</a>
           <span class="pstep" id="pstep">Étape {{ etape() }} sur {{ totalEtapes }}</span>
         </div>
 

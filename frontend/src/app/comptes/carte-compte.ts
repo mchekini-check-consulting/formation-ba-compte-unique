@@ -1,5 +1,5 @@
 import { Component, computed, input } from '@angular/core';
-import { Compte, formaterDate, formaterSolde } from './comptes';
+import { Compte, formaterDate, soldeAffichable } from './comptes';
 
 // CU-19 : carte « Compte courant » de la maquette. Sans compte lu ou avec un solde refusé,
 // seul le message d'indisponibilité s'affiche : aucune valeur, aucune date, aucun statut.
@@ -43,10 +43,7 @@ import { Compte, formaterDate, formaterSolde } from './comptes';
 export class CarteCompte {
   readonly compte = input.required<Compte | null>();
 
-  protected readonly solde = computed(() => {
-    const centimes = this.compte()?.soldeCentimes;
-    return centimes === null || centimes === undefined ? null : formaterSolde(centimes);
-  });
+  protected readonly solde = computed(() => soldeAffichable(this.compte()));
 
   protected readonly miseAJour = computed(() => {
     const date = this.compte()?.soldeMisAJourLe;

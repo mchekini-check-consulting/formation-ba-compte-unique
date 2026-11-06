@@ -70,6 +70,33 @@ describe('Landing', () => {
     expect(page.querySelector('.parcours')).toBeNull();
   });
 
+  // CU-83 : « Me connecter » mène à la page de connexion ; aucun lien vide (« # ») et chaque
+  // ancre « #rubrique » vise une section qui existe sur la page.
+  it('« Me connecter » mène à /connexion et aucun lien ne pointe dans le vide', async () => {
+    const connecter = [...page.querySelectorAll('a')].find((lien) => lien.textContent?.trim() === 'Me connecter');
+    expect(connecter?.getAttribute('href')).toBe('/connexion');
+    const verifier = () => {
+      for (const lien of page.querySelectorAll('a')) {
+        const cible = lien.getAttribute('href');
+        expect(cible, lien.textContent ?? '').toBeTruthy();
+        expect(cible).not.toBe('#');
+        // « #parcours » : ouvre le parcours d'ouverture (clic géré par la page).
+        if (cible!.startsWith('#') && cible !== '#parcours') {
+          expect(page.querySelector(cible!), cible!).not.toBeNull();
+        }
+      }
+    };
+    verifier();
+  });
+
+  it('pendant le parcours, un lien du menu ramène au site sur la rubrique', async () => {
+    await cliquer('.cta');
+    expect(page.querySelector('#compte')).toBeNull();
+    await cliquer('aside nav a[href="#compte"]');
+    expect(page.querySelector('.parcours')).toBeNull();
+    expect(page.querySelector('#compte')).not.toBeNull();
+  });
+
   it("ouvre le parcours à l'étape 1 et masque la page", async () => {
     await cliquer('.top .btn.p');
     expect(page.querySelector('#pstep')?.textContent).toContain('Étape 1 sur 6');

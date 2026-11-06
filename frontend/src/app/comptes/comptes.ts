@@ -18,6 +18,18 @@ export function libelleStatut(statut: string): string {
   return LIBELLES_STATUT[statut] ?? statut;
 }
 
+/**
+ * CU-160 : solde à afficher, ou null si la valeur reçue est absente ou incohérente (négative,
+ * non entière, pas un nombre) : la page affiche alors « Votre solde est momentanément
+ * indisponible ». Le backend ne renvoie jamais de solde négatif ; l'écran ne se fie pas à lui seul.
+ */
+export function soldeAffichable(compte: Pick<Compte, 'soldeCentimes'> | null | undefined): string | null {
+  const centimes: unknown = compte?.soldeCentimes;
+  return typeof centimes === 'number' && Number.isSafeInteger(centimes) && centimes >= 0
+    ? formaterSolde(centimes)
+    : null;
+}
+
 // CU-19 : 124050 centimes -> « 1 240,50 € » (espaces insécables, calcul en nombres entiers).
 export function formaterSolde(centimes: number): string {
   const euros = String(Math.trunc(centimes / 100)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');

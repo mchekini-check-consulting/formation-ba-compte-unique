@@ -9,6 +9,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Duration;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
@@ -80,8 +81,27 @@ class ConnexionControllerTest {
 		assertEquals("Trop de tentatives. Réessayez dans 5 minutes.", reponse.getBody().message());
 		assertNull(reponse.getBody().invitation());
 
-		assertEquals("Trop de tentatives depuis votre connexion. Réessayez plus tard.",
-				controller.tropDeTentatives(TropDeTentativesException.adresseIp()).getBody().message());
+		assertEquals("Trop de tentatives depuis votre connexion. Réessayez plus tard.", controller
+				.tropDeTentatives(TropDeTentativesException.adresseIp(Duration.ofMinutes(15))).getBody().message());
+	}
+
+	// CU-171 : la durée restante accompagne le refus (en-tête Retry-After et corps).
+	@Test
+	void unBlocageRenvoieLaDureeRestanteEnSecondes() {
+		ResponseEntity<RefusConnexion> reponse = controller
+				.tropDeTentatives(TropDeTentativesException.adresseIp(Duration.ofSeconds(754, 300)));
+		assertEquals(755L, reponse.getBody().reessayerDansSecondes());
+		assertEquals("755", reponse.getHeaders().getFirst(HttpHeaders.RETRY_AFTER));
+
+		ResponseEntity<RefusConnexion> fini = controller
+				.tropDeTentatives(TropDeTentativesException.identifiant(Duration.ofSeconds(-3)));
+		assertEquals(1L, fini.getBody().reessayerDansSecondes());
+		assertEquals("Trop de tentatives. Réessayez dans 1 minute.", fini.getBody().message());
+	}
+
+	@Test
+	void unRefusDIdentifiantsNIndiquePasDeDuree() {
+		assertNull(controller.refus(new ConnexionRefuseeException(false)).getBody().reessayerDansSecondes());
 	}
 
 	@Test

@@ -15,6 +15,8 @@ export interface SessionEnCours extends SessionOuverte {
 export interface RefusConnexion {
   message: string;
   invitation: string | null;
+  /** CU-171 : pendant un blocage (429), secondes restantes avant de pouvoir réessayer. */
+  reessayerDansSecondes?: number | null;
 }
 
 // Connexion à l'espace (POST /connexion), session en cours (GET /connexion/session, ne prolonge
