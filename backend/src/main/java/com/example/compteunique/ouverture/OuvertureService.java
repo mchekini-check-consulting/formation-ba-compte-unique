@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.example.compteunique.compte.Compte;
 import com.example.compteunique.compte.CompteRepository;
 import com.example.compteunique.connexion.IdentifiantIndisponibleException;
 import com.example.compteunique.dossier.Categories.StatutDossier;
@@ -105,7 +106,7 @@ public class OuvertureService {
 	public OuvertureReponse etat(String reference) {
 		Dossier dossier = dossier(reference);
 		return new OuvertureReponse(dossier.getStatut(),
-				comptes.findByDossierId(dossier.getId()).map(compte -> compte.getIbanMasque()).orElse(null),
+				comptes.findByDossierId(dossier.getId()).map(Compte::getIbanMasque).orElse(null),
 				Masquage.email(dossier.getEmail()), Masquage.mobile(dossier.getMobile()),
 				resultat(dossier.getId(), Canal.EMAIL), resultat(dossier.getId(), Canal.SMS));
 	}

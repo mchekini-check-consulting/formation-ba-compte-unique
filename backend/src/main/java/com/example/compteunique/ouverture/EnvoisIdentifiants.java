@@ -71,11 +71,12 @@ public class EnvoisIdentifiants {
 
 	/** Un envoi (ou une relance) ; renvoie son résultat. Pour le SMS, un nouveau lien remplace l'ancien. */
 	public ResultatEnvoi envoyer(Long dossierId, Canal canal) {
+		OffsetDateTime maintenant = OffsetDateTime.now(horloge);
 		return transaction.execute(statut -> {
 			// Enregistré seulement une fois la tentative faite : résultat et date sont obligatoires en base.
 			EnvoiMessage envoi = envois.findByDossierIdAndCanal(dossierId, canal)
 					.orElseGet(() -> new EnvoiMessage(dossierId, canal));
-			envoi.tentative(remettre(dossierId, canal), OffsetDateTime.now(horloge));
+			envoi.tentative(remettre(dossierId, canal), maintenant);
 			return envois.save(envoi).getResultat();
 		});
 	}
