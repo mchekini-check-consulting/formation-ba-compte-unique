@@ -67,7 +67,7 @@ class OuvertureTest {
 	private final CreationCompte creation = new CreationCompte(dossiers, comptes, generateur, identifiantService,
 			HORLOGE);
 	private final EnvoisIdentifiants envoisIdentifiants = new EnvoisIdentifiants(dossiers, comptes, identifiants,
-			jetons, messagerie, envois, transactions, HORLOGE);
+			jetons, messagerie, envois, transactions).avecHorloge(HORLOGE);
 	private final OuvertureService ouverture = new OuvertureService(dossiers, comptes, envois, creation,
 			envoisIdentifiants, HORLOGE);
 

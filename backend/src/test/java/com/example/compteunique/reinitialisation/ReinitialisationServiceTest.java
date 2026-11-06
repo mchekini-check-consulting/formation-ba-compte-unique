@@ -76,8 +76,10 @@ class ReinitialisationServiceTest {
 	private final JournalSecurite journal = mock(JournalSecurite.class);
 	// Exécute la tâche d'arrière-plan tout de suite, pour pouvoir vérifier son effet.
 	private final Executor immediat = Runnable::run;
-	private final ReinitialisationService service = new ReinitialisationService(identifiants, identifiantService,
-			jetons, sessions, comptes, dossiers, activation, messagerie, journal, immediat, HORLOGE);
+	private final EnvoiLienReinitialisation envoiLien = new EnvoiLienReinitialisation(identifiants, jetons, comptes,
+			dossiers, messagerie).avecHorloge(HORLOGE);
+	private final ReinitialisationService service = new ReinitialisationService(identifiantService, jetons, sessions,
+			activation, envoiLien, journal, immediat).avecHorloge(HORLOGE);
 
 	private final IdentifiantConnexion compte = new IdentifiantConnexion(IDENTIFIANT);
 	private final Dossier dossier = ExempleDossier.conventionSignee("ref");
@@ -117,13 +119,13 @@ class ReinitialisationServiceTest {
 	@Test
 	void demandeTraiteeEnArrierePlan() {
 		List<Runnable> enAttente = new ArrayList<>();
-		ReinitialisationService differe = new ReinitialisationService(identifiants, identifiantService, jetons,
-				sessions, comptes, dossiers, activation, messagerie, journal, enAttente::add, HORLOGE);
+		ReinitialisationService differe = new ReinitialisationService(identifiantService, jetons, sessions,
+				activation, envoiLien, journal, enAttente::add).avecHorloge(HORLOGE);
 		differe.demander(IDENTIFIANT);
 		verify(identifiants, never()).findByIdentifiant(anyString());
 		assertThat(enAttente).hasSize(1);
 		enAttente.get(0).run();
-		verify(messagerie).envoyerSms(dossier.getMobile(), ReinitialisationService.texteSms(LIEN));
+		verify(messagerie).envoyerSms(dossier.getMobile(), EnvoiLienReinitialisation.texteSms(LIEN));
 	}
 
 	// Critère 2 : compte activé → jeton créé et SMS avec le lien envoyé au mobile enregistré.
@@ -131,8 +133,8 @@ class ReinitialisationServiceTest {
 	void compteActiveRecoitUnLienParSms() {
 		service.demander(IDENTIFIANT);
 		verify(jetons).generer(7L, TypeJeton.REINITIALISATION);
-		verify(messagerie).envoyerSms(dossier.getMobile(), ReinitialisationService.texteSms(LIEN));
-		assertThat(ReinitialisationService.texteSms(LIEN)).contains(LIEN).doesNotContain(IDENTIFIANT);
+		verify(messagerie).envoyerSms(dossier.getMobile(), EnvoiLienReinitialisation.texteSms(LIEN));
+		assertThat(EnvoiLienReinitialisation.texteSms(LIEN)).contains(LIEN).doesNotContain(IDENTIFIANT);
 	}
 
 	// Critère 3 : identifiant inconnu ou compte non activé → aucun SMS.
@@ -152,7 +154,7 @@ class ReinitialisationServiceTest {
 	@Test
 	void auDelaDe3DemandesParHeureAucunSms() {
 		when(jetons.nombreCreesDepuis(eq(7L), eq(TypeJeton.REINITIALISATION), any()))
-				.thenReturn((long) ReinitialisationService.DEMANDES_MAX_PAR_HEURE);
+				.thenReturn((long) EnvoiLienReinitialisation.DEMANDES_MAX_PAR_HEURE);
 		service.demander(IDENTIFIANT);
 		verify(jetons).nombreCreesDepuis(7L, TypeJeton.REINITIALISATION,
 				OffsetDateTime.now(HORLOGE).minus(Duration.ofHours(1)));

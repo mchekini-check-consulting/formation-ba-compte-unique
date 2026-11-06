@@ -3,6 +3,7 @@ package com.example.compteunique.connexion;
 import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -26,6 +27,11 @@ public class IdentifiantConnexionService {
 	public IdentifiantConnexionService(IdentifiantConnexionRepository identifiants, PasswordEncoder hacheur) {
 		this.identifiants = identifiants;
 		this.hacheur = hacheur;
+	}
+
+	/** L'identifiant de connexion (8 chiffres) d'un client, pour le journal de sécurité (CU-48). */
+	public Optional<String> identifiantDe(Long identifiantConnexionId) {
+		return identifiants.findById(identifiantConnexionId).map(IdentifiantConnexion::getIdentifiant);
 	}
 
 	/** Identifiant de 8 chiffres, EN_ATTENTE_ACTIVATION, sans mot de passe. */

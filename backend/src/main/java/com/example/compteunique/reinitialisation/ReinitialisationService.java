@@ -1,86 +1,61 @@
 package com.example.compteunique.reinitialisation;
 
 import java.time.Clock;
-import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.concurrent.Executor;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.compteunique.activation.ActivationService;
-import com.example.compteunique.compte.Compte;
-import com.example.compteunique.compte.CompteRepository;
 import com.example.compteunique.compte.EvenementSecurite;
-import com.example.compteunique.connexion.IdentifiantConnexion;
-import com.example.compteunique.connexion.IdentifiantConnexionRepository;
 import com.example.compteunique.connexion.IdentifiantConnexionService;
 import com.example.compteunique.connexion.Jeton;
 import com.example.compteunique.connexion.JetonInvalideException;
 import com.example.compteunique.connexion.JetonService;
 import com.example.compteunique.connexion.SessionClientRepository;
-import com.example.compteunique.connexion.StatutIdentifiant;
 import com.example.compteunique.connexion.TypeJeton;
-import com.example.compteunique.dossier.Dossier;
-import com.example.compteunique.dossier.DossierRepository;
 import com.example.compteunique.logging.Loggable;
-import com.example.compteunique.messagerie.Messagerie;
 import com.example.compteunique.securite.JournalSecurite;
 
 // CU-46 (US-18) : mot de passe oublié. La cliente saisit son identifiant et reçoit par SMS un
 // lien (jeton haché, valable 24 h, à usage unique : JetonService) vers la page « Définir mon
-// mot de passe ». La réponse ne révèle jamais si un compte existe.
+// mot de passe ». La réponse ne révèle jamais si un compte existe. L'envoi du SMS est fait par
+// EnvoiLienReinitialisation.
 @Service
 @Loggable
 public class ReinitialisationService {
 
-	/** Critère 6 : au-delà, aucun SMS (seuil à valider avec le RSSI). */
-	static final int DEMANDES_MAX_PAR_HEURE = 3;
-
 	private static final Logger log = LoggerFactory.getLogger(ReinitialisationService.class);
 
-	private final IdentifiantConnexionRepository identifiants;
 	private final IdentifiantConnexionService identifiantService;
 	private final JetonService jetons;
 	private final SessionClientRepository sessions;
-	private final CompteRepository comptes;
-	private final DossierRepository dossiers;
 	private final ActivationService activation;
-	private final Messagerie messagerie;
+	private final EnvoiLienReinitialisation envoiLien;
 	private final JournalSecurite journal;
 	private final Executor arrierePlan;
-	private final Clock horloge;
+	private Clock horloge = Clock.systemDefaultZone();
 
-	@Autowired
-	@SuppressWarnings("PMD.ExcessiveParameterList")
-	public ReinitialisationService(IdentifiantConnexionRepository identifiants,
-			IdentifiantConnexionService identifiantService, JetonService jetons, SessionClientRepository sessions,
-			CompteRepository comptes, DossierRepository dossiers, ActivationService activation, Messagerie messagerie,
+	public ReinitialisationService(IdentifiantConnexionService identifiantService, JetonService jetons,
+			SessionClientRepository sessions, ActivationService activation, EnvoiLienReinitialisation envoiLien,
 			JournalSecurite journal, @Qualifier("applicationTaskExecutor") Executor arrierePlan) {
-		this(identifiants, identifiantService, jetons, sessions, comptes, dossiers, activation, messagerie, journal,
-				arrierePlan, Clock.systemDefaultZone());
-	}
-
-	@SuppressWarnings("PMD.ExcessiveParameterList")
-	ReinitialisationService(IdentifiantConnexionRepository identifiants,
-			IdentifiantConnexionService identifiantService, JetonService jetons, SessionClientRepository sessions,
-			CompteRepository comptes, DossierRepository dossiers, ActivationService activation, Messagerie messagerie,
-			JournalSecurite journal, Executor arrierePlan, Clock horloge) {
-		this.identifiants = identifiants;
 		this.identifiantService = identifiantService;
 		this.jetons = jetons;
 		this.sessions = sessions;
-		this.comptes = comptes;
-		this.dossiers = dossiers;
 		this.activation = activation;
-		this.messagerie = messagerie;
+		this.envoiLien = envoiLien;
 		this.journal = journal;
 		this.arrierePlan = arrierePlan;
-		this.horloge = horloge;
+	}
+
+	/** Tests : horloge simulée (l'horloge système est utilisée sinon). */
+	ReinitialisationService avecHorloge(Clock horlogeSimulee) {
+		this.horloge = horlogeSimulee;
+		return this;
 	}
 
 	/**
@@ -93,40 +68,12 @@ public class ReinitialisationService {
 				identifiant, null, null, OffsetDateTime.now(horloge)));
 		arrierePlan.execute(() -> {
 			try {
-				envoyerLien(identifiant);
+				envoiLien.envoyer(identifiant);
 			} catch (RuntimeException e) {
 				// Ni identifiant ni destinataire dans le log.
 				log.warn("Demande de réinitialisation non traitée : {}", e.getClass().getSimpleName());
 			}
 		});
-	}
-
-	/** Lien envoyé par SMS seulement pour un compte activé, dans la limite de 3 demandes par heure. */
-	void envoyerLien(String identifiant) {
-		if (identifiant == null || identifiant.isBlank()) {
-			return;
-		}
-		identifiants.findByIdentifiant(identifiant.trim())
-				.filter(compte -> compte.getStatut() == StatutIdentifiant.ACTIF)
-				.filter(this::sousLaLimite)
-				.ifPresent(this::envoyerSms);
-	}
-
-	private boolean sousLaLimite(IdentifiantConnexion compte) {
-		OffsetDateTime ilYaUneHeure = OffsetDateTime.now(horloge).minus(Duration.ofHours(1));
-		return jetons.nombreCreesDepuis(compte.getId(), TypeJeton.REINITIALISATION, ilYaUneHeure)
-				< DEMANDES_MAX_PAR_HEURE;
-	}
-
-	private void envoyerSms(IdentifiantConnexion compte) {
-		comptes.findByIdentifiantConnexionId(compte.getId())
-				.map(Compte::getDossierId)
-				.flatMap(dossiers::findById)
-				.map(Dossier::getMobile)
-				.ifPresent(mobile -> {
-					String jeton = jetons.generer(compte.getId(), TypeJeton.REINITIALISATION);
-					messagerie.envoyerSms(mobile, texteSms(jetons.lien(TypeJeton.REINITIALISATION, jeton)));
-				});
 	}
 
 	/** Ouverture du lien : sans le consommer. */
@@ -155,14 +102,9 @@ public class ReinitialisationService {
 		sessions.fermerToutesLesSessions(identifiantId);
 		// CU-48 : utilisation du lien de réinitialisation journalisée.
 		journal.enregistrer(EvenementSecurite.authentification(EvenementSecurite.REINITIALISATION,
-				identifiants.findById(identifiantId).map(IdentifiantConnexion::getIdentifiant).orElse(null),
-				identifiantId, null, OffsetDateTime.now(horloge)));
+				identifiantService.identifiantDe(identifiantId).orElse(null), identifiantId, null,
+				OffsetDateTime.now(horloge)));
 		return EtatReinitialisation.REINITIALISE;
-	}
-
-	static String texteSms(String lien) {
-		return "Hi-Tech Bank : définissez votre nouveau mot de passe : " + lien
-				+ " (lien valable 24 h, à usage unique). Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.";
 	}
 
 }
