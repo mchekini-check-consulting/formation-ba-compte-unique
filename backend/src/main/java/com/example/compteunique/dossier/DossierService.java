@@ -25,6 +25,7 @@ public class DossierService {
 
 	static final int AGE_MINIMUM = 18;
 	private static final Set<String> CIVILITES = Set.of("M.", "Mme");
+	private static final String CHAMP_REFERENCE = "reference";
 	/** CU-9 : annulations que l'écran peut signaler (étapes pièce, selfie, questions). */
 	private static final Set<MotifAnnulation> ANNULATIONS_ECRAN = Set.of(MotifAnnulation.CONTROLE_AUTOMATIQUE,
 			MotifAnnulation.DEMANDE_CLIENTE);
@@ -51,7 +52,7 @@ public class DossierService {
 	 */
 	@Transactional(noRollbackFor = OuvertureRefuseeException.class)
 	public DossierReponse renseignerIdentite(String reference, IdentiteRequete requete) {
-		String ref = obligatoire(reference, "reference");
+		String ref = obligatoire(reference, CHAMP_REFERENCE);
 		IdentiteRequete identite = controler(requete);
 		Dossier dossier = dossiers.findByReference(ref).orElseGet(() -> new Dossier(ref));
 		if (dossier.getStatut() == StatutDossier.ANNULE) {
@@ -76,8 +77,7 @@ public class DossierService {
 		if (motif == null || !ANNULATIONS_ECRAN.contains(motif)) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "motif : CONTROLE_AUTOMATIQUE ou DEMANDE_CLIENTE");
 		}
-		Dossier dossier = dossiers.findByReference(obligatoire(reference, "reference"))
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "dossier inconnu"));
+		Dossier dossier = dossierExistant(reference);
 		if (dossier.getStatut() != StatutDossier.EN_COURS_DE_VERIFICATION) {
 			throw new ResponseStatusException(HttpStatus.CONFLICT, "dossier non annulable");
 		}
@@ -90,8 +90,7 @@ public class DossierService {
 		if (controles == null || controles.sanctions() == null || controles.pep() == null) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "sanctions et pep obligatoires");
 		}
-		Dossier dossier = dossiers.findByReference(obligatoire(reference, "reference"))
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "dossier inconnu"));
+		Dossier dossier = dossierExistant(reference);
 		dossier.enregistrerControles(controles.sanctions(), controles.pep(), OffsetDateTime.now(horloge));
 		return DossierReponse.de(dossiers.save(dossier));
 	}
@@ -134,6 +133,11 @@ public class DossierService {
 				present(i.typePiece(), "typePiece"),
 				obligatoire(i.numeroPiece(), "numeroPiece"),
 				dateExpiration);
+	}
+
+	private Dossier dossierExistant(String reference) {
+		return dossiers.findByReference(obligatoire(reference, CHAMP_REFERENCE))
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "dossier inconnu"));
 	}
 
 	private static String obligatoire(String valeur, String champ) {
