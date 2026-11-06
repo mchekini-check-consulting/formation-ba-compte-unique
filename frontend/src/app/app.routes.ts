@@ -10,16 +10,18 @@ import { MessagesTest } from './messages-test/messages-test';
 import { PageInfo } from './page-info/page-info';
 import { MotDePasseOublie } from './reinitialisation/mot-de-passe-oublie';
 import { ReinitialisationPage } from './reinitialisation/reinitialisation-page';
+import { connexionPublique, espaceProtege } from './session/garde-session';
 
 export const routes: Routes = [
   { path: '', component: Landing, pathMatch: 'full' },
-  { path: 'connexion', component: ConnexionPage },
+  { path: 'connexion', component: ConnexionPage, canActivate: [connexionPublique] },
   { path: 'activation', component: ActivationPage },
   { path: 'mot-de-passe-oublie', component: MotDePasseOublie },
   { path: 'reinitialisation', component: ReinitialisationPage },
-  { path: 'espace', component: Espace },
-  { path: 'comptes', component: MesComptes },
-  { path: 'comptes/:id', component: DetailCompte },
+  // CU-18 : pages protégées par une session valide.
+  { path: 'espace', component: Espace, canActivate: [espaceProtege] },
+  { path: 'comptes', component: MesComptes, canActivate: [espaceProtege] },
+  { path: 'comptes/:id', component: DetailCompte, canActivate: [espaceProtege] },
   { path: 'items', component: ItemsPage },
   { path: 'test/emails', component: MessagesTest, data: { canal: 'emails' } },
   { path: 'test/sms', component: MessagesTest, data: { canal: 'sms' } },

@@ -1,6 +1,6 @@
 import { Component, Injector, afterNextRender, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { Controles } from '../identification/dossier';
+import { Controles, DossierService, RepriseOuverture } from '../identification/dossier';
 import { EtapeIdentite } from '../identification/etape-identite';
 import { EtapePiece } from '../identification/etape-piece';
 import { EtapeQuestions } from '../identification/etape-questions';
@@ -27,6 +27,7 @@ const ETAPE_SIGNATURE = 5;
 export class Landing {
   private readonly injector = inject(Injector);
   private readonly ouvertures = inject(OuvertureService);
+  private readonly dossiers = inject(DossierService);
   protected readonly parcoursOuvert = signal(false);
   protected readonly etape = signal(1);
   protected readonly totalEtapes = DERNIERE_ETAPE;
@@ -97,6 +98,28 @@ export class Landing {
     this.annulation.set(message);
     this.controlesAnnulation.set(controles);
     window.scrollTo(0, 0);
+  }
+
+  /**
+   * CU-9 : une pièce, un selfie ou une réponse refusés annulent la demande « par contrôle » ; le
+   * dossier est marqué pour qu'une nouvelle ouverture en ligne ne soit pas possible. Le message
+   * s'affiche même si l'enregistrement échoue.
+   */
+  protected annulerParControle(message: string): void {
+    this.dossiers.annuler(this.dossierId, 'CONTROLE_AUTOMATIQUE').subscribe({ error: () => undefined });
+    this.annuler(message);
+  }
+
+  /**
+   * CU-9 critère 4 : reprise du dossier en cours de la même personne. S'il attend encore la
+   * cliente, l'étape « Mon identité » enregistre la saisie sur ce dossier et le parcours continue ;
+   * s'il attend la banque (convention signée...), le parcours passe au suivi de l'ouverture.
+   */
+  protected reprendreLeDossier(reprise: RepriseOuverture): void {
+    this.dossierId = reprise.reference;
+    if (reprise.etape === 'OUVERTURE') {
+      this.allerA(DERNIERE_ETAPE);
+    }
   }
 
   protected suivant(): void {

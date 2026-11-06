@@ -1,4 +1,25 @@
-@if (indisponible()) {
+@if (refus(); as r) {
+  <!-- CU-9 : la personne est déjà connue ; rien n'est révélé du profil ou du dossier existant. -->
+  <section class="ident carte" aria-labelledby="titre-refus">
+    <h2 id="titre-refus">{{ r.code === 'OUVERTURE_EN_COURS' ? 'Ouverture déjà en cours' : 'Ouverture impossible en ligne' }}</h2>
+    <div class="notice warn" role="alert">{{ r.message }}</div>
+    @switch (r.code) {
+      @case ('ESPACE_EXISTANT') {
+        <a class="pbtn bloc" routerLink="/connexion">Me connecter</a>
+      }
+      @case ('OUVERTURE_ANNULEE') {
+        @if (r.conseiller) {
+          <p class="conseiller">{{ r.conseiller }}</p>
+        }
+      }
+      @case ('OUVERTURE_EN_COURS') {
+        @if (r.reprise) {
+          <button type="button" class="pbtn bloc" (click)="reprendre()">Reprendre mon ouverture</button>
+        }
+      }
+    }
+  </section>
+} @else if (indisponible()) {
   <section class="ident carte" aria-labelledby="titre-indisponible">
     <h2 id="titre-indisponible">Vérification impossible</h2>
     <div class="status"><span>Statut du dossier</span><span class="pill wait">En cours de vérification</span></div>

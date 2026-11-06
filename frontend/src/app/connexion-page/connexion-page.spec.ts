@@ -78,6 +78,23 @@ describe('ConnexionPage', () => {
     expect(page.querySelector('[role=alert]')?.textContent).toContain('réessayez plus tard');
   });
 
+  it.each([
+    [429, 'Trop de tentatives. Réessayez dans 5 minutes.'],
+    [429, 'Trop de tentatives depuis votre connexion. Réessayez plus tard.'],
+    [503, 'Connexion momentanément impossible. Réessayez dans quelques minutes.'],
+  ])('CU-16 / CU-48 : affiche le message du refus %i « %s »', async (status, message) => {
+    const fixture = TestBed.createComponent(ConnexionPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    soumettre(page);
+    http.expectOne('/api/backend/connexion').flush({ message, invitation: null }, { status, statusText: 'Refus' });
+    await fixture.whenStable();
+    const alerte = page.querySelectorAll('[role=alert] p');
+    expect(alerte.length).toBe(1);
+    expect(alerte[0].textContent).toBe(message);
+    expect(page.querySelector<HTMLInputElement>('input[name=motDePasse]')!.value).toBe('');
+  });
+
   it('affiche la maquette : titre, arguments et liens utiles', async () => {
     const fixture = TestBed.createComponent(ConnexionPage);
     await fixture.whenStable();

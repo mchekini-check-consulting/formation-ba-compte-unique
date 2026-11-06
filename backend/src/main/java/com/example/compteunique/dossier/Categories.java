@@ -36,4 +36,26 @@ public final class Categories {
 		COMPTE_OUVERT
 	}
 
+	/** CU-9 : motif d'un dossier « Annulé ». */
+	public enum MotifAnnulation {
+		/** Sanctions, PEP, pièce expirée ou non authentique, permis de conduire, écart de concordance. */
+		CONTROLE_AUTOMATIQUE(true),
+		DECISION_CONFORMITE(true),
+		DEMANDE_CLIENTE(false),
+		INACTIVITE(false),
+		CODE_EXPIRE(false),
+		TROIS_TENTATIVES(false);
+
+		private final boolean bloquant;
+
+		MotifAnnulation(boolean bloquant) {
+			this.bloquant = bloquant;
+		}
+
+		/** Annulé par contrôle : bloque toute nouvelle ouverture en ligne, seul un conseiller peut la reprendre. */
+		public boolean estBloquant() {
+			return bloquant;
+		}
+	}
+
 }

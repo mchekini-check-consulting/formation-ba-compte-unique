@@ -42,7 +42,7 @@ class AccesComptesIT {
 	private JdbcTemplate base;
 
 	private String seConnecter(String identifiant) {
-		return connexion.connecter(identifiant, MOT_DE_PASSE).jetonSession();
+		return connexion.connecter(identifiant, MOT_DE_PASSE, null).jetonSession();
 	}
 
 	private Compte seulCompte(String jeton) {

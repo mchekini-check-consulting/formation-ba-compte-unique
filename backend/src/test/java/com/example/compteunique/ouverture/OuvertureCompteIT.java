@@ -104,7 +104,7 @@ class OuvertureCompteIT {
 		assertThat(activation.activer(jeton.group(1), MOT_DE_PASSE, MOT_DE_PASSE)).isEqualTo(EtatActivation.ACTIVE);
 		assertThat(activation.etat(jeton.group(1))).isEqualTo(EtatActivation.DEJA_ACTIVE);
 
-		String session = connexion.connecter(identifiant.group(1), MOT_DE_PASSE).jetonSession();
+		String session = connexion.connecter(identifiant.group(1), MOT_DE_PASSE, null).jetonSession();
 		assertThat(connexion.identifiantDeLaSession(session)).contains(identifiant.group(1));
 
 		// CU-46 : mot de passe oublié, puis faute de frappe dans la confirmation et correction
@@ -130,8 +130,8 @@ class OuvertureCompteIT {
 				Integer.class)).isEqualTo(1);
 
 		assertThat(connexion.identifiantDeLaSession(session)).isEmpty();
-		assertThrows(ConnexionRefuseeException.class, () -> connexion.connecter(identifiant.group(1), MOT_DE_PASSE));
-		assertThat(connexion.connecter(identifiant.group(1), NOUVEAU).identifiant()).isEqualTo(identifiant.group(1));
+		assertThrows(ConnexionRefuseeException.class, () -> connexion.connecter(identifiant.group(1), MOT_DE_PASSE, null));
+		assertThat(connexion.connecter(identifiant.group(1), NOUVEAU, null).identifiant()).isEqualTo(identifiant.group(1));
 	}
 
 	/** La demande est traitée en arrière-plan : on attend le nouveau SMS (5 secondes au plus). */

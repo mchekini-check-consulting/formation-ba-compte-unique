@@ -14,6 +14,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+import com.example.compteunique.dossier.Categories.MotifAnnulation;
 import com.example.compteunique.dossier.Categories.Nationalite;
 import com.example.compteunique.dossier.Categories.PaysNaissance;
 import com.example.compteunique.dossier.Categories.ResultatControle;
@@ -131,12 +132,34 @@ public class Dossier {
 	@Column(name = "creation_prochaine_le")
 	private OffsetDateTime creationProchaineLe;
 
+	/** CU-9 : motif d'un dossier « Annulé » ; une annulation par contrôle bloque les nouvelles ouvertures. */
+	@Enumerated(EnumType.STRING)
+	@Column(name = "motif_annulation", length = 30)
+	private MotifAnnulation motifAnnulation;
+
+	@Column(name = "annule_le")
+	private OffsetDateTime annuleLe;
+
+	/** CU-9 : dernière action de la cliente ; 30 jours sans action annulent le dossier. */
+	@Column(name = "derniere_action_le", nullable = false)
+	private OffsetDateTime derniereActionLe;
+
+	/** CU-9 critère 7 : en attente de l'analyste (PPE), jamais annulé pour inactivité. */
+	@Column(name = "attente_analyste", nullable = false)
+	private boolean attenteAnalyste;
+
 	protected Dossier() {
 	}
 
 	public Dossier(String reference) {
 		this.reference = reference;
 		this.statut = StatutDossier.EN_COURS_DE_VERIFICATION;
+		this.derniereActionLe = OffsetDateTime.now();
+	}
+
+	/** CU-9 : une action de la cliente sur son dossier (saisie, contrôle, signature). */
+	public void actionCliente(OffsetDateTime maintenant) {
+		derniereActionLe = maintenant;
 	}
 
 	/**
@@ -172,15 +195,18 @@ public class Dossier {
 		controlePep = null;
 		controleLe = null;
 		statut = StatutDossier.EN_COURS_DE_VERIFICATION;
+		derniereActionLe = maintenant;
 	}
 
-	/** CUB-8 : tout contrôle en échec (sanctions ou PEP) annule le dossier. */
+	/** CUB-8 : tout contrôle en échec (sanctions ou PEP) annule le dossier (CU-9 : annulé par contrôle). */
 	void enregistrerControles(ResultatControle sanctions, ResultatControle pep, OffsetDateTime maintenant) {
 		controleSanctions = sanctions;
 		controlePep = pep;
 		controleLe = maintenant;
-		statut = sanctions == ResultatControle.OK && pep == ResultatControle.OK
-				? StatutDossier.EN_COURS_DE_VERIFICATION : StatutDossier.ANNULE;
+		derniereActionLe = maintenant;
+		if (sanctions != ResultatControle.OK || pep != ResultatControle.OK) {
+			annuler(MotifAnnulation.CONTROLE_AUTOMATIQUE, maintenant);
+		}
 	}
 
 	/** CU-12 : convention prête à signer = identité enregistrée et contrôles sanctions et PEP OK. */
@@ -201,9 +227,27 @@ public class Dossier {
 		creationProchaineLe = maintenant.plus(DELAI_RELANCE);
 	}
 
-	public void annuler() {
+	public void annuler(MotifAnnulation motif, OffsetDateTime maintenant) {
 		statut = StatutDossier.ANNULE;
+		motifAnnulation = motif;
+		annuleLe = maintenant;
 		creationProchaineLe = null;
+	}
+
+	public MotifAnnulation getMotifAnnulation() {
+		return motifAnnulation;
+	}
+
+	public OffsetDateTime getAnnuleLe() {
+		return annuleLe;
+	}
+
+	public OffsetDateTime getDerniereActionLe() {
+		return derniereActionLe;
+	}
+
+	public boolean isAttenteAnalyste() {
+		return attenteAnalyste;
 	}
 
 	/** CU-13 : compte et identifiant de connexion créés. */

@@ -40,7 +40,7 @@ class ConnexionIT {
 		IdentifiantConnexion compte = identifiants.creer();
 		Long id = compte.getId();
 
-		assertThrows(ConnexionRefuseeException.class, () -> connexion.connecter(compte.getIdentifiant(), CONFORME));
+		assertThrows(ConnexionRefuseeException.class, () -> connexion.connecter(compte.getIdentifiant(), CONFORME, null));
 
 		String premier = jetons.generer(id, TypeJeton.ACTIVATION);
 		String second = jetons.generer(id, TypeJeton.ACTIVATION);
@@ -51,7 +51,7 @@ class ConnexionIT {
 		identifiants.definirMotDePasse(id, CONFORME);
 		base.update("update identifiant_connexion set compteur_erreurs = 2 where id = ?", id);
 
-		ResultatConnexion resultat = connexion.connecter(compte.getIdentifiant(), CONFORME);
+		ResultatConnexion resultat = connexion.connecter(compte.getIdentifiant(), CONFORME, null);
 
 		assertThat(connexion.identifiantDeLaSession(resultat.jetonSession())).contains(compte.getIdentifiant());
 		assertThat(base.queryForObject("select compteur_erreurs from identifiant_connexion where id = ?",
@@ -67,8 +67,8 @@ class ConnexionIT {
 	void activiteExpirationEtDeconnexion() {
 		IdentifiantConnexion compte = identifiants.creer();
 		identifiants.definirMotDePasse(compte.getId(), CONFORME);
-		String expiree = connexion.connecter(compte.getIdentifiant(), CONFORME).jetonSession();
-		String deconnectee = connexion.connecter(compte.getIdentifiant(), CONFORME).jetonSession();
+		String expiree = connexion.connecter(compte.getIdentifiant(), CONFORME, null).jetonSession();
+		String deconnectee = connexion.connecter(compte.getIdentifiant(), CONFORME, null).jetonSession();
 		String empreinteExpiree = SecretsAleatoires.empreinte(expiree);
 
 		base.update("update session_client set derniere_activite_le = now() - interval '9 minutes' where jeton_hache = ?",

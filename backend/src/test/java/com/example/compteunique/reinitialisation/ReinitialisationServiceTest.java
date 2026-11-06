@@ -24,9 +24,12 @@ import java.util.concurrent.Executor;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import com.example.compteunique.compte.EvenementSecurite;
+import com.example.compteunique.securite.JournalSecurite;
 import com.example.compteunique.activation.ActivationService;
 import com.example.compteunique.compte.Compte;
 import com.example.compteunique.compte.CompteRepository;
@@ -70,10 +73,11 @@ class ReinitialisationServiceTest {
 	private final DossierRepository dossiers = mock(DossierRepository.class);
 	private final ActivationService activation = mock(ActivationService.class);
 	private final Messagerie messagerie = mock(Messagerie.class);
+	private final JournalSecurite journal = mock(JournalSecurite.class);
 	// Exécute la tâche d'arrière-plan tout de suite, pour pouvoir vérifier son effet.
 	private final Executor immediat = Runnable::run;
 	private final ReinitialisationService service = new ReinitialisationService(identifiants, identifiantService,
-			jetons, sessions, comptes, dossiers, activation, messagerie, immediat, HORLOGE);
+			jetons, sessions, comptes, dossiers, activation, messagerie, journal, immediat, HORLOGE);
 
 	private final IdentifiantConnexion compte = new IdentifiantConnexion(IDENTIFIANT);
 	private final Dossier dossier = ExempleDossier.conventionSignee("ref");
@@ -114,7 +118,7 @@ class ReinitialisationServiceTest {
 	void demandeTraiteeEnArrierePlan() {
 		List<Runnable> enAttente = new ArrayList<>();
 		ReinitialisationService differe = new ReinitialisationService(identifiants, identifiantService, jetons,
-				sessions, comptes, dossiers, activation, messagerie, enAttente::add, HORLOGE);
+				sessions, comptes, dossiers, activation, messagerie, journal, enAttente::add, HORLOGE);
 		differe.demander(IDENTIFIANT);
 		verify(identifiants, never()).findByIdentifiant(anyString());
 		assertThat(enAttente).hasSize(1);
@@ -176,6 +180,21 @@ class ReinitialisationServiceTest {
 		assertThat(compte.getMotDePasseHache()).isNotEqualTo(ANCIEN).startsWith("$argon2id$").doesNotContain(CONFORME);
 		verify(jetons).utiliser(JETON, TypeJeton.REINITIALISATION);
 		verify(sessions).fermerToutesLesSessions(7L);
+		// CU-48 : utilisation du lien journalisée.
+		ArgumentCaptor<EvenementSecurite> evenement = ArgumentCaptor.forClass(EvenementSecurite.class);
+		verify(journal).enregistrer(evenement.capture());
+		assertThat(evenement.getValue().getEvenement()).isEqualTo(EvenementSecurite.REINITIALISATION);
+		assertThat(evenement.getValue().getIdentifiantConnexionId()).isEqualTo(7L);
+	}
+
+	// CU-48 : la demande est journalisée telle que saisie ; CU-16 critère 9 : jamais bloquée.
+	@Test
+	void laDemandeEstJournalisee() {
+		service.demander("inconnu");
+		ArgumentCaptor<EvenementSecurite> evenement = ArgumentCaptor.forClass(EvenementSecurite.class);
+		verify(journal).enregistrer(evenement.capture());
+		assertThat(evenement.getValue().getEvenement()).isEqualTo(EvenementSecurite.DEMANDE_REINITIALISATION);
+		assertThat(evenement.getValue().getIdentifiantSaisi()).isEqualTo("inconnu");
 	}
 
 	// Complément de l'US-09 : confirmation différente ou vide, ou règles non respectées → rien

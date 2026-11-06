@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.compteunique.activation.ActivationService;
 import com.example.compteunique.compte.Compte;
 import com.example.compteunique.compte.CompteRepository;
+import com.example.compteunique.compte.EvenementSecurite;
 import com.example.compteunique.connexion.IdentifiantConnexion;
 import com.example.compteunique.connexion.IdentifiantConnexionRepository;
 import com.example.compteunique.connexion.IdentifiantConnexionService;
@@ -28,6 +29,7 @@ import com.example.compteunique.dossier.Dossier;
 import com.example.compteunique.dossier.DossierRepository;
 import com.example.compteunique.logging.Loggable;
 import com.example.compteunique.messagerie.Messagerie;
+import com.example.compteunique.securite.JournalSecurite;
 
 // CU-46 (US-18) : mot de passe oublié. La cliente saisit son identifiant et reçoit par SMS un
 // lien (jeton haché, valable 24 h, à usage unique : JetonService) vers la page « Définir mon
@@ -49,6 +51,7 @@ public class ReinitialisationService {
 	private final DossierRepository dossiers;
 	private final ActivationService activation;
 	private final Messagerie messagerie;
+	private final JournalSecurite journal;
 	private final Executor arrierePlan;
 	private final Clock horloge;
 
@@ -57,16 +60,16 @@ public class ReinitialisationService {
 	public ReinitialisationService(IdentifiantConnexionRepository identifiants,
 			IdentifiantConnexionService identifiantService, JetonService jetons, SessionClientRepository sessions,
 			CompteRepository comptes, DossierRepository dossiers, ActivationService activation, Messagerie messagerie,
-			@Qualifier("applicationTaskExecutor") Executor arrierePlan) {
-		this(identifiants, identifiantService, jetons, sessions, comptes, dossiers, activation, messagerie, arrierePlan,
-				Clock.systemDefaultZone());
+			JournalSecurite journal, @Qualifier("applicationTaskExecutor") Executor arrierePlan) {
+		this(identifiants, identifiantService, jetons, sessions, comptes, dossiers, activation, messagerie, journal,
+				arrierePlan, Clock.systemDefaultZone());
 	}
 
 	@SuppressWarnings("PMD.ExcessiveParameterList")
 	ReinitialisationService(IdentifiantConnexionRepository identifiants,
 			IdentifiantConnexionService identifiantService, JetonService jetons, SessionClientRepository sessions,
 			CompteRepository comptes, DossierRepository dossiers, ActivationService activation, Messagerie messagerie,
-			Executor arrierePlan, Clock horloge) {
+			JournalSecurite journal, Executor arrierePlan, Clock horloge) {
 		this.identifiants = identifiants;
 		this.identifiantService = identifiantService;
 		this.jetons = jetons;
@@ -75,6 +78,7 @@ public class ReinitialisationService {
 		this.dossiers = dossiers;
 		this.activation = activation;
 		this.messagerie = messagerie;
+		this.journal = journal;
 		this.arrierePlan = arrierePlan;
 		this.horloge = horloge;
 	}
@@ -84,6 +88,9 @@ public class ReinitialisationService {
 	 * même délai, qu'un compte existe ou non.
 	 */
 	public void demander(String identifiant) {
+		// CU-48 : la demande est journalisée telle que saisie, sans révéler si le compte existe.
+		journal.enregistrer(EvenementSecurite.authentification(EvenementSecurite.DEMANDE_REINITIALISATION,
+				identifiant, null, null, OffsetDateTime.now(horloge)));
 		arrierePlan.execute(() -> {
 			try {
 				envoyerLien(identifiant);
@@ -146,6 +153,10 @@ public class ReinitialisationService {
 				activation.interdits(identifiantId));
 		jetons.utiliser(jeton, TypeJeton.REINITIALISATION);
 		sessions.fermerToutesLesSessions(identifiantId);
+		// CU-48 : utilisation du lien de réinitialisation journalisée.
+		journal.enregistrer(EvenementSecurite.authentification(EvenementSecurite.REINITIALISATION,
+				identifiants.findById(identifiantId).map(IdentifiantConnexion::getIdentifiant).orElse(null),
+				identifiantId, null, OffsetDateTime.now(horloge)));
 		return EtatReinitialisation.REINITIALISE;
 	}
 

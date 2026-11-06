@@ -11,33 +11,45 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.example.compteunique.dossier.Categories.MotifAnnulation;
 import com.example.compteunique.dossier.Categories.StatutDossier;
 import com.example.compteunique.logging.Loggable;
 
 // CUB-8 (US-01) : enregistre l'identité saisie puis le résultat des contrôles sanctions et PEP.
 // Les règles de saisie sont aussi contrôlées par l'écran ; elles sont revérifiées ici car le
 // backend ne doit jamais enregistrer un dossier incomplet.
+// CU-9 : une personne déjà connue ne crée pas de nouveau dossier (ControleDoublon).
 @Service
 @Loggable
 public class DossierService {
 
 	static final int AGE_MINIMUM = 18;
 	private static final Set<String> CIVILITES = Set.of("M.", "Mme");
+	/** CU-9 : annulations que l'écran peut signaler (étapes pièce, selfie, questions). */
+	private static final Set<MotifAnnulation> ANNULATIONS_ECRAN = Set.of(MotifAnnulation.CONTROLE_AUTOMATIQUE,
+			MotifAnnulation.DEMANDE_CLIENTE);
 
 	private final DossierRepository dossiers;
+	private final ControleDoublon doublons;
 	private final Clock horloge;
 
 	@Autowired
-	public DossierService(DossierRepository dossiers) {
-		this(dossiers, Clock.systemDefaultZone());
+	public DossierService(DossierRepository dossiers, ControleDoublon doublons) {
+		this(dossiers, doublons, Clock.systemDefaultZone());
 	}
 
-	DossierService(DossierRepository dossiers, Clock horloge) {
+	DossierService(DossierRepository dossiers, ControleDoublon doublons, Clock horloge) {
 		this.dossiers = dossiers;
+		this.doublons = doublons;
 		this.horloge = horloge;
 	}
 
-	@Transactional
+	/**
+	 * CU-9 : la personne est contrôlée contre les profils et dossiers existants avant tout
+	 * enregistrement. En cas de refus, aucun dossier n'est créé ni modifié ; seul l'événement est
+	 * ajouté au journal (pas d'annulation de la transaction pour le garder).
+	 */
+	@Transactional(noRollbackFor = OuvertureRefuseeException.class)
 	public DossierReponse renseignerIdentite(String reference, IdentiteRequete requete) {
 		String ref = obligatoire(reference, "reference");
 		IdentiteRequete identite = controler(requete);
@@ -48,7 +60,28 @@ public class DossierService {
 		if (dossier.getStatut() != StatutDossier.EN_COURS_DE_VERIFICATION) {
 			throw new ResponseStatusException(HttpStatus.CONFLICT, "convention déjà signée");
 		}
-		dossier.renseignerIdentite(identite, OffsetDateTime.now(horloge));
+		OffsetDateTime maintenant = OffsetDateTime.now(horloge);
+		doublons.verifier(ref, identite, maintenant);
+		dossier.renseignerIdentite(identite, maintenant);
+		return DossierReponse.de(dossiers.save(dossier));
+	}
+
+	/**
+	 * CU-9 : annulation signalée par l'écran, pour un dossier encore « En cours de vérification » :
+	 * contrôle automatique (pièce expirée ou non authentique, écart de concordance, selfie, PEP
+	 * déclaré) ou demande de la cliente.
+	 */
+	@Transactional
+	public DossierReponse annuler(String reference, MotifAnnulation motif) {
+		if (motif == null || !ANNULATIONS_ECRAN.contains(motif)) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "motif : CONTROLE_AUTOMATIQUE ou DEMANDE_CLIENTE");
+		}
+		Dossier dossier = dossiers.findByReference(obligatoire(reference, "reference"))
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "dossier inconnu"));
+		if (dossier.getStatut() != StatutDossier.EN_COURS_DE_VERIFICATION) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "dossier non annulable");
+		}
+		dossier.annuler(motif, OffsetDateTime.now(horloge));
 		return DossierReponse.de(dossiers.save(dossier));
 	}
 

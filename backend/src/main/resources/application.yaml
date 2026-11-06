@@ -12,7 +12,16 @@ spring:
     hibernate:
       ddl-auto: validate   # le schéma vient uniquement des migrations Flyway
 
+server:
+  # CU-48 : derrière le gateway, l'adresse IP de la cliente est lue dans X-Forwarded-For
+  # (seuls les relais du réseau interne sont crus).
+  forward-headers-strategy: native
+
 app:
+  conseiller:
+    # CU-9 critère 8 : coordonnées affichées quand une ouverture en ligne est annulée par contrôle.
+    # Valeur fictive du prototype, à remplacer par les vraies coordonnées.
+    coordonnees: ${CONSEILLER_COORDONNEES:Service client Hi-Tech Bank — 01 23 45 67 89, du lundi au vendredi de 9 h à 18 h}
   liens:
     # Adresse de base des liens envoyés par e-mail ou SMS ; par environnement dans helm.yaml
     # (CU-87 : toujours celle de l'environnement, jamais celle de la production en test).

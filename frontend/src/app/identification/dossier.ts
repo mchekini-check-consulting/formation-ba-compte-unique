@@ -34,6 +34,29 @@ export interface DossierReponse {
   controleLe: string | null;
 }
 
+/**
+ * CU-9 : refus (409) d'une nouvelle ouverture pour une personne déjà connue. Les messages viennent
+ * du backend (textes exacts du ticket). Seule une ouverture en cours donne de quoi la reprendre ;
+ * seule une ouverture annulée par contrôle donne les coordonnées du conseiller.
+ */
+export type CodeRefusOuverture = 'ESPACE_EXISTANT' | 'ACTIVATION_ATTENDUE' | 'OUVERTURE_ANNULEE' | 'OUVERTURE_EN_COURS';
+
+export interface RepriseOuverture {
+  reference: string;
+  /** IDENTITE : le dossier attend encore la cliente ; OUVERTURE : il attend la banque. */
+  etape: 'IDENTITE' | 'OUVERTURE';
+}
+
+export interface RefusOuverture {
+  code: CodeRefusOuverture;
+  message: string;
+  reprise: RepriseOuverture | null;
+  conseiller: string | null;
+}
+
+/** CU-9 : annulations que l'écran signale (pièce, selfie, questions : contrôle automatique). */
+export type MotifAnnulation = 'CONTROLE_AUTOMATIQUE' | 'DEMANDE_CLIENTE';
+
 /** Seul le contrôle en correspondance est en échec (NOK). */
 export function controlesDe(resultat: ControleSanctionsReponse['resultat']): Controles {
   return {
@@ -57,5 +80,10 @@ export class DossierService {
 
   enregistrerControles(reference: string, controles: Controles): Observable<DossierReponse> {
     return this.http.put<DossierReponse>(`${this.base}/${encodeURIComponent(reference)}/controles`, controles);
+  }
+
+  /** CU-9 : annulation du dossier par un contrôle des étapes pièce, selfie ou questions. */
+  annuler(reference: string, motif: MotifAnnulation): Observable<DossierReponse> {
+    return this.http.put<DossierReponse>(`${this.base}/${encodeURIComponent(reference)}/annulation`, { motif });
   }
 }

@@ -101,8 +101,14 @@ describe('Landing', () => {
   it('arrête la demande annulée par un contrôle et ramène au site', async () => {
     await cliquer('.top .btn.p');
     await avancer();
+    const reference = etapeIdentification().dossierId();
     etapeIdentification().annule.emit("Votre demande d'ouverture en ligne est annulée.");
     await fixture.whenStable();
+    // CU-9 : le dossier est annulé par contrôle, ce qui bloque une nouvelle ouverture en ligne.
+    const annulation = TestBed.inject(HttpTestingController).expectOne(`/api/backend/dossiers/${reference}/annulation`);
+    expect(annulation.request.method).toBe('PUT');
+    expect(annulation.request.body).toEqual({ motif: 'CONTROLE_AUTOMATIQUE' });
+    annulation.flush('', { status: 500, statusText: 'Erreur' });
     expect(etapeVisible()?.querySelector('h2')?.textContent).toBe('Ouverture annulée');
     expect(etapeVisible()?.textContent).toContain("Votre demande d'ouverture en ligne est annulée.");
     expect(etapeIdentification()).toBeUndefined();
@@ -125,6 +131,24 @@ describe('Landing', () => {
     expect(pastilles.map((p) => p.textContent)).toEqual(['NOK', 'OK']);
     expect(pastilles[0].classList).toContain('ko');
     expect(pastilles[1].classList).toContain('ok');
+  });
+
+  it('CU-9 : reprend un dossier en cours à la saisie, sur la référence existante', async () => {
+    await cliquer('.top .btn.p');
+    etapeIdentification().reprise.emit({ reference: 'dossier-existant', etape: 'IDENTITE' });
+    await fixture.whenStable();
+    expect(etapeVisible()?.querySelector('h2')?.textContent).toBe('Mon identité');
+    expect(etapeIdentification().dossierId()).toBe('dossier-existant');
+  });
+
+  it("CU-9 : reprend un dossier qui attend la banque au suivi de l'ouverture", async () => {
+    await cliquer('.top .btn.p');
+    etapeIdentification().reprise.emit({ reference: 'dossier-signe', etape: 'OUVERTURE' });
+    await fixture.whenStable();
+    expect(page.querySelector('.pstep')?.textContent).toContain('Étape 6 sur 6');
+    expect(fixture.debugElement.query(By.directive(EtapeCompteOuvert)).componentInstance.dossierId()).toBe(
+      'dossier-signe',
+    );
   });
 
   it("revient à la page en reculant depuis l'étape 1", async () => {
