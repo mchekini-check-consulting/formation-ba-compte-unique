@@ -1,0 +1,5 @@
+# Outils de dev / CI (lint, couverture, tests d'intégration), en plus de l'application
+-r requirements.txt
+coverage
+ruff==0.17.4   # version fixée : une nouvelle version de ruff peut ajouter des règles et casser la CI
+testcontainers[postgres]

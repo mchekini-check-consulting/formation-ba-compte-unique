@@ -1,0 +1,9 @@
+node_modules
+dist
+coverage
+.vscode
+*.log
+Dockerfile
+.dockerignore
+compose.yaml
+.env

@@ -30,7 +30,7 @@ le frontend (`type: frontend`). Pour chaque backend, son port local et celui
 de sa base : README du composant, sinon les valeurs par défaut du modèle
 (Node 3000, Java 8080, Django 8000 ; PostgreSQL 5432 dans `compose.yaml`).
 Vérifier que le relais du frontend contient une entrée par backend appelé
-(sinon : skill `appeler-un-backend`).
+(sinon : skill `nouvelle-fonctionnalite`, étape « Liaison frontend ↔ backend »).
 
 Vérifier que ces ports sont libres. Un port pris par un programme lancé
 précédemment par ce skill : le réutiliser ou l'arrêter. Pris par autre chose
@@ -48,7 +48,7 @@ trace des processus lancés pour l'étape 7) :
 
 | Stack | Installation | Lancement (port local P, base sur le port B) |
 |---|---|---|
-| Node/NestJS | `npm install` | `PORT=P npm run start:dev` |
+| Node/Express | `npm install` | `PORT=P npm run dev` |
 | Java/Spring Boot | — | `SERVER_PORT=P ./mvnw spring-boot:run` |
 | Python/Django | `python -m venv .venv` puis `pip install -r requirements-dev.txt` (dans le venv) | `DATABASE_URL=postgresql://app:app@localhost:B/<base> python manage.py migrate` puis la même variable avec `python manage.py runserver P` |
 

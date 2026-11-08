@@ -1,0 +1,8 @@
+[run]
+source = .
+omit =
+    manage.py
+    config/*
+    */migrations/*
+    */tests/*
+    .venv/*
