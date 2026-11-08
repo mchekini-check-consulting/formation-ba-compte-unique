@@ -1,0 +1,10 @@
+**/__pycache__
+*.pyc
+.venv
+venv
+.coverage
+coverage.xml
+.ruff_cache
+Dockerfile
+.dockerignore
+compose.yaml

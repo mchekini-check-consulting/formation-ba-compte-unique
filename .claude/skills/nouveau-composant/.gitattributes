@@ -1,0 +1,4 @@
+# Modèles et script : fins de ligne LF quel que soit le poste (mvnw, Makefile, instancier.sh
+# s'exécutent sous bash) ; scripts Windows en CRLF.
+* text=auto eol=lf
+*.cmd text eol=crlf

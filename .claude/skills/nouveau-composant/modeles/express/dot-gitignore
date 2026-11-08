@@ -1,0 +1,19 @@
+# compiled output
+/dist
+/node_modules
+*.tsbuildinfo
+
+# logs
+*.log
+
+# tests
+/coverage
+
+### VS Code ###
+.vscode/*
+
+### IntelliJ / WebStorm ###
+.idea/
+
+# variables d'environnement locales (secrets) : jamais dans un commit
+.env

@@ -4,8 +4,8 @@ Dépôt d'un prototype développé par des Business Analysts (BA) en formation,
 sans connaissance du développement ni de git. Expliquer en langage simple,
 ne jamais faire d'action git risquée (rebase, push forcé, `reset --hard`,
 suppression de branche) et passer par les skills de `.claude/skills/`
-(README) pour les gestes courants : nouvelle fonctionnalité, nouveau backend,
-modèle de données, appel d'un backend depuis le frontend, lancement local,
+(README) pour les gestes courants : nouvelle fonctionnalité, nouveau composant
+(backend ou frontend), modèle de données, appel d'un backend depuis le frontend, lancement local,
 déploiement, vérification du déploiement.
 
 ## Architecture
@@ -45,7 +45,7 @@ l'intégrer dans la branche avant d'envoyer (skill `deploy`).
 
 **Frontend**
 - Adresse d'un backend : `apiBase(...)` dans `frontend/src/app/api.ts` (un service par ressource, ex. `items.ts`), calculée depuis
-  l'adresse de la page. Elle vise encore `/backend` en dur : pour appeler un autre backend, la généraliser en `apiBase('<backend>')` (skill `appeler-un-backend`). Jamais d'URL, d'environnement,
+  l'adresse de la page. Elle vise encore `/backend` en dur : pour appeler un autre backend, la généraliser en `apiBase('<backend>')` (skill `nouvelle-fonctionnalite`). Jamais d'URL, d'environnement,
   de `localhost` ou de nom de dépôt écrits en dur.
 - En local, `/api/<backend>` est relayé vers le backend du poste par
   `frontend/proxy.conf.json` : une entrée par backend.

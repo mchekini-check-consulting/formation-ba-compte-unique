@@ -1,0 +1,30 @@
+spring:
+  application:
+    name: __SLUG__
+  # Base PostgreSQL. Valeurs locales (compose.yaml) ; sur le cluster, remplacées par
+  # SPRING_DATASOURCE_URL, _USERNAME, _PASSWORD (helm.yaml : database).
+  datasource:
+    url: jdbc:postgresql://localhost:__PORT_DB_LOCAL__/__BASE__
+    username: app
+    password: app
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate   # le schéma vient uniquement des migrations Flyway
+
+# Port local (./mvnw spring-boot:run) ; dans l'image : 8080 (Dockerfile, SERVER_PORT)
+server:
+  port: __PORT_LOCAL__
+
+# Logs métier (@LogMetier, paquet logging) : niveau minimal par environnement
+# (LOG_LEVEL de helm.yaml) ; une ligne JSON par log (logback-spring.xml)
+logging:
+  level:
+    __PAQUET__: ${LOG_LEVEL:info}
+
+# Santé : /actuator/health (application + base), rien d'autre d'exposé
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

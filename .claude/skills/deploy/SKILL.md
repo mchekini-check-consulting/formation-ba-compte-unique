@@ -116,9 +116,9 @@ git merge --no-edit origin/main
 - **Migrations en double, même sans conflit** : si la branche et `main` ont
   chacune ajouté une migration au même backend, vérifier qu'elles ne se
   marchent pas dessus (même numéro Flyway `V<n>__`, deux migrations Django
-  « feuilles », migration TypeORM absente de la liste de
-  `database.module.ts`). Corriger côté branche comme décrit dans le skill
-  `modifier-le-modele-de-donnees` (section « Pièges git »), puis commiter.
+  « feuilles », deux migrations Drizzle `drizzle/<n>_...`). Corriger côté
+  branche comme décrit dans le skill `nouvelle-fonctionnalite` (section
+  « Pièges git des migrations »), puis commiter.
 
 ### 4. Contrôles locaux — avant tout envoi
 

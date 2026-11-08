@@ -1,0 +1,11 @@
+# Base locale pour ./mvnw spring-boot:run (mêmes valeurs que application.yaml) :
+#   docker compose up -d
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: __BASE__
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+    ports:
+      - "__PORT_DB_LOCAL__:5432"
