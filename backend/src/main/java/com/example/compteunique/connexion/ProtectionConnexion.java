@@ -90,9 +90,13 @@ public class ProtectionConnexion {
 	/**
 	 * CU-16 critère 2 : refuse la tentative, sans vérifier le mot de passe, si l'identifiant est
 	 * bloqué. Sinon renvoie son compteur, remis à zéro si un blocage vient de se terminer (critère 6).
+	 * identifiantConnexionId : numéro technique de la cliente si l'identifiant existe, seulement pour le log métier
+	 * (CU-212) ; le journal de sécurité garde son contenu (pas de numéro pour une tentative pendant un blocage).
 	 */
-	@LogMetier(champs = "resultat.erreursConsecutives")
-	public BlocageIdentifiant verifierIdentifiant(String identifiant, OffsetDateTime maintenant) {
+	@LogMetier(champs = { "resultat.erreursConsecutives", "identifiantConnexionId" },
+			messageEchec = "identifiant bloqué")
+	public BlocageIdentifiant verifierIdentifiant(String identifiant, Long identifiantConnexionId,
+			OffsetDateTime maintenant) {
 		BlocageIdentifiant blocage = blocagesIdentifiant.findWithLockByIdentifiant(identifiant)
 				.orElseGet(() -> new BlocageIdentifiant(identifiant));
 		if (blocage.estBloque(maintenant)) {
@@ -105,7 +109,9 @@ public class ProtectionConnexion {
 	}
 
 	/** CU-16 critères 1 et 3 : une erreur de plus ; la troisième bloque l'identifiant 5 minutes. */
-	@LogMetier(champs = { "blocage.erreursConsecutives", "identifiantConnexionId" })
+	@LogMetier(champs = { "blocage.erreursConsecutives", "identifiantConnexionId" },
+			message = "erreur de connexion enregistrée",
+			messageEchec = "erreur de connexion enregistrée, identifiant bloqué")
 	public void erreur(BlocageIdentifiant blocage, Long identifiantConnexionId, OffsetDateTime maintenant) {
 		boolean bloque = blocage.erreur(maintenant);
 		blocagesIdentifiant.save(blocage);
@@ -117,7 +123,7 @@ public class ProtectionConnexion {
 	}
 
 	/** CU-16 critères 4 et 5 : connexion réussie, le compteur est remis à zéro. */
-	@LogMetier(champs = "blocage.erreursConsecutives")
+	@LogMetier(champs = "blocage.erreursConsecutives", message = "connexion réussie")
 	public void reussite(BlocageIdentifiant blocage) {
 		if (blocagesIdentifiant.existsById(blocage.getIdentifiant())) {
 			blocagesIdentifiant.delete(blocage);

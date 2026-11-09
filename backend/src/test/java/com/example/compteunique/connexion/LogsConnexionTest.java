@@ -80,7 +80,7 @@ class LogsConnexionTest {
 		ProtectionConnexion protection = protection();
 
 		try (CaptureLogs logs = CaptureLogs.de(LogsMetierAspect.class)) {
-			BlocageIdentifiant blocage = protection.verifierIdentifiant(IDENTIFIANT, MAINTENANT);
+			BlocageIdentifiant blocage = protection.verifierIdentifiant(IDENTIFIANT, null, MAINTENANT);
 			blocage.erreur(MAINTENANT);
 			protection.reussite(blocage);
 

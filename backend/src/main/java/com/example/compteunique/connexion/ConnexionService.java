@@ -72,11 +72,13 @@ public class ConnexionService {
 				: identifiantSaisi;
 		OffsetDateTime maintenant = maintenant();
 		protection.verifierAdresse(adresseIp, identifiant, maintenant);
-		BlocageIdentifiant blocage = protection.verifierIdentifiant(identifiant, maintenant);
-
+		// CU-212 : cherché avant la vérification du blocage, pour que le log d'une tentative pendant un
+		// blocage porte le numéro technique de la cliente. Le mot de passe n'est toujours pas vérifié.
 		Optional<IdentifiantConnexion> trouve = identifiants.findByIdentifiant(identifiant);
-		String motif = motifDeRefus(trouve, motDePasse);
 		Long identifiantConnexionId = trouve.map(IdentifiantConnexion::getId).orElse(null);
+		BlocageIdentifiant blocage = protection.verifierIdentifiant(identifiant, identifiantConnexionId, maintenant);
+
+		String motif = motifDeRefus(trouve, motDePasse);
 		if (motif != null) {
 			journal.enregistrer(EvenementSecurite.authentification(EvenementSecurite.CONNEXION_ECHOUEE, identifiant,
 					identifiantConnexionId, motif, maintenant));
@@ -137,7 +139,7 @@ public class ConnexionService {
 
 	/** CU-17 : déconnexion volontaire ; sans effet si la session est absente ou déjà fermée. */
 	@Transactional
-	@LogMetier
+	@LogMetier(message = "déconnexion volontaire")
 	public void deconnecter(String jetonSession) {
 		session(jetonSession).filter(session -> !session.estRevoquee()).ifPresent(session -> {
 			OffsetDateTime maintenant = maintenant();

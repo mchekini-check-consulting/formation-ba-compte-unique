@@ -242,4 +242,59 @@ class LogsMetierAspectTest {
             });
         }
     }
+
+    class Abonnement {
+
+        @LogMetier(message = "abonnement souscrit", messageEchec = "abonnement refusé")
+        public void souscrire(String formule) {
+            if ("inconnue".equals(formule)) {
+                throw new IllegalArgumentException("formule inconnue");
+            }
+        }
+
+        @LogMetier(message = "abonnement résilié")
+        public void resilier(String formule) {
+            throw new IllegalStateException("déjà résilié");
+        }
+    }
+
+    class ServiceBavard {
+
+        private final org.slf4j.Logger journal = org.slf4j.LoggerFactory.getLogger(ServiceBavard.class);
+
+        @LogMetier
+        public void agir() {
+            journal.error("ligne écrite pendant l'appel");
+        }
+    }
+
+    @Test
+    void lesLignesEcritesPendantLAppelGardentLaCouche() {
+        ServiceBavard service = avecLogs(new ServiceBavard());
+
+        try (CaptureLogs logs = CaptureLogs.de(ServiceBavard.class)) {
+            service.agir();
+
+            assertThat(logs.lignes()).singleElement()
+                    .satisfies(ligne -> assertThat(ligne.mdc()).containsEntry("layer", "service"));
+        }
+        assertThat(org.slf4j.MDC.get("layer")).isNull();
+    }
+
+    @Test
+    void messagesMetierPourUnAppelReussiOuEnEchec() {
+        Abonnement abonnement = avecLogs(new Abonnement());
+
+        try (CaptureLogs logs = CaptureLogs.de(LogsMetierAspect.class)) {
+            abonnement.souscrire("confort");
+            assertThatThrownBy(() -> abonnement.souscrire("inconnue")).isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> abonnement.resilier("confort")).isInstanceOf(IllegalStateException.class);
+
+            assertThat(logs.lignes()).extracting(Ligne::niveau, Ligne::message).containsExactly(
+                    tuple("INFO", "abonnement souscrit"),
+                    tuple("WARN", "abonnement refusé"),
+                    tuple("WARN", "service call failed"));
+            assertThat(logs.lignes().get(1).mdc()).containsEntry("err", "IllegalArgumentException");
+        }
+    }
 }
