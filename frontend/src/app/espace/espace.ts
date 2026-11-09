@@ -14,7 +14,8 @@ const DUREE_ANNONCE_MS = 3200;
 // Espace de la cliente connectée, d'après la maquette « Espace client Hi-Tech Bank » : compte
 // courant (CU-19), tous les produits ouverts à la souscription, déconnexion et fermeture de la
 // session après 10 minutes sans activité (CU-17). Sans session active, retour à la connexion.
-// Les parcours pas encore développés (souscription, versement...) l'annoncent simplement.
+// Les parcours pas encore développés (souscription...) l'annoncent simplement. « Faire un versement »
+// ouvre la page /versement (CU-11).
 @Component({
   selector: 'app-espace',
   imports: [CarteCompte, RouterLink],

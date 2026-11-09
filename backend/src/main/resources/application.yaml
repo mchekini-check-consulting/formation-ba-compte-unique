@@ -38,6 +38,9 @@ app:
     # CU-167 : journal de sécurité consultable sur /test/journal-securite en test (local, dev,
     # qualif) ; false en preprod et prod (helm.yaml).
     journal-consultable: ${JOURNAL_CONSULTABLE:true}
+    # CU-143 : bouchon « Simuler un virement entrant » (/test/virements-entrants) en test (local, dev,
+    # qualif) ; false en preprod et prod (helm.yaml) : le point d'accès n'existe alors pas.
+    virements-simules: ${VIREMENTS_SIMULES:true}
 
 logging:
   level:

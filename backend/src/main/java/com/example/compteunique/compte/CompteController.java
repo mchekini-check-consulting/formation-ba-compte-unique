@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.compteunique.connexion.ConnexionController;
 
 // CU-20 : GET /comptes (mes comptes) ; GET /comptes/{id} (un compte dont je suis titulaire).
+// CU-11 : GET /comptes/{id}/versements (rubrique Versements : IBAN complet et derniers mouvements).
 @RestController
 @RequestMapping("/comptes")
 public class CompteController {
@@ -42,6 +43,32 @@ public class CompteController {
 	}
 
 	public record Refus(String message) {
+	}
+
+	/** CU-11 : un mouvement tel qu'affiché dans la rubrique Versements. */
+	public record MouvementVue(OffsetDateTime date, String libelle, String emetteur, long montantCentimes) {
+
+		static MouvementVue de(Mouvement mouvement) {
+			return new MouvementVue(mouvement.getEffectueLe(), mouvement.getLibelle(), mouvement.getEmetteur(),
+					mouvement.getMontantCentimes());
+		}
+
+	}
+
+	/**
+	 * CU-11 : rubrique Versements. iban : IBAN complet à communiquer à l'émetteur, seulement pour un compte actif
+	 * (seul endroit où l'IBAN complet est envoyé à l'écran) ; vide sinon.
+	 */
+	public record RubriqueVersements(String iban, List<MouvementVue> mouvements) {
+	}
+
+	@GetMapping("/{id}/versements")
+	public RubriqueVersements versements(
+			@CookieValue(name = ConnexionController.COOKIE_SESSION, required = false) String jetonSession,
+			@PathVariable String id) {
+		Compte compte = comptes.consulter(jetonSession, id);
+		return new RubriqueVersements(compte.isActif() ? compte.getIbanParQuatre() : null,
+				comptes.mouvements(compte).stream().map(MouvementVue::de).toList());
 	}
 
 	@GetMapping

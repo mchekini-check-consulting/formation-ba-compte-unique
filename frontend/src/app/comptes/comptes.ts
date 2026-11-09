@@ -53,7 +53,22 @@ export function formaterDate(date: string): string {
   return `${partie('day')}/${partie('month')}/${partie('year')} à ${partie('hour')}:${partie('minute')}`;
 }
 
+// CU-11 : un virement reçu, tel qu'affiché dans la rubrique Versements.
+export interface Mouvement {
+  date: string;
+  libelle: string;
+  emetteur: string;
+  montantCentimes: number;
+}
+
+// CU-11 : IBAN complet à communiquer à l'émetteur (compte actif seulement) et derniers mouvements.
+export interface RubriqueVersements {
+  iban: string | null;
+  mouvements: Mouvement[];
+}
+
 // CU-20 : les comptes de la cliente connectée (GET /comptes, GET /comptes/{id}).
+// CU-11 : rubrique Versements (GET /comptes/{id}/versements).
 @Injectable({ providedIn: 'root' })
 export class ComptesService {
   private readonly http = inject(HttpClient);
@@ -65,5 +80,11 @@ export class ComptesService {
 
   consulter(id: string): Observable<Compte> {
     return this.http.get<Compte>(`${this.url}/${encodeURIComponent(id)}`, { withCredentials: true });
+  }
+
+  versements(id: string): Observable<RubriqueVersements> {
+    return this.http.get<RubriqueVersements>(`${this.url}/${encodeURIComponent(id)}/versements`, {
+      withCredentials: true,
+    });
   }
 }
