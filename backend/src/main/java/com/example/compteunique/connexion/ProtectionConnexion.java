@@ -90,9 +90,12 @@ public class ProtectionConnexion {
 	/**
 	 * CU-16 critère 2 : refuse la tentative, sans vérifier le mot de passe, si l'identifiant est
 	 * bloqué. Sinon renvoie son compteur, remis à zéro si un blocage vient de se terminer (critère 6).
+	 * identifiantConnexionId : numéro technique de la cliente si l'identifiant existe, seulement pour le log métier
+	 * (CU-212) ; le journal de sécurité garde son contenu (pas de numéro pour une tentative pendant un blocage).
 	 */
-	@LogMetier(champs = "resultat.erreursConsecutives")
-	public BlocageIdentifiant verifierIdentifiant(String identifiant, OffsetDateTime maintenant) {
+	@LogMetier(champs = { "resultat.erreursConsecutives", "identifiantConnexionId" })
+	public BlocageIdentifiant verifierIdentifiant(String identifiant, Long identifiantConnexionId,
+			OffsetDateTime maintenant) {
 		BlocageIdentifiant blocage = blocagesIdentifiant.findWithLockByIdentifiant(identifiant)
 				.orElseGet(() -> new BlocageIdentifiant(identifiant));
 		if (blocage.estBloque(maintenant)) {

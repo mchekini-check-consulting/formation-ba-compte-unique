@@ -46,7 +46,7 @@ class ConnexionServiceTest {
 	private final PasswordEncoder hacheur = spy(new HachageConfig().hacheurMotDePasse());
 
 	{
-		when(protection.verifierIdentifiant(anyString(), any())).thenAnswer(appel -> new BlocageIdentifiant(appel.getArgument(0)));
+		when(protection.verifierIdentifiant(anyString(), any(), any())).thenAnswer(appel -> new BlocageIdentifiant(appel.getArgument(0)));
 	}
 	private final ConnexionService service = new ConnexionService(identifiants, sessions, hacheur, protection, journal);
 
@@ -266,7 +266,7 @@ class ConnexionServiceTest {
 	@Test
 	void unIdentifiantBloqueEstRefuseSansVerifierLeMotDePasse() {
 		compteActif();
-		when(protection.verifierIdentifiant(anyString(), any()))
+		when(protection.verifierIdentifiant(anyString(), any(), any()))
 				.thenThrow(TropDeTentativesException.identifiant(Duration.ofMinutes(3)));
 
 		TropDeTentativesException refus = assertThrows(TropDeTentativesException.class,
@@ -284,7 +284,7 @@ class ConnexionServiceTest {
 
 		assertThrows(TropDeTentativesException.class, () -> service.connecter("ABC12345", MOT_DE_PASSE, "10.0.0.1"));
 
-		verify(protection, never()).verifierIdentifiant(anyString(), any());
+		verify(protection, never()).verifierIdentifiant(anyString(), any(), any());
 		verify(sessions, never()).save(any());
 	}
 
