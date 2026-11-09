@@ -106,6 +106,7 @@ class LogsMetierAspectTest {
         @ExceptionHandler(FormuleInconnueException.class)
         @ResponseStatus(HttpStatus.NOT_FOUND)
         public void formuleInconnue() {
+            // Le code 404 est porté par @ResponseStatus : rien d'autre à faire.
         }
     }
 

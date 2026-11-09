@@ -60,9 +60,11 @@ class ChampsTest {
         @LogMetier(champs = {"demande.logement.adresse", "authorization", "demande.logement", "demande.options",
             "resultat", "status", "inconnu", "demande.prix", "demande.reference"})
         public void nonConforme(String authorization, Demande demande) {
+            // Exemple : seule l'annotation est contrôlée, le corps n'est jamais appelé.
         }
 
         public void sansAnnotation() {
+            // Exemple : méthode sans @LogMetier, le corps n'est jamais appelé.
         }
     }
 
