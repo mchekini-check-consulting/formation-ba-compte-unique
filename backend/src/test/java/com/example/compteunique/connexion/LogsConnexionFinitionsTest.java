@@ -16,25 +16,35 @@ import static org.mockito.Mockito.when;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.aop.aspectj.annotation.AspectJProxyFactory;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.example.compteunique.compte.EvenementSecurite;
 import com.example.compteunique.compte.JournalSecuriteRepository;
 import com.example.compteunique.logging.CaptureLogs;
 import com.example.compteunique.logging.CaptureLogs.Ligne;
+import com.example.compteunique.logging.LogMetier;
 import com.example.compteunique.logging.LogsControleur;
 import com.example.compteunique.logging.LogsMetierAspect;
 import com.example.compteunique.logging.RequestLoggingInterceptor;
+import com.example.compteunique.securite.JournalIndisponibleException;
 import com.example.compteunique.securite.JournalSecurite;
 
 /**
@@ -181,6 +191,154 @@ class LogsConnexionFinitionsTest {
 					.equals(ligne.mdc().get("method"))).extracting(Ligne::message)
 					.containsExactly("service call completed", "identifiant bloqué");
 		}
+	}
+
+	// Requête HTTP en cours : le journal y lit l'adresse IP (elle doit rester hors des logs).
+	@BeforeEach
+	void requeteDepuisUneAdresseIp() {
+		MockHttpServletRequest requete = new MockHttpServletRequest();
+		requete.setRemoteAddr(IP);
+		RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(requete));
+	}
+
+	@AfterEach
+	void finDeRequete() {
+		RequestContextHolder.resetRequestAttributes();
+	}
+
+	private static void sansDonneeSensible(List<Ligne> lignes, String... secrets) {
+		assertThat(lignes).isNotEmpty().allSatisfy(ligne -> {
+			assertThat(ligne.mdc().keySet()).noneMatch(cle -> cle.contains("identifiantSaisi")
+					|| cle.contains("adresseIp") || cle.contains("motDePasse") || cle.contains("jeton"));
+			for (String secret : secrets) {
+				assertThat(ligne.message()).doesNotContain(secret);
+				assertThat(ligne.mdc().values()).noneMatch(valeur -> valeur.contains(secret));
+			}
+		});
+	}
+
+	// L5 : adresse IP bloquée.
+	@Test
+	void adresseIpBloqueeJournaliseeSansLAdresse() {
+		ProtectionConnexion limiteParAdresse = avecLogs(new ProtectionConnexion(blocagesIdentifiant, blocagesAdresse,
+				evenements, journal, true));
+		when(blocagesAdresse.findById(IP)).thenReturn(Optional.of(new BlocageAdresseIp(IP, MAINTENANT.plusMinutes(10))));
+
+		try (CaptureLogs logs = CaptureLogs.de(LogsMetierAspect.class)) {
+			assertThatThrownBy(() -> limiteParAdresse.verifierAdresse(IP, IDENTIFIANT, MAINTENANT))
+					.isInstanceOf(TropDeTentativesException.class);
+
+			assertThat(ligne(logs.lignes(), "JournalSecurite.enregistrer").mdc())
+					.containsEntry("evenement.evenement", EvenementSecurite.CONNEXION_ECHOUEE)
+					.containsEntry("evenement.motif", ProtectionConnexion.ADRESSE_IP_BLOQUEE);
+			sansDonneeSensible(logs.lignes(), IP, IDENTIFIANT);
+		}
+		// L'adresse est bien connue (enregistrée dans le journal en base), mais pas dans les logs.
+		ArgumentCaptor<EvenementSecurite> evenement = ArgumentCaptor.forClass(EvenementSecurite.class);
+		verify(evenements).saveAndFlush(evenement.capture());
+		assertThat(evenement.getValue().getAdresseIp()).isEqualTo(IP);
+	}
+
+	@Test
+	void blocageDeLAdresseAuVingtiemeEchecJournaliseSansLAdresse() {
+		ProtectionConnexion limiteParAdresse = avecLogs(new ProtectionConnexion(blocagesIdentifiant, blocagesAdresse,
+				evenements, journal, true));
+		when(evenements.countByAdresseIpAndEvenementAndMotifInAndSurvenuLeAfter(any(), any(), any(), any()))
+				.thenReturn((long) ProtectionConnexion.ECHECS_MAX_ADRESSE_IP);
+
+		try (CaptureLogs logs = CaptureLogs.de(LogsMetierAspect.class)) {
+			assertThatThrownBy(() -> limiteParAdresse.verifierAdresse(IP, IDENTIFIANT, MAINTENANT))
+					.isInstanceOf(TropDeTentativesException.class);
+
+			assertThat(logs.lignes()).extracting(ligne -> ligne.mdc().get("evenement.evenement"))
+					.containsExactly(EvenementSecurite.BLOCAGE_ADRESSE_IP, EvenementSecurite.CONNEXION_ECHOUEE);
+			sansDonneeSensible(logs.lignes(), IP, IDENTIFIANT);
+		}
+	}
+
+	// L6 : session expirée, journalisée une seule fois.
+	@Test
+	void expirationDeSessionJournaliseeUneSeuleFois() {
+		SessionClient expiree = new SessionClient(NUMERO, "empreinte",
+				MAINTENANT.minus(SessionClient.DELAI_INACTIVITE).minusMinutes(1));
+		when(sessions.findByJetonHache(any())).thenReturn(Optional.of(expiree));
+
+		try (CaptureLogs logs = CaptureLogs.de(LogsMetierAspect.class)) {
+			assertThat(service.etatSession("jeton-expire")).isEmpty();
+			assertThat(service.etatSession("jeton-expire")).isEmpty();
+			assertThat(service.activite("jeton-expire")).isEmpty();
+
+			assertThat(logs.lignes()).filteredOn(ligne -> EvenementSecurite.EXPIRATION_SESSION
+					.equals(ligne.mdc().get("evenement.evenement"))).singleElement()
+					.satisfies(ligne -> assertThat(ligne.mdc()).containsEntry("evenement.identifiantConnexionId",
+							String.valueOf(NUMERO)));
+			sansDonneeSensible(logs.lignes(), IP, "jeton-expire");
+		}
+		verify(evenements).saveAndFlush(any());
+	}
+
+	// L8 : journal de sécurité indisponible.
+	@Test
+	void journalIndisponibleSignaleEtExceptionPropagee() {
+		compteActif();
+		when(blocagesIdentifiant.findWithLockByIdentifiant(IDENTIFIANT))
+				.thenReturn(Optional.of(new BlocageIdentifiant(IDENTIFIANT)));
+		when(evenements.saveAndFlush(any())).thenThrow(new DataAccessResourceFailureException("base indisponible"));
+
+		try (CaptureLogs metier = CaptureLogs.de(LogsMetierAspect.class);
+				CaptureLogs erreurs = CaptureLogs.de(JournalSecurite.class)) {
+			assertThatThrownBy(() -> service.connecter(IDENTIFIANT, MOT_DE_PASSE, IP))
+					.isInstanceOf(JournalIndisponibleException.class);
+
+			assertThat(erreurs.lignes()).singleElement().satisfies(ligne -> {
+				assertThat(ligne.niveau()).isEqualTo("ERROR");
+				assertThat(ligne.message()).startsWith("Journal de sécurité indisponible")
+						.contains(EvenementSecurite.CONNEXION_REUSSIE);
+				assertThat(ligne.mdc()).containsEntry("layer", "service");
+			});
+			Ligne echec = ligne(metier.lignes(), "JournalSecurite.enregistrer");
+			assertThat(echec.niveau()).isEqualTo("WARN");
+			assertThat(echec.message()).isEqualTo("service call failed");
+			assertThat(echec.mdc()).containsEntry("err", "JournalIndisponibleException");
+			sansDonneeSensible(erreurs.lignes(), IP, IDENTIFIANT, MOT_DE_PASSE);
+		}
+		verify(sessions, never()).save(any());
+	}
+
+	// Confidentialité : parcours complet, aucune donnée sensible dans les lignes capturées.
+	@Test
+	void parcoursCompletSansDonneeSensible() {
+		compteActif();
+		BlocageIdentifiant compteur = new BlocageIdentifiant(IDENTIFIANT);
+		when(blocagesIdentifiant.findWithLockByIdentifiant(IDENTIFIANT)).thenReturn(Optional.of(compteur));
+
+		try (CaptureLogs logs = CaptureLogs.de(LogsMetierAspect.class);
+				CaptureLogs erreurs = CaptureLogs.de(JournalSecurite.class)) {
+			assertThatThrownBy(() -> service.connecter(IDENTIFIANT, "mauvais-mot", IP))
+					.isInstanceOf(ConnexionRefuseeException.class);
+			ResultatConnexion resultat = service.connecter(IDENTIFIANT, MOT_DE_PASSE, IP);
+			when(sessions.findByJetonHache(any())).thenReturn(Optional.of(new SessionClient(NUMERO, "empreinte",
+					MAINTENANT)));
+			service.deconnecter(resultat.jetonSession());
+
+			assertThat(erreurs.lignes()).isEmpty();
+			sansDonneeSensible(logs.lignes(), IDENTIFIANT, MOT_DE_PASSE, "mauvais-mot", IP,
+					resultat.jetonSession());
+		}
+	}
+
+	/** Aucun champ annoté des classes de la connexion ne désigne l'identifiant saisi ou l'adresse IP. */
+	@Test
+	void aucunChampAnnoteNeDesigneUneDonneePersonnelle() {
+		List<String> champs = Stream.of(ConnexionController.class, ConnexionService.class, ProtectionConnexion.class,
+				JournalSecurite.class)
+				.flatMap(classe -> Arrays.stream(classe.getDeclaredMethods()))
+				.filter(methode -> methode.isAnnotationPresent(LogMetier.class))
+				.flatMap(methode -> Arrays.stream(methode.getAnnotation(LogMetier.class).champs()))
+				.toList();
+
+		assertThat(champs).isNotEmpty().noneMatch(champ -> champ.contains("identifiantSaisi")
+				|| champ.contains("adresseIp") || champ.contains("motDePasse") || champ.contains("jeton"));
 	}
 
 	/** Le contrôleur POST /connexion n'écrit qu'une ligne controller par requête (pas de doublon). */
