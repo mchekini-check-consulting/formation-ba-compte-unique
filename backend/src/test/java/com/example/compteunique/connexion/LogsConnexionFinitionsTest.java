@@ -2,6 +2,9 @@ package com.example.compteunique.connexion;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -19,14 +22,19 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.aop.aspectj.annotation.AspectJProxyFactory;
+import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.example.compteunique.compte.EvenementSecurite;
 import com.example.compteunique.compte.JournalSecuriteRepository;
 import com.example.compteunique.logging.CaptureLogs;
 import com.example.compteunique.logging.CaptureLogs.Ligne;
+import com.example.compteunique.logging.LogsControleur;
 import com.example.compteunique.logging.LogsMetierAspect;
+import com.example.compteunique.logging.RequestLoggingInterceptor;
 import com.example.compteunique.securite.JournalSecurite;
 
 /**
@@ -122,6 +130,80 @@ class LogsConnexionFinitionsTest {
 
 			assertThat(ligne(logs.lignes(), "ProtectionConnexion.verifierIdentifiant").mdc())
 					.doesNotContainKey("identifiantConnexionId");
+		}
+	}
+
+	// Messages métier.
+	@Test
+	void messagesMetierDuParcoursDeConnexion() {
+		compteActif();
+		BlocageIdentifiant compteur = new BlocageIdentifiant(IDENTIFIANT);
+		when(blocagesIdentifiant.findWithLockByIdentifiant(IDENTIFIANT)).thenReturn(Optional.of(compteur));
+		when(blocagesIdentifiant.existsById(IDENTIFIANT)).thenReturn(true);
+
+		try (CaptureLogs logs = CaptureLogs.de(LogsMetierAspect.class)) {
+			assertThatThrownBy(() -> service.connecter(IDENTIFIANT, "mauvais", IP))
+					.isInstanceOf(ConnexionRefuseeException.class);
+			ResultatConnexion resultat = service.connecter(IDENTIFIANT, MOT_DE_PASSE, IP);
+			when(sessions.findByJetonHache(SecretsAleatoires.empreinte(resultat.jetonSession())))
+					.thenReturn(Optional.of(new SessionClient(NUMERO, "empreinte", MAINTENANT)));
+			service.deconnecter(resultat.jetonSession());
+
+			assertThat(logs.lignes()).extracting(ligne -> ligne.mdc().get("method"), Ligne::message).containsExactly(
+					tuple("ProtectionConnexion.verifierIdentifiant", "service call completed"),
+					tuple("JournalSecurite.enregistrer", "service call completed"),
+					tuple("ProtectionConnexion.erreur", "erreur de connexion enregistrée"),
+					tuple("ProtectionConnexion.verifierIdentifiant", "service call completed"),
+					tuple("JournalSecurite.enregistrer", "service call completed"),
+					tuple("ProtectionConnexion.reussite", "connexion réussie"),
+					tuple("JournalSecurite.enregistrer", "service call completed"),
+					tuple("ConnexionService.deconnecter", "déconnexion volontaire"));
+		}
+	}
+
+	@Test
+	void troisiemeErreurEtTentativePendantLeBlocage() {
+		compteActif();
+		BlocageIdentifiant compteur = new BlocageIdentifiant(IDENTIFIANT);
+		compteur.erreur(MAINTENANT.minusMinutes(1));
+		compteur.erreur(MAINTENANT.minusMinutes(1));
+		when(blocagesIdentifiant.findWithLockByIdentifiant(IDENTIFIANT)).thenReturn(Optional.of(compteur));
+
+		try (CaptureLogs logs = CaptureLogs.de(LogsMetierAspect.class)) {
+			assertThatThrownBy(() -> service.connecter(IDENTIFIANT, "mauvais", IP))
+					.isInstanceOf(TropDeTentativesException.class);
+			assertThatThrownBy(() -> service.connecter(IDENTIFIANT, MOT_DE_PASSE, IP))
+					.isInstanceOf(TropDeTentativesException.class);
+
+			assertThat(ligne(logs.lignes(), "ProtectionConnexion.erreur").message())
+					.isEqualTo("erreur de connexion enregistrée, identifiant bloqué");
+			assertThat(logs.lignes()).filteredOn(ligne -> "ProtectionConnexion.verifierIdentifiant"
+					.equals(ligne.mdc().get("method"))).extracting(Ligne::message)
+					.containsExactly("service call completed", "identifiant bloqué");
+		}
+	}
+
+	/** Le contrôleur POST /connexion n'écrit qu'une ligne controller par requête (pas de doublon). */
+	@Test
+	void unSeulMessageControllerParConnexion() throws Exception {
+		ConnexionService connexion = mock(ConnexionService.class);
+		when(connexion.connecter(any(), any(), any())).thenReturn(new ResultatConnexion(IDENTIFIANT, "jeton"));
+		MockMvc mockMvc = MockMvcBuilders.standaloneSetup(avecLogs(new ConnexionController(connexion)))
+				.addInterceptors(new RequestLoggingInterceptor(), new LogsControleur())
+				.build();
+
+		try (CaptureLogs anciennes = CaptureLogs.de(RequestLoggingInterceptor.class);
+				CaptureLogs detaillees = CaptureLogs.de(LogsControleur.class)) {
+			mockMvc.perform(post("/connexion").contentType(MediaType.APPLICATION_JSON)
+					.content("{\"identifiant\":\"" + IDENTIFIANT + "\",\"motDePasse\":\"" + MOT_DE_PASSE + "\"}"))
+					.andExpect(status().isOk());
+
+			assertThat(anciennes.lignes()).isEmpty();
+			assertThat(detaillees.lignes()).singleElement().satisfies(ligne -> {
+				assertThat(ligne.message()).isEqualTo("http request handled");
+				assertThat(ligne.mdc()).containsEntry("layer", "controller").containsEntry("route", "/connexion")
+						.containsEntry("status", "200");
+			});
 		}
 	}
 

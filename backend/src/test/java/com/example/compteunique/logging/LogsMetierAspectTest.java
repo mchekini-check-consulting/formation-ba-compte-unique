@@ -242,4 +242,36 @@ class LogsMetierAspectTest {
             });
         }
     }
+
+    class Abonnement {
+
+        @LogMetier(message = "abonnement souscrit", messageEchec = "abonnement refusé")
+        public void souscrire(String formule) {
+            if ("inconnue".equals(formule)) {
+                throw new IllegalArgumentException("formule inconnue");
+            }
+        }
+
+        @LogMetier(message = "abonnement résilié")
+        public void resilier(String formule) {
+            throw new IllegalStateException("déjà résilié");
+        }
+    }
+
+    @Test
+    void messagesMetierPourUnAppelReussiOuEnEchec() {
+        Abonnement abonnement = avecLogs(new Abonnement());
+
+        try (CaptureLogs logs = CaptureLogs.de(LogsMetierAspect.class)) {
+            abonnement.souscrire("confort");
+            assertThatThrownBy(() -> abonnement.souscrire("inconnue")).isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> abonnement.resilier("confort")).isInstanceOf(IllegalStateException.class);
+
+            assertThat(logs.lignes()).extracting(Ligne::niveau, Ligne::message).containsExactly(
+                    tuple("INFO", "abonnement souscrit"),
+                    tuple("WARN", "abonnement refusé"),
+                    tuple("WARN", "service call failed"));
+            assertThat(logs.lignes().get(1).mdc()).containsEntry("err", "IllegalArgumentException");
+        }
+    }
 }

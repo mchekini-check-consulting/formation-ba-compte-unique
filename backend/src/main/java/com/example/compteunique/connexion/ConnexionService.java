@@ -139,7 +139,7 @@ public class ConnexionService {
 
 	/** CU-17 : déconnexion volontaire ; sans effet si la session est absente ou déjà fermée. */
 	@Transactional
-	@LogMetier
+	@LogMetier(message = "déconnexion volontaire")
 	public void deconnecter(String jetonSession) {
 		session(jetonSession).filter(session -> !session.estRevoquee()).ifPresent(session -> {
 			OffsetDateTime maintenant = maintenant();

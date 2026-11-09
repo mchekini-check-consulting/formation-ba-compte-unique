@@ -48,11 +48,26 @@ public class LogsMetierAspect {
         long debut = System.nanoTime();
         try {
             Object resultat = point.proceed();
-            ecrire(couche, nom, debut, null, Champs.extraire(champs, methode, point.getArgs(), resultat, true));
+            ecrire(new Appel(couche, nom, debut, logMetier), null,
+                    Champs.extraire(champs, methode, point.getArgs(), resultat, true));
             return resultat;
         } catch (Throwable erreur) {
-            ecrire(couche, nom, debut, erreur, Champs.extraire(champs, methode, point.getArgs(), null, false));
+            ecrire(new Appel(couche, nom, debut, logMetier), erreur,
+                    Champs.extraire(champs, methode, point.getArgs(), null, false));
             throw erreur;
+        }
+    }
+
+    /** Un appel journalisé : couche, nom de la méthode, début (nanosecondes) et son annotation (messages). */
+    private record Appel(String couche, String nom, long debut, LogMetier logMetier) {
+
+        /** Message métier de l'annotation, ou le message générique s'il est vide (ou sans annotation). */
+        String message(boolean echec, String generique) {
+            if (logMetier == null) {
+                return generique;
+            }
+            String metier = echec ? logMetier.messageEchec() : logMetier.message();
+            return metier.isBlank() ? generique : metier;
         }
     }
 
@@ -83,11 +98,12 @@ public class LogsMetierAspect {
         }
     }
 
-    private static void ecrire(String couche, String nom, long debut, Throwable erreur, Map<String, String> valeurs) {
-        long dureeMs = Duration.ofNanos(System.nanoTime() - debut).toMillis();
+    private static void ecrire(Appel appel, Throwable erreur, Map<String, String> valeurs) {
+        String couche = appel.couche();
+        long dureeMs = Duration.ofNanos(System.nanoTime() - appel.debut()).toMillis();
         ContexteMdc contexte = ContexteMdc.ouvrir()
                 .avec("layer", couche)
-                .avec("method", nom)
+                .avec("method", appel.nom())
                 .avec("durationMs", String.valueOf(dureeMs))
                 .avec(valeurs);
         if (erreur != null) {
@@ -95,11 +111,11 @@ public class LogsMetierAspect {
         }
         try (contexte) {
             if (erreur != null) {
-                log.warn("{} call failed", couche);
+                log.warn("{}", appel.message(true, couche + " call failed"));
             } else if ("db".equals(couche) && dureeMs >= SEUIL_DB_LENT_MS) {
                 log.warn("slow db call");
             } else {
-                log.info("{} call completed", couche);
+                log.info("{}", appel.message(false, couche + " call completed"));
             }
         }
     }

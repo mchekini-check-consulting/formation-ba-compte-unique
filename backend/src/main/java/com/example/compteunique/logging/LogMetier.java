@@ -21,4 +21,16 @@ public @interface LogMetier {
      * d'une liste), vers une valeur simple. Jamais de donnée personnelle : vérifié par LogMetierConventionTest.
      */
     String[] champs() default {};
+
+    /**
+     * Message métier court, en français, d'un appel réussi (service et db), ex. « connexion réussie ». Vide : message
+     * générique « service call completed ». Jamais de donnée : un texte fixe.
+     */
+    String message() default "";
+
+    /**
+     * Message métier d'un appel en échec (exception), ex. « identifiant bloqué ». Vide : message générique
+     * « service call failed ». Jamais de donnée : un texte fixe.
+     */
+    String messageEchec() default "";
 }
