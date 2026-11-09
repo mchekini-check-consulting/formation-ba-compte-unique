@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.compteunique.logging.LogMetier;
 import com.example.compteunique.securite.JournalIndisponibleException;
 
 /**
@@ -76,6 +77,7 @@ public class ConnexionController {
 	public record SessionFermee(String motif) {
 	}
 
+	@LogMetier
 	@PostMapping
 	public ResponseEntity<SessionOuverte> connecter(@RequestBody DemandeConnexion demande, HttpServletRequest requete) {
 		ResultatConnexion resultat = connexion.connecter(demande.identifiant(), demande.motDePasse(),
@@ -100,6 +102,7 @@ public class ConnexionController {
 	}
 
 	/** CU-17 : « Me déconnecter » : session révoquée et cookie supprimé, même si elle était déjà fermée. */
+	@LogMetier
 	@PostMapping("/deconnexion")
 	public ResponseEntity<Void> deconnecter(
 			@CookieValue(name = COOKIE_SESSION, required = false) String jetonSession) {

@@ -9,14 +9,16 @@ import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 class WebLoggingConfigTest {
 
 	@Test
-	void enregistreLInterceptorDeLogging() {
+	void enregistreLesInterceptorsDeLogging() {
 		RequestLoggingInterceptor interceptor = new RequestLoggingInterceptor();
-		WebLoggingConfig config = new WebLoggingConfig(interceptor);
+		LogsControleur logsControleur = new LogsControleur();
+		WebLoggingConfig config = new WebLoggingConfig(interceptor, logsControleur);
 		InterceptorRegistry registry = mock(InterceptorRegistry.class);
 
 		config.addInterceptors(registry);
 
 		verify(registry).addInterceptor(interceptor);
+		verify(registry).addInterceptor(logsControleur);
 	}
 
 }

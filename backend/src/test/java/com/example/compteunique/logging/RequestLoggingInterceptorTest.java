@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;
+import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerMapping;
 
 class RequestLoggingInterceptorTest {
@@ -57,6 +58,28 @@ class RequestLoggingInterceptorTest {
 		interceptor.afterCompletion(request, response, new Object(), null);
 
 		assertThat(MDC.get("layer")).isNull();
+	}
+
+	static class ControleurDeTest {
+
+		@LogMetier
+		public void annotee() {
+			// méthode d'exemple
+		}
+
+	}
+
+	@Test
+	void laisseLesMethodesLogMetierALogsControleur() throws NoSuchMethodException {
+		HttpServletRequest request = mock(HttpServletRequest.class);
+		HttpServletResponse response = mock(HttpServletResponse.class);
+		HandlerMethod handler = new HandlerMethod(new ControleurDeTest(), ControleurDeTest.class.getMethod("annotee"));
+
+		try (CaptureLogs logs = CaptureLogs.de(RequestLoggingInterceptor.class)) {
+			interceptor.afterCompletion(request, response, handler, null);
+
+			assertThat(logs.lignes()).isEmpty();
+		}
 	}
 
 }

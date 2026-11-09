@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.stereotype.Component;
+import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.HandlerMapping;
 
@@ -26,6 +27,10 @@ public class RequestLoggingInterceptor implements HandlerInterceptor {
 	@Override
 	public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler,
 			Exception exception) {
+		// Méthode annotée @LogMetier : sa ligne, plus détaillée, est écrite par LogsControleur.
+		if (handler instanceof HandlerMethod methode && methode.hasMethodAnnotation(LogMetier.class)) {
+			return;
+		}
 		Long debut = (Long) request.getAttribute(ATTRIBUT_DEBUT);
 		long duree = debut == null ? 0 : System.currentTimeMillis() - debut;
 		MDC.put(LAYER, "controller");
