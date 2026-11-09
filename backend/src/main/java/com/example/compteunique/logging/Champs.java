@@ -32,7 +32,8 @@ public final class Champs {
 
     /** Écrits par la plateforme : un champ approuvé ne peut pas porter ces noms. */
     static final Set<String> RESERVES =
-            Set.of("time", "level", "msg", "logger", "layer", "method", "route", "status", "durationMs", "err");
+            Set.of("time", "level", "msg", "logger", "layer", "method", "route", "status", "durationMs", "err",
+                    "requestId");
 
     /**
      * Mots (découpage camelCase) qui signalent une donnée personnelle ou un secret : refusés même si le BA les
