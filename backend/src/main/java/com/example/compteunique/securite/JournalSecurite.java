@@ -13,6 +13,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import com.example.compteunique.compte.EvenementSecurite;
 import com.example.compteunique.compte.JournalSecuriteRepository;
+import com.example.compteunique.logging.LogMetier;
 import com.example.compteunique.logging.Loggable;
 
 // CU-9 et CU-48 : écriture d'un événement dans le journal de sécurité, avec l'adresse IP de la
@@ -30,6 +31,7 @@ public class JournalSecurite {
 		this.journal = journal;
 	}
 
+	@LogMetier(champs = { "evenement.evenement", "evenement.motif", "evenement.identifiantConnexionId" })
 	public void enregistrer(EvenementSecurite evenement) {
 		adresseIpCourante().ifPresent(evenement::depuis);
 		try {

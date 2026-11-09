@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.compteunique.compte.EvenementSecurite;
+import com.example.compteunique.logging.LogMetier;
 import com.example.compteunique.logging.Loggable;
 import com.example.compteunique.securite.JournalSecurite;
 
@@ -136,6 +137,7 @@ public class ConnexionService {
 
 	/** CU-17 : déconnexion volontaire ; sans effet si la session est absente ou déjà fermée. */
 	@Transactional
+	@LogMetier
 	public void deconnecter(String jetonSession) {
 		session(jetonSession).filter(session -> !session.estRevoquee()).ifPresent(session -> {
 			OffsetDateTime maintenant = maintenant();

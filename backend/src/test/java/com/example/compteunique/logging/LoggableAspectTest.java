@@ -19,6 +19,11 @@ class LoggableAspectTest {
 			return valeur.toUpperCase();
 		}
 
+		@LogMetier
+		public String detaillee() {
+			return "ok";
+		}
+
 	}
 
 	private ServiceDeTest proxy() {
@@ -39,6 +44,19 @@ class LoggableAspectTest {
 		ServiceDeTest service = proxy();
 		assertThatThrownBy(() -> service.operation("echec")).isInstanceOf(IllegalStateException.class);
 		assertThat(MDC.get("layer")).isNull();
+	}
+
+	@Test
+	void laisseLesMethodesLogMetierALogsMetierAspect() {
+		ServiceDeTest service = proxy();
+
+		try (CaptureLogs logs = CaptureLogs.de(LoggableAspect.class)) {
+			service.operation("ok");
+			service.detaillee();
+
+			assertThat(logs.lignes()).hasSize(2)
+					.allSatisfy(ligne -> assertThat(ligne.message()).contains("operation"));
+		}
 	}
 
 }

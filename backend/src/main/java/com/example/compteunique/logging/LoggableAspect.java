@@ -15,7 +15,9 @@ public class LoggableAspect {
 	private static final Logger log = LoggerFactory.getLogger(LoggableAspect.class);
 	private static final String LAYER = "layer";
 
-	@Around("@within(com.example.compteunique.logging.Loggable) && execution(public * *(..))")
+	// Une méthode annotée @LogMetier est écrite par LogsMetierAspect, avec ses champs : pas de doublon.
+	@Around("@within(com.example.compteunique.logging.Loggable) && execution(public * *(..))"
+			+ " && !@annotation(com.example.compteunique.logging.LogMetier)")
 	public Object logMethode(ProceedingJoinPoint jointPoint) throws Throwable {
 		String methode = jointPoint.getSignature().toShortString();
 		long debut = System.currentTimeMillis();
