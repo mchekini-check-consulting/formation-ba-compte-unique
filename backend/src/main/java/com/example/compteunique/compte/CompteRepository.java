@@ -5,6 +5,11 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import jakarta.persistence.LockModeType;
 
 public interface CompteRepository extends JpaRepository<Compte, Long> {
 
@@ -19,5 +24,13 @@ public interface CompteRepository extends JpaRepository<Compte, Long> {
 
 	/** CU-20 : un compte seulement si la cliente en est titulaire. */
 	Optional<Compte> findByIdAndCustomerId(Long id, UUID customerId);
+
+	/**
+	 * CU-143 et CU-11 : compte qui reçoit un virement, verrouillé jusqu'à la fin de la transaction pour que deux
+	 * virements simultanés s'additionnent.
+	 */
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("select c from Compte c where c.iban = :iban")
+	Optional<Compte> verrouillerParIban(@Param("iban") String iban);
 
 }

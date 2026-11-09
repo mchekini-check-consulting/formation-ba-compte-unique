@@ -108,7 +108,30 @@ public class Compte {
 
 	/** CU-19 : compte ouvert, à 0, dont le solde n'a jamais changé depuis l'ouverture. */
 	public boolean isSansVersement() {
-		return ACTIF.equals(statut) && soldeCentimes == 0 && soldeMisAJourLe.isEqual(ouvertLe);
+		return isActif() && soldeCentimes == 0 && soldeMisAJourLe.isEqual(ouvertLe);
+	}
+
+	public boolean isActif() {
+		return ACTIF.equals(statut);
+	}
+
+	/**
+	 * Versement : augmente le solde et sa date de mise à jour. Refusé si le compte n'est pas actif, si le montant
+	 * n'est pas strictement positif ou si le solde dépasserait la capacité d'un nombre entier.
+	 */
+	public void crediter(long montantCentimes, OffsetDateTime le) {
+		if (!isActif()) {
+			throw new CompteNonActifException();
+		}
+		if (montantCentimes <= 0) {
+			throw new MontantInvalideException();
+		}
+		try {
+			this.soldeCentimes = Math.addExact(soldeCentimes, montantCentimes);
+		} catch (ArithmeticException depassement) {
+			throw new MontantInvalideException();
+		}
+		this.soldeMisAJourLe = le;
 	}
 
 	public String getStatut() {
@@ -121,6 +144,11 @@ public class Compte {
 
 	public Long getIdentifiantConnexionId() {
 		return identifiantConnexionId;
+	}
+
+	/** CU-11 : IBAN complet à communiquer à l'émetteur, affiché seulement dans la rubrique Versements. */
+	public String getIbanParQuatre() {
+		return Iban.de(numeroCompte).parQuatre();
 	}
 
 	/** IBAN tel qu'affiché à la cliente (quatre derniers chiffres). */

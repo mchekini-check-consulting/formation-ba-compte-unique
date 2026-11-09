@@ -49,6 +49,11 @@ public record Iban(String valeur, String numeroCompte) {
 		return valeur.substring(0, 4) + " •••• •••• " + valeur.substring(valeur.length() - 4);
 	}
 
+	/** CU-11 : IBAN complet par groupes de quatre (FR76 9999 9000 0199 0000 0000 105), rubrique Versements. */
+	public String parQuatre() {
+		return valeur.replaceAll("(.{4})(?!$)", "$1 ");
+	}
+
 	private static String deuxChiffres(int valeur) {
 		return String.format("%02d", valeur);
 	}

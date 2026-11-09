@@ -59,7 +59,7 @@
               nouveau produit en quelques minutes.
             </p>
             <div class="actions">
-              <button class="btn m" type="button" (click)="annoncer('Versement : bientôt disponible.')">Faire un versement</button>
+              <a class="btn m" routerLink="/versement">Faire un versement</a>
               <a class="btn o" href="#epargne">Souscrire un produit</a>
             </div>
           </div>
@@ -133,9 +133,9 @@
           </div>
 
           <div class="tiles" aria-label="Actions du compte">
-            <button class="tile" type="button" (click)="annoncer('Versement : bientôt disponible.')">
+            <a class="tile" routerLink="/versement">
               <b>Faire un versement</b><span>Par virement instantané depuis un compte à votre nom.</span>
-            </button>
+            </a>
             <button class="tile" type="button" (click)="annoncer('Ajout d\'un compte externe : bientôt disponible.')">
               <b>Ajouter un compte</b><span>Un compte d'une autre banque, à votre nom.</span>
             </button>

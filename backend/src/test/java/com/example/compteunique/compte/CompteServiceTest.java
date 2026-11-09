@@ -19,6 +19,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import com.example.compteunique.connexion.ConnexionService;
 
@@ -31,7 +32,8 @@ class CompteServiceTest {
 	private final ConnexionService connexion = mock(ConnexionService.class);
 	private final CompteRepository comptes = mock(CompteRepository.class);
 	private final JournalSecuriteRepository journal = mock(JournalSecuriteRepository.class);
-	private final CompteService service = new CompteService(connexion, comptes, journal);
+	private final MouvementRepository mouvements = mock(MouvementRepository.class);
+	private final CompteService service = new CompteService(connexion, comptes, journal, mouvements);
 	private final Compte compte = new Compte(1L, TITULAIRE, Iban.de("99000000001"), CLIENTE, OffsetDateTime.now());
 
 	@BeforeEach
@@ -121,6 +123,15 @@ class CompteServiceTest {
 		assertThrows(CompteInaccessibleException.class, () -> service.consulter(JETON, "5"));
 
 		assertNull(evenementEnregistre().getCustomerId());
+	}
+
+	@Test
+	void lesMouvementsSontLusPourLeCompteDonne() {
+		ReflectionTestUtils.setField(compte, "id", 5L);
+		Mouvement mouvement = new Mouvement(5L, 1250, "Loyer", "Emetteur Test", true, OffsetDateTime.now());
+		when(mouvements.findTop50ByCompteIdOrderByEffectueLeDescIdDesc(5L)).thenReturn(List.of(mouvement));
+
+		assertEquals(List.of(mouvement), service.mouvements(compte));
 	}
 
 	@Test

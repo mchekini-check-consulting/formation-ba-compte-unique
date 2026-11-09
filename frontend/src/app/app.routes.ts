@@ -11,6 +11,7 @@ import { PageInfo } from './page-info/page-info';
 import { MotDePasseOublie } from './reinitialisation/mot-de-passe-oublie';
 import { ReinitialisationPage } from './reinitialisation/reinitialisation-page';
 import { connexionPublique, espaceProtege } from './session/garde-session';
+import { VersementPage } from './versement/versement-page';
 
 // CU-170 : refus par défaut. Seules les pages de PAGES_PUBLIQUES s'ouvrent sans session ; toutes
 // les autres, y compris une page ajoutée plus tard ou une adresse inconnue, exigent une session
@@ -35,6 +36,8 @@ const PAGES_DE_L_ESPACE: Routes = [
   { path: 'espace', component: Espace },
   { path: 'comptes', component: MesComptes },
   { path: 'comptes/:id', component: DetailCompte },
+  // CU-11 : ouverte par les boutons « Faire un versement » de l'espace.
+  { path: 'versement', component: VersementPage },
 ];
 
 const protegee = (route: Route): Route => ({ ...route, canActivate: [espaceProtege, ...(route.canActivate ?? [])] });

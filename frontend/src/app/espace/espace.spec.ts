@@ -74,6 +74,17 @@ describe('Espace', () => {
     expect(page.querySelector('.toast')?.textContent).toBe('Souscription Livret A : bientôt disponible.');
   });
 
+  it('les deux boutons « Faire un versement » ouvrent la page de versement (CU-11)', async () => {
+    const { page } = await ouvrir([COMPTE]);
+    const boutons = Array.from(page.querySelectorAll('a')).filter((lien) =>
+      lien.textContent?.includes('Faire un versement'),
+    );
+    expect(boutons).toHaveLength(2);
+    for (const bouton of boutons) {
+      expect(bouton.getAttribute('href')).toBe('/versement');
+    }
+  });
+
   it('affiche le compte à rebours de la session', async () => {
     const { page } = await ouvrir([COMPTE]);
     expect(page.querySelector('.minuteur')?.textContent).toContain('10:00');

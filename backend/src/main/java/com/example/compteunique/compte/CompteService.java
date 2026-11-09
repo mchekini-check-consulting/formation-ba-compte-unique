@@ -19,11 +19,19 @@ public class CompteService {
 	private final ConnexionService connexion;
 	private final CompteRepository comptes;
 	private final JournalSecuriteRepository journal;
+	private final MouvementRepository mouvements;
 
-	public CompteService(ConnexionService connexion, CompteRepository comptes, JournalSecuriteRepository journal) {
+	public CompteService(ConnexionService connexion, CompteRepository comptes, JournalSecuriteRepository journal,
+			MouvementRepository mouvements) {
 		this.connexion = connexion;
 		this.comptes = comptes;
 		this.journal = journal;
+		this.mouvements = mouvements;
+	}
+
+	/** CU-11 : derniers mouvements d'un compte déjà contrôlé par {@link #consulter}. */
+	public List<Mouvement> mouvements(Compte compte) {
+		return mouvements.findTop50ByCompteIdOrderByEffectueLeDescIdDesc(compte.getId());
 	}
 
 	public List<Compte> mesComptes(String jetonSession) {

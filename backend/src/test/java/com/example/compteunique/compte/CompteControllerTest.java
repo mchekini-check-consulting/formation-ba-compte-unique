@@ -16,6 +16,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.example.compteunique.compte.CompteController.CompteVue;
+import com.example.compteunique.compte.CompteController.MouvementVue;
+import com.example.compteunique.compte.CompteController.RubriqueVersements;
 import com.example.compteunique.compte.CompteController.Refus;
 
 class CompteControllerTest {
@@ -91,6 +93,28 @@ class CompteControllerTest {
 		when(comptes.consulter("jeton", "5")).thenReturn(compte);
 
 		assertEquals(compte.getIbanMasque(), controller.consulter("jeton", "5").ibanMasque());
+	}
+
+	@Test
+	void laRubriqueVersementsDonneLIbanCompletEtLesMouvements() {
+		OffsetDateTime date = OffsetDateTime.parse("2026-11-09T10:00:00Z");
+		Mouvement mouvement = new Mouvement(1L, 1250, "Loyer", "Emetteur Test", true, date);
+		when(comptes.consulter("jeton", "5")).thenReturn(compte);
+		when(comptes.mouvements(compte)).thenReturn(List.of(mouvement));
+
+		RubriqueVersements rubrique = controller.versements("jeton", "5");
+
+		assertEquals("FR76 9999 9000 0199 0000 0000 105", rubrique.iban());
+		assertEquals(List.of(new MouvementVue(date, "Loyer", "Emetteur Test", 1250)), rubrique.mouvements());
+	}
+
+	@Test
+	void unCompteClotureNAfficheAucunIbanDansLaRubriqueVersements() {
+		ReflectionTestUtils.setField(compte, "statut", Compte.CLOTURE);
+		when(comptes.consulter("jeton", "5")).thenReturn(compte);
+		when(comptes.mouvements(compte)).thenReturn(List.of());
+
+		assertNull(controller.versements("jeton", "5").iban());
 	}
 
 	@Test
