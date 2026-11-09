@@ -258,6 +258,29 @@ class LogsMetierAspectTest {
         }
     }
 
+    class ServiceBavard {
+
+        private final org.slf4j.Logger journal = org.slf4j.LoggerFactory.getLogger(ServiceBavard.class);
+
+        @LogMetier
+        public void agir() {
+            journal.error("ligne écrite pendant l'appel");
+        }
+    }
+
+    @Test
+    void lesLignesEcritesPendantLAppelGardentLaCouche() {
+        ServiceBavard service = avecLogs(new ServiceBavard());
+
+        try (CaptureLogs logs = CaptureLogs.de(ServiceBavard.class)) {
+            service.agir();
+
+            assertThat(logs.lignes()).singleElement()
+                    .satisfies(ligne -> assertThat(ligne.mdc()).containsEntry("layer", "service"));
+        }
+        assertThat(org.slf4j.MDC.get("layer")).isNull();
+    }
+
     @Test
     void messagesMetierPourUnAppelReussiOuEnEchec() {
         Abonnement abonnement = avecLogs(new Abonnement());

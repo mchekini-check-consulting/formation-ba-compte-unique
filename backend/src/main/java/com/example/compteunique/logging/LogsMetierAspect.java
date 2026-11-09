@@ -47,7 +47,7 @@ public class LogsMetierAspect {
 
         long debut = System.nanoTime();
         try {
-            Object resultat = point.proceed();
+            Object resultat = executer(point, couche);
             ecrire(new Appel(couche, nom, debut, logMetier), null,
                     Champs.extraire(champs, methode, point.getArgs(), resultat, true));
             return resultat;
@@ -55,6 +55,17 @@ public class LogsMetierAspect {
             ecrire(new Appel(couche, nom, debut, logMetier), erreur,
                     Champs.extraire(champs, methode, point.getArgs(), null, false));
             throw erreur;
+        }
+    }
+
+    /**
+     * Exécute la méthode avec la couche dans le contexte MDC : les logs écrits pendant l'appel (ex. l'erreur
+     * « journal de sécurité indisponible ») gardent leur champ layer, sans quoi Alloy les jetterait.
+     */
+    private static Object executer(ProceedingJoinPoint point, String couche) throws Throwable {
+        ContexteMdc pendant = ContexteMdc.ouvrir().avec("layer", couche);
+        try (pendant) {
+            return point.proceed();
         }
     }
 
