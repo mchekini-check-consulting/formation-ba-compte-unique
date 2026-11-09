@@ -13,7 +13,7 @@ applications:
     # remplace tout jusqu'à la fin de la ligne.
     tag:
       dev: ed81aad
-      qualif: a93c30e
+      qualif: ed81aad
       preprod: ""
       prod: ""
     containerPort: 8080
@@ -78,7 +78,7 @@ applications:
     # remplace tout jusqu'à la fin de la ligne.
     tag:
       dev: ed81aad
-      qualif: a93c30e
+      qualif: ed81aad
       preprod: ""
       prod: ""
     containerPort: 8080
