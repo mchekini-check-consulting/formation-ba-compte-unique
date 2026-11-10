@@ -14,6 +14,7 @@ import com.example.compteunique.logging.ContexteMdc;
 final class TracesConnexion {
 
 	static final String AUCUN = "aucun";
+	private static final String CONNECTER = "connecter";
 
 	static final String CONNEXION_REUSSIE = "CONNEXION_REUSSIE";
 	static final String CONNEXION_REFUSEE = "CONNEXION_REFUSEE";
@@ -30,29 +31,29 @@ final class TracesConnexion {
 
 	/** L1 : connexion réussie. */
 	static void connexionReussie(Long identifiantConnexionId) {
-		ecrire(false, "connecter", CONNEXION_REUSSIE, identifiantConnexionId, null, null, "connexion réussie");
+		ecrire(false, CONNECTER, CONNEXION_REUSSIE, identifiantConnexionId, null, null, "connexion réussie");
 	}
 
 	/** L2 : identifiant inconnu, compte non activé ou mot de passe faux. */
 	static void connexionRefusee(String motif, Long identifiantConnexionId) {
-		ecrire(true, "connecter", CONNEXION_REFUSEE, identifiantConnexionId, motif, null, "connexion refusée");
+		ecrire(true, CONNECTER, CONNEXION_REFUSEE, identifiantConnexionId, motif, null, "connexion refusée");
 	}
 
 	/** L3 : la troisième erreur bloque l'identifiant. */
 	static void blocageIdentifiant(Long identifiantConnexionId, long secondes) {
-		ecrire(true, "connecter", BLOCAGE_IDENTIFIANT, identifiantConnexionId, ProtectionConnexion.IDENTIFIANT_BLOQUE,
+		ecrire(true, CONNECTER, BLOCAGE_IDENTIFIANT, identifiantConnexionId, ProtectionConnexion.IDENTIFIANT_BLOQUE,
 				secondes, "blocage de " + secondes + " secondes");
 	}
 
 	/** L4 : tentative pendant un blocage de l'identifiant, avec les secondes restantes. */
 	static void tentativePendantBlocage(Long identifiantConnexionId, long secondesRestantes) {
-		ecrire(true, "connecter", TENTATIVE_PENDANT_BLOCAGE, identifiantConnexionId,
+		ecrire(true, CONNECTER, TENTATIVE_PENDANT_BLOCAGE, identifiantConnexionId,
 				ProtectionConnexion.IDENTIFIANT_BLOQUE, secondesRestantes, "tentative pendant un blocage");
 	}
 
 	/** L5 : adresse IP bloquée, avec les secondes restantes ; ni adresse ni identifiant. */
 	static void adresseIpBloquee(long secondesRestantes) {
-		ecrire(true, "connecter", ADRESSE_IP_BLOQUEE, null, ProtectionConnexion.ADRESSE_IP_BLOQUEE,
+		ecrire(true, CONNECTER, ADRESSE_IP_BLOQUEE, null, ProtectionConnexion.ADRESSE_IP_BLOQUEE,
 				secondesRestantes, "adresse IP bloquée");
 	}
 
@@ -63,7 +64,7 @@ final class TracesConnexion {
 	}
 
 	/** L7 : déconnexion volontaire. */
-	static void deconnexion(Long identifiantConnexionId) {
+	static void deconnexionVolontaire(Long identifiantConnexionId) {
 		ecrire(false, "deconnecter", DECONNEXION, identifiantConnexionId, null, null, "déconnexion volontaire");
 	}
 

@@ -164,7 +164,7 @@ public class ConnexionService {
 			OffsetDateTime maintenant = maintenant();
 			session.revoquer(maintenant);
 			journaliserSession(EvenementSecurite.DECONNEXION, session, maintenant);
-			TracesConnexion.deconnexion(session.getIdentifiantConnexionId());
+			TracesConnexion.deconnexionVolontaire(session.getIdentifiantConnexionId());
 		});
 	}
 
