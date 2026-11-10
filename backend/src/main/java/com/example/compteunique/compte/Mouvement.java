@@ -10,12 +10,14 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 // CU-11 (US-06) : mouvement du compte, table créée par db/migration/V17__mouvement_virement_entrant.sql.
-// simule : virement du bouchon de test (CU-143), aucun virement réel.
+// CU-144 : virement sortant (V18__mouvement_virement_sortant.sql) : bénéficiaire et son IBAN, sans émetteur.
+// simule : virement d'un bouchon de test (CU-143, CU-144), aucun virement réel.
 @Entity
 @Table(name = "mouvement")
 public class Mouvement {
 
 	public static final String VIREMENT_ENTRANT = "VIREMENT_ENTRANT";
+	public static final String VIREMENT_SORTANT = "VIREMENT_SORTANT";
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -33,8 +35,14 @@ public class Mouvement {
 	@Column(nullable = false, length = 140, updatable = false)
 	private String libelle;
 
-	@Column(nullable = false, length = 70, updatable = false)
+	@Column(length = 70, updatable = false)
 	private String emetteur;
+
+	@Column(length = 70, updatable = false)
+	private String beneficiaire;
+
+	@Column(name = "iban_beneficiaire", length = 34, updatable = false)
+	private String ibanBeneficiaire;
 
 	@Column(nullable = false, updatable = false)
 	private boolean simule;
@@ -55,6 +63,33 @@ public class Mouvement {
 		this.emetteur = emetteur;
 		this.simule = simule;
 		this.effectueLe = effectueLe;
+	}
+
+	/** Virement sortant (CU-144) : le montant est débité du compte, au profit du bénéficiaire. */
+	public static Mouvement virementSortant(Long compteId, long montantCentimes, String libelle, String beneficiaire,
+			String ibanBeneficiaire, boolean simule, OffsetDateTime effectueLe) {
+		Mouvement mouvement = new Mouvement();
+		mouvement.compteId = compteId;
+		mouvement.type = VIREMENT_SORTANT;
+		mouvement.montantCentimes = montantCentimes;
+		mouvement.libelle = libelle;
+		mouvement.beneficiaire = beneficiaire;
+		mouvement.ibanBeneficiaire = ibanBeneficiaire;
+		mouvement.simule = simule;
+		mouvement.effectueLe = effectueLe;
+		return mouvement;
+	}
+
+	public boolean isSortant() {
+		return VIREMENT_SORTANT.equals(type);
+	}
+
+	public String getBeneficiaire() {
+		return beneficiaire;
+	}
+
+	public String getIbanBeneficiaire() {
+		return ibanBeneficiaire;
 	}
 
 	public Long getId() {
