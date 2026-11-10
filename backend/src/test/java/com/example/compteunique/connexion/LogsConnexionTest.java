@@ -1,7 +1,6 @@
 package com.example.compteunique.connexion;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
 import java.time.OffsetDateTime;
@@ -16,7 +15,10 @@ import com.example.compteunique.logging.CaptureLogs.Ligne;
 import com.example.compteunique.logging.LogsMetierAspect;
 import com.example.compteunique.securite.JournalSecurite;
 
-/** Logs métier « Suivre la connexion d'une cliente » : champs approuvés par le BA, sans donnée personnelle. */
+/**
+ * Logs métier « Suivre la connexion d'une cliente » : champs approuvés par le BA, sans donnée personnelle. Les
+ * traces L1 à L7 de la connexion sont testées dans LogsConnexionFinitionsTest.
+ */
 class LogsConnexionTest {
 
 	private static final OffsetDateTime MAINTENANT = OffsetDateTime.parse("2026-11-09T18:00:00+01:00");
@@ -28,12 +30,6 @@ class LogsConnexionTest {
 		fabrique.setProxyTargetClass(true);
 		fabrique.addAspect(new LogsMetierAspect());
 		return (T) fabrique.getProxy();
-	}
-
-	private static ProtectionConnexion protection() {
-		return avecLogs(new ProtectionConnexion(mock(BlocageIdentifiantRepository.class),
-				mock(BlocageAdresseIpRepository.class), mock(JournalSecuriteRepository.class),
-				mock(JournalSecurite.class), false));
 	}
 
 	@Test
@@ -51,43 +47,6 @@ class LogsConnexionTest {
 					.containsEntry("evenement.motif", "MOT_DE_PASSE_INCORRECT")
 					.containsEntry("evenement.identifiantConnexionId", "42");
 			assertThat(ligne.mdc().values()).doesNotContain(IDENTIFIANT);
-		}
-	}
-
-	@Test
-	void troisiemeErreurEcriteEnAlerteAvecLeCompteur() {
-		ProtectionConnexion protection = protection();
-		BlocageIdentifiant blocage = new BlocageIdentifiant(IDENTIFIANT);
-
-		try (CaptureLogs logs = CaptureLogs.de(LogsMetierAspect.class)) {
-			protection.erreur(blocage, 42L, MAINTENANT);
-			protection.erreur(blocage, 42L, MAINTENANT);
-			assertThatThrownBy(() -> protection.erreur(blocage, 42L, MAINTENANT))
-					.isInstanceOf(TropDeTentativesException.class);
-
-			assertThat(logs.lignes()).extracting(ligne -> ligne.mdc().get("blocage.erreursConsecutives"))
-					.containsExactly("1", "2", "3");
-			Ligne blocageLigne = logs.lignes().get(2);
-			assertThat(blocageLigne.niveau()).isEqualTo("WARN");
-			assertThat(blocageLigne.mdc()).containsEntry("err", "TropDeTentativesException")
-					.containsEntry("identifiantConnexionId", "42");
-			assertThat(logs.lignes()).allSatisfy(ligne -> assertThat(ligne.mdc().values()).doesNotContain(IDENTIFIANT));
-		}
-	}
-
-	@Test
-	void verificationEtReussiteEcriventLesErreursAccumulees() {
-		ProtectionConnexion protection = protection();
-
-		try (CaptureLogs logs = CaptureLogs.de(LogsMetierAspect.class)) {
-			BlocageIdentifiant blocage = protection.verifierIdentifiant(IDENTIFIANT, null, MAINTENANT);
-			blocage.erreur(MAINTENANT);
-			protection.reussite(blocage);
-
-			assertThat(logs.lignes()).extracting(ligne -> ligne.mdc().get("method"))
-					.containsExactly("ProtectionConnexion.verifierIdentifiant", "ProtectionConnexion.reussite");
-			assertThat(logs.lignes().get(0).mdc()).containsEntry("resultat.erreursConsecutives", "0");
-			assertThat(logs.lignes().get(1).mdc()).containsEntry("blocage.erreursConsecutives", "1");
 		}
 	}
 

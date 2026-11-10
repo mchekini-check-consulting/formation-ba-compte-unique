@@ -79,7 +79,7 @@ class ProtectionConnexionTest {
 		when(blocagesIdentifiant.findWithLockByIdentifiant(IDENTIFIANT)).thenReturn(Optional.of(blocage));
 
 		TropDeTentativesException refus = assertThrows(TropDeTentativesException.class,
-				() -> protection.verifierIdentifiant(IDENTIFIANT, null, T0.plusMinutes(3).plusSeconds(30)));
+				() -> protection.verifierIdentifiant(IDENTIFIANT, T0.plusMinutes(3).plusSeconds(30)));
 
 		assertEquals("Trop de tentatives. Réessayez dans 2 minutes.", refus.getMessage());
 		assertEquals(ProtectionConnexion.IDENTIFIANT_BLOQUE, evenementsJournalises(1).get(0).getMotif());
@@ -91,7 +91,7 @@ class ProtectionConnexionTest {
 		when(blocagesIdentifiant.findWithLockByIdentifiant(IDENTIFIANT)).thenReturn(Optional.of(blocage));
 
 		TropDeTentativesException refus = assertThrows(TropDeTentativesException.class,
-				() -> protection.verifierIdentifiant(IDENTIFIANT, null, T0.plusMinutes(4).plusSeconds(59)));
+				() -> protection.verifierIdentifiant(IDENTIFIANT, T0.plusMinutes(4).plusSeconds(59)));
 
 		assertEquals("Trop de tentatives. Réessayez dans 1 minute.", refus.getMessage());
 	}
@@ -101,7 +101,7 @@ class ProtectionConnexionTest {
 		BlocageIdentifiant blocage = bloque();
 		when(blocagesIdentifiant.findWithLockByIdentifiant(IDENTIFIANT)).thenReturn(Optional.of(blocage));
 
-		BlocageIdentifiant leve = protection.verifierIdentifiant(IDENTIFIANT, null, T0.plusMinutes(5));
+		BlocageIdentifiant leve = protection.verifierIdentifiant(IDENTIFIANT, T0.plusMinutes(5));
 		assertEquals(0, leve.getErreursConsecutives());
 		assertThat(leve.getBloqueJusquAu()).isNull();
 
@@ -113,7 +113,7 @@ class ProtectionConnexionTest {
 	void unIdentifiantJamaisVuACompteurAZeroSansEnregistrement() {
 		when(blocagesIdentifiant.findWithLockByIdentifiant(IDENTIFIANT)).thenReturn(Optional.empty());
 
-		BlocageIdentifiant blocage = protection.verifierIdentifiant(IDENTIFIANT, null, T0);
+		BlocageIdentifiant blocage = protection.verifierIdentifiant(IDENTIFIANT, T0);
 
 		assertEquals(0, blocage.getErreursConsecutives());
 		verify(blocagesIdentifiant, never()).save(any());
