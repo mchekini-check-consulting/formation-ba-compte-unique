@@ -43,7 +43,9 @@ page ou route « Hello World » et ses tests. En plus :
   variables injectées par la plateforme (`SPRING_DATASOURCE_*`,
   `DATABASE_URL`), migration initiale (Flyway `V1__init.sql`, Drizzle
   `drizzle/0000_init.sql`, migrations Django) appliquée au démarrage, route de
-  santé (`/actuator/health` Spring, `/health` Express et Django), test
+  santé (`/actuator/health` Spring, `/health` Express et Django), Swagger
+  (Spring : `/swagger-ui.html`, toutes les adresses décrites automatiquement,
+  coupé en preprod et prod par `SWAGGER_ACTIF`), test
   d'intégration sur un PostgreSQL jetable (Testcontainers) ; **logs** : une ligne
   JSON par log sur stdout, niveau `LOG_LEVEL`, et la plomberie des logs métier
   (`@LogMetier` Spring, `logMetier`/`logRoute` Express, `@log_metier` Django,
@@ -174,7 +176,8 @@ Puis l'image Docker, en conditions réelles :
      (Django : `-e ALLOWED_HOSTS=localhost`), toujours `-e LOG_LEVEL=info`
      (réseau : `docker network ls | grep <slug>`) ;
   4. après quelques secondes : `curl -sf http://localhost:8099/` répond
-     « Hello, World! » et la route de santé répond `UP` / `ok` ;
+     « Hello, World! » et la route de santé répond `UP` / `ok` ; Spring :
+     `curl -sf http://localhost:8099/v3/api-docs` décrit la route `/` ;
   5. `docker logs <slug>-test` : des lignes JSON (`"level"`, `"msg"`).
 - **frontend** : `docker build -t <slug> .`, `docker run -d --name
   <slug>-test -p 8099:8080 <slug>`, `curl -sf http://localhost:8099/` renvoie
@@ -212,6 +215,12 @@ Backend :
     envList:
       - key: LOG_LEVEL
         value: {dev: debug, qualif: info, preprod: info, prod: warn}
+```
+Spring, en plus dans `envList` (Swagger visible en dev et qualif seulement) :
+```yaml
+      # Swagger (.../gateway/<slug>/swagger-ui.html) en dev et qualif, jamais en preprod ni en prod.
+      - key: SWAGGER_ACTIF
+        value: {dev: "true", qualif: "true", preprod: "false", prod: "false"}
 ```
 Django, en plus dans `envList` (le gateway relaie avec son propre nom d'hôte) :
 ```yaml

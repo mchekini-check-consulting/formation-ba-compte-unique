@@ -60,6 +60,9 @@ applications:
           qualif: "classpath:db/migration,classpath:db/demo"
           preprod: "classpath:db/migration"
           prod: "classpath:db/migration"
+      # Swagger (.../gateway/backend/swagger-ui.html) en dev et qualif, jamais en preprod ni en prod.
+      - key: SWAGGER_ACTIF
+        value: {dev: "true", qualif: "true", preprod: "false", prod: "false"}
   - name: gateway
     type: gateway
     # Pas d'image/tag : fourni par la plateforme (petit Traefik autonome),
@@ -116,3 +119,6 @@ applications:
     envList:
       - key: LOG_LEVEL
         value: {dev: debug, qualif: info, preprod: info, prod: warn}
+      # Swagger (.../gateway/bouchons-identite/swagger-ui.html) en dev et qualif, jamais en preprod ni en prod.
+      - key: SWAGGER_ACTIF
+        value: {dev: "true", qualif: "true", preprod: "false", prod: "false"}

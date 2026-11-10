@@ -21,6 +21,9 @@ URLs, identiques dans les 4 environnements (`dev`, `qualif`, `preprod`, `prod`) 
 - backends : `https://gateway.formation-ba-compte-unique.<env>.check-consulting.net/<backend>/...`
   (préfixe retiré par le gateway). Un backend n'a jamais d'adresse publique
   propre ; le navigateur n'appelle que le gateway.
+- Swagger (backends Spring, local, dev et qualif seulement, `SWAGGER_ACTIF`) :
+  `.../gateway.../<backend>/swagger-ui.html` ; en local `http://localhost:<port>/swagger-ui.html`.
+  Toute nouvelle route y apparaît automatiquement (springdoc, paquet `documentation`).
 
 Déploiement : merge sur `main` → CI (image taguée avec le sha court) → Kargo
 écrit `tag.dev` dans `helm.yaml` (commit `promote(dev)` sur `main`) → ArgoCD.

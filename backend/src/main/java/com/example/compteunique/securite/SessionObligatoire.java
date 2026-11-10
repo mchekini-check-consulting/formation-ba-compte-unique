@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,6 +19,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import com.example.compteunique.connexion.ConnexionController;
 import com.example.compteunique.connexion.ConnexionService;
+import com.example.compteunique.documentation.SwaggerConfig;
 
 // CU-170 : refus par défaut. Toute adresse du backend absente de ROUTES_PUBLIQUES exige une
 // session active (cookie de session), sinon 401 avant même d'exécuter la demande. Une nouvelle
@@ -28,14 +30,18 @@ import com.example.compteunique.connexion.ConnexionService;
 public class SessionObligatoire implements WebMvcConfigurer, HandlerInterceptor {
 
 	/** Adresses accessibles sans session. Tout le reste exige une session active. */
-	public static final List<String> ROUTES_PUBLIQUES = List.of(
+	public static final List<String> ROUTES_PUBLIQUES = Stream.concat(Stream.of(
 			"/", // réponse « Hello, World! » (vérification que le backend répond)
 			"/error", // page d'erreur de Spring
 			"/connexion/**", // connexion, lecture de session et déconnexion : gèrent la session eux-mêmes
 			"/activation/**", // activation de l'espace (lien reçu par SMS)
 			"/reinitialisation/**", // mot de passe oublié
 			"/dossiers/**", // parcours d'ouverture de compte, avant toute session
-			"/test/**"); // pages de test (e-mails, SMS, journal) : vides hors environnement de test
+			"/test/**"), // pages de test (e-mails, SMS, journal) : vides hors environnement de test
+			// Swagger : description des adresses, absente en preprod et prod. Les essais lancés
+			// depuis Swagger restent soumis à la session comme toute autre demande.
+			SwaggerConfig.ADRESSES.stream())
+			.toList();
 
 	static final String CORPS_SESSION_EXPIREE = "{\"motif\":\"EXPIREE\"}";
 

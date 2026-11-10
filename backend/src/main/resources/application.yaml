@@ -45,3 +45,12 @@ app:
 logging:
   level:
     root: ${LOG_LEVEL:INFO}
+
+# Swagger : description des API (/v3/api-docs) et page pour les essayer (/swagger-ui.html).
+# Actif en local, dev et qualif ; SWAGGER_ACTIF=false en preprod et prod (helm.yaml) : les
+# adresses de Swagger n'existent alors pas.
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ACTIF:true}
+  swagger-ui:
+    enabled: ${SWAGGER_ACTIF:true}
