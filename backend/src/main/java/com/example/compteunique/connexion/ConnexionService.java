@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.compteunique.compte.EvenementSecurite;
-import com.example.compteunique.logging.LogMetier;
 import com.example.compteunique.logging.Loggable;
 import com.example.compteunique.securite.JournalSecurite;
 
@@ -71,18 +70,35 @@ public class ConnexionService {
 				? identifiantSaisi.substring(0, IDENTIFIANT_MAX)
 				: identifiantSaisi;
 		OffsetDateTime maintenant = maintenant();
-		protection.verifierAdresse(adresseIp, identifiant, maintenant);
-		// CU-212 : cherché avant la vérification du blocage, pour que le log d'une tentative pendant un
+		try {
+			protection.verifierAdresse(adresseIp, identifiant, maintenant);
+		} catch (TropDeTentativesException refus) {
+			TracesConnexion.adresseIpBloquee(refus.getRestantSecondes());
+			throw refus;
+		}
+		// CU-212 : cherché avant la vérification du blocage, pour que la trace d'une tentative pendant un
 		// blocage porte le numéro technique de la cliente. Le mot de passe n'est toujours pas vérifié.
 		Optional<IdentifiantConnexion> trouve = identifiants.findByIdentifiant(identifiant);
 		Long identifiantConnexionId = trouve.map(IdentifiantConnexion::getId).orElse(null);
-		BlocageIdentifiant blocage = protection.verifierIdentifiant(identifiant, identifiantConnexionId, maintenant);
+		BlocageIdentifiant blocage;
+		try {
+			blocage = protection.verifierIdentifiant(identifiant, maintenant);
+		} catch (TropDeTentativesException refus) {
+			TracesConnexion.tentativePendantBlocage(identifiantConnexionId, refus.getRestantSecondes());
+			throw refus;
+		}
 
 		String motif = motifDeRefus(trouve, motDePasse);
 		if (motif != null) {
 			journal.enregistrer(EvenementSecurite.authentification(EvenementSecurite.CONNEXION_ECHOUEE, identifiant,
 					identifiantConnexionId, motif, maintenant));
-			protection.erreur(blocage, identifiantConnexionId, maintenant);
+			TracesConnexion.connexionRefusee(motif, identifiantConnexionId);
+			try {
+				protection.erreur(blocage, identifiantConnexionId, maintenant);
+			} catch (TropDeTentativesException refus) {
+				TracesConnexion.blocageIdentifiant(identifiantConnexionId, refus.getRestantSecondes());
+				throw refus;
+			}
 			throw new ConnexionRefuseeException(ProtectionConnexion.COMPTE_NON_ACTIVE.equals(motif));
 		}
 		IdentifiantConnexion compte = trouve.orElseThrow();
@@ -92,6 +108,7 @@ public class ConnexionService {
 		compte.connexionReussie();
 		String jeton = SecretsAleatoires.nouveauJeton();
 		sessions.save(new SessionClient(compte.getId(), SecretsAleatoires.empreinte(jeton), maintenant));
+		TracesConnexion.connexionReussie(identifiantConnexionId);
 		return new ResultatConnexion(compte.getIdentifiant(), jeton);
 	}
 
@@ -137,14 +154,17 @@ public class ConnexionService {
 		});
 	}
 
-	/** CU-17 : déconnexion volontaire ; sans effet si la session est absente ou déjà fermée. */
+	/**
+	 * CU-17 : déconnexion volontaire ; sans effet si la session est absente ou déjà fermée (CU-227 : pas de
+	 * trace L7 dans ce cas).
+	 */
 	@Transactional
-	@LogMetier(message = "déconnexion volontaire")
 	public void deconnecter(String jetonSession) {
 		session(jetonSession).filter(session -> !session.estRevoquee()).ifPresent(session -> {
 			OffsetDateTime maintenant = maintenant();
 			session.revoquer(maintenant);
 			journaliserSession(EvenementSecurite.DECONNEXION, session, maintenant);
+			TracesConnexion.deconnexion(session.getIdentifiantConnexionId());
 		});
 	}
 
@@ -165,6 +185,7 @@ public class ConnexionService {
 			if (!session.estRevoquee()) {
 				session.revoquer(maintenant);
 				journaliserSession(EvenementSecurite.EXPIRATION_SESSION, session, maintenant);
+				TracesConnexion.sessionInactive(session.getIdentifiantConnexionId());
 			}
 			return false;
 		});

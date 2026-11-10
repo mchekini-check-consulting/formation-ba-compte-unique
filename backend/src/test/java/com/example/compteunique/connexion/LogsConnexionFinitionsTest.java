@@ -10,6 +10,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -87,6 +88,13 @@ class LogsConnexionFinitionsTest {
 				.orElseThrow(() -> new AssertionError("aucune ligne pour " + methode + " : " + lignes));
 	}
 
+	/** Traces L1 à L7 d'un type d'événement de connexion. */
+	static List<Ligne> traces(CaptureLogs logs, String evenement) {
+		return logs.lignes().stream()
+				.filter(ligne -> evenement.equals(ligne.mdc().get("evenementConnexion")))
+				.toList();
+	}
+
 	private IdentifiantConnexion compteActif() {
 		IdentifiantConnexion compte = new IdentifiantConnexion(IDENTIFIANT);
 		compte.definirMotDePasse(hacheur.encode(MOT_DE_PASSE), MAINTENANT.minusDays(1));
@@ -103,22 +111,27 @@ class LogsConnexionFinitionsTest {
 		when(blocagesIdentifiant.findWithLockByIdentifiant(IDENTIFIANT)).thenReturn(Optional.of(blocage));
 	}
 
-	// P2 : tentative pendant un blocage, identifiant existant.
+	// P2 et C6 (L4) : tentative pendant un blocage, identifiant existant.
 	@Test
-	void tentativePendantUnBlocageDonneLeNumeroTechniqueDeLaCliente() {
+	void tentativePendantUnBlocageDonneLeNumeroTechniqueEtLesSecondesRestantes() {
 		compteActif();
 		identifiantBloque();
 
-		try (CaptureLogs logs = CaptureLogs.de(LogsMetierAspect.class)) {
+		try (CaptureLogs logs = CaptureLogs.de(TracesConnexion.class)) {
 			assertThatThrownBy(() -> service.connecter(IDENTIFIANT, MOT_DE_PASSE, IP))
 					.isInstanceOf(TropDeTentativesException.class)
 					.hasMessage("Trop de tentatives. Réessayez dans 4 minutes.");
 
-			Ligne verification = ligne(logs.lignes(), "ProtectionConnexion.verifierIdentifiant");
-			assertThat(verification.niveau()).isEqualTo("WARN");
-			assertThat(verification.mdc()).containsEntry("layer", "service")
-					.containsEntry("identifiantConnexionId", String.valueOf(NUMERO))
-					.containsEntry("err", "TropDeTentativesException");
+			assertThat(logs.lignes()).singleElement().satisfies(ligne -> {
+				assertThat(ligne.niveau()).isEqualTo("WARN");
+				assertThat(ligne.message()).isEqualTo("tentative pendant un blocage");
+				assertThat(ligne.mdc()).containsEntry("layer", "service")
+						.containsEntry("method", "ConnexionService.connecter")
+						.containsEntry("evenementConnexion", TracesConnexion.TENTATIVE_PENDANT_BLOCAGE)
+						.containsEntry("motif", ProtectionConnexion.IDENTIFIANT_BLOQUE)
+						.containsEntry("identifiantConnexionId", String.valueOf(NUMERO))
+						.containsEntry("secondes", "240");
+			});
 		}
 		// Comportement inchangé : pas de comparaison de mot de passe, journal sans numéro technique.
 		verify(hacheur, never()).matches(anyString(), anyString());
@@ -134,24 +147,24 @@ class LogsConnexionFinitionsTest {
 		when(identifiants.findByIdentifiant(IDENTIFIANT)).thenReturn(Optional.empty());
 		identifiantBloque();
 
-		try (CaptureLogs logs = CaptureLogs.de(LogsMetierAspect.class)) {
+		try (CaptureLogs logs = CaptureLogs.de(TracesConnexion.class)) {
 			assertThatThrownBy(() -> service.connecter(IDENTIFIANT, MOT_DE_PASSE, IP))
 					.isInstanceOf(TropDeTentativesException.class);
 
-			assertThat(ligne(logs.lignes(), "ProtectionConnexion.verifierIdentifiant").mdc())
-					.doesNotContainKey("identifiantConnexionId");
+			assertThat(traces(logs, TracesConnexion.TENTATIVE_PENDANT_BLOCAGE)).singleElement()
+					.satisfies(ligne -> assertThat(ligne.mdc()).containsEntry("identifiantConnexionId", "aucun"));
 		}
 	}
 
-	// Messages métier.
+	// C1, C2, C9 : parcours réussite, erreur, déconnexion ; une ligne par étape, au bon niveau.
 	@Test
-	void messagesMetierDuParcoursDeConnexion() {
+	void tracesDuParcoursDeConnexion() {
 		compteActif();
 		BlocageIdentifiant compteur = new BlocageIdentifiant(IDENTIFIANT);
 		when(blocagesIdentifiant.findWithLockByIdentifiant(IDENTIFIANT)).thenReturn(Optional.of(compteur));
 		when(blocagesIdentifiant.existsById(IDENTIFIANT)).thenReturn(true);
 
-		try (CaptureLogs logs = CaptureLogs.de(LogsMetierAspect.class)) {
+		try (CaptureLogs logs = CaptureLogs.de(TracesConnexion.class)) {
 			assertThatThrownBy(() -> service.connecter(IDENTIFIANT, "mauvais", IP))
 					.isInstanceOf(ConnexionRefuseeException.class);
 			ResultatConnexion resultat = service.connecter(IDENTIFIANT, MOT_DE_PASSE, IP);
@@ -159,18 +172,54 @@ class LogsConnexionFinitionsTest {
 					.thenReturn(Optional.of(new SessionClient(NUMERO, "empreinte", MAINTENANT)));
 			service.deconnecter(resultat.jetonSession());
 
-			assertThat(logs.lignes()).extracting(ligne -> ligne.mdc().get("method"), Ligne::message).containsExactly(
-					tuple("ProtectionConnexion.verifierIdentifiant", "service call completed"),
-					tuple("JournalSecurite.enregistrer", "service call completed"),
-					tuple("ProtectionConnexion.erreur", "erreur de connexion enregistrée"),
-					tuple("ProtectionConnexion.verifierIdentifiant", "service call completed"),
-					tuple("JournalSecurite.enregistrer", "service call completed"),
-					tuple("ProtectionConnexion.reussite", "connexion réussie"),
-					tuple("JournalSecurite.enregistrer", "service call completed"),
-					tuple("ConnexionService.deconnecter", "déconnexion volontaire"));
+			assertThat(logs.lignes()).extracting(Ligne::niveau, Ligne::message,
+					ligne -> ligne.mdc().get("motif"), ligne -> ligne.mdc().get("identifiantConnexionId"))
+					.containsExactly(
+							tuple("WARN", "connexion refusée", ProtectionConnexion.MOT_DE_PASSE_INCORRECT, "42"),
+							tuple("INFO", "connexion réussie", null, "42"),
+							tuple("INFO", "déconnexion volontaire", null, "42"));
+			assertThat(logs.lignes()).allSatisfy(ligne -> assertThat(ligne.mdc()).containsEntry("layer", "service"));
 		}
 	}
 
+	// C3 : identifiant inconnu, « aucun » à la place du numéro technique.
+	@Test
+	void identifiantInconnuTraceAvecAucun() {
+		when(identifiants.findByIdentifiant(IDENTIFIANT)).thenReturn(Optional.empty());
+
+		try (CaptureLogs logs = CaptureLogs.de(TracesConnexion.class)) {
+			assertThatThrownBy(() -> service.connecter(IDENTIFIANT, MOT_DE_PASSE, IP))
+					.isInstanceOf(ConnexionRefuseeException.class);
+
+			assertThat(logs.lignes()).singleElement().satisfies(ligne -> {
+				assertThat(ligne.niveau()).isEqualTo("WARN");
+				assertThat(ligne.mdc()).containsEntry("evenementConnexion", TracesConnexion.CONNEXION_REFUSEE)
+						.containsEntry("motif", ProtectionConnexion.IDENTIFIANT_INCONNU)
+						.containsEntry("identifiantConnexionId", "aucun");
+			});
+			sansDonneeSensible(logs.lignes(), IDENTIFIANT, MOT_DE_PASSE, IP);
+		}
+	}
+
+	// C4 : compte non activé.
+	@Test
+	void compteNonActiveTraceAvecSonMotif() {
+		IdentifiantConnexion compte = new IdentifiantConnexion(IDENTIFIANT);
+		ReflectionTestUtils.setField(compte, "id", NUMERO);
+		when(identifiants.findByIdentifiant(IDENTIFIANT)).thenReturn(Optional.of(compte));
+
+		try (CaptureLogs logs = CaptureLogs.de(TracesConnexion.class)) {
+			assertThatThrownBy(() -> service.connecter(IDENTIFIANT, MOT_DE_PASSE, IP))
+					.isInstanceOf(ConnexionRefuseeException.class);
+
+			assertThat(traces(logs, TracesConnexion.CONNEXION_REFUSEE)).singleElement()
+					.satisfies(ligne -> assertThat(ligne.mdc())
+							.containsEntry("motif", ProtectionConnexion.COMPTE_NON_ACTIVE)
+							.containsEntry("identifiantConnexionId", "42"));
+		}
+	}
+
+	// C5 et C6 : la troisième erreur produit une seule ligne L3 « 300 secondes », puis L4 pendant le blocage.
 	@Test
 	void troisiemeErreurEtTentativePendantLeBlocage() {
 		compteActif();
@@ -179,17 +228,48 @@ class LogsConnexionFinitionsTest {
 		compteur.erreur(MAINTENANT.minusMinutes(1));
 		when(blocagesIdentifiant.findWithLockByIdentifiant(IDENTIFIANT)).thenReturn(Optional.of(compteur));
 
-		try (CaptureLogs logs = CaptureLogs.de(LogsMetierAspect.class)) {
+		try (CaptureLogs logs = CaptureLogs.de(TracesConnexion.class)) {
 			assertThatThrownBy(() -> service.connecter(IDENTIFIANT, "mauvais", IP))
 					.isInstanceOf(TropDeTentativesException.class);
 			assertThatThrownBy(() -> service.connecter(IDENTIFIANT, MOT_DE_PASSE, IP))
 					.isInstanceOf(TropDeTentativesException.class);
 
-			assertThat(ligne(logs.lignes(), "ProtectionConnexion.erreur").message())
-					.isEqualTo("erreur de connexion enregistrée, identifiant bloqué");
-			assertThat(logs.lignes()).filteredOn(ligne -> "ProtectionConnexion.verifierIdentifiant"
-					.equals(ligne.mdc().get("method"))).extracting(Ligne::message)
-					.containsExactly("service call completed", "identifiant bloqué");
+			assertThat(traces(logs, TracesConnexion.BLOCAGE_IDENTIFIANT)).singleElement().satisfies(ligne -> {
+				assertThat(ligne.niveau()).isEqualTo("WARN");
+				assertThat(ligne.message()).isEqualTo("blocage de 300 secondes");
+				assertThat(ligne.mdc()).containsEntry("secondes", "300")
+						.containsEntry("identifiantConnexionId", "42");
+			});
+			assertThat(traces(logs, TracesConnexion.TENTATIVE_PENDANT_BLOCAGE)).singleElement()
+					.satisfies(ligne -> assertThat(ligne.mdc()).containsEntry("secondes", "300"));
+		}
+	}
+
+	// C9 (CU-227) : une seconde déconnexion sur la même session ne produit pas de seconde ligne L7.
+	@Test
+	void secondeDeconnexionSansSecondeTrace() {
+		SessionClient session = new SessionClient(NUMERO, "empreinte", MAINTENANT);
+		when(sessions.findByJetonHache(any())).thenReturn(Optional.of(session));
+
+		try (CaptureLogs logs = CaptureLogs.de(TracesConnexion.class)) {
+			service.deconnecter("jeton");
+			service.deconnecter("jeton");
+
+			assertThat(traces(logs, TracesConnexion.DECONNEXION)).singleElement();
+		}
+		verify(evenements).saveAndFlush(any());
+	}
+
+	// C11 : une tentative incomplète ne produit aucune trace.
+	@Test
+	void tentativeIncompleteSansTrace() {
+		try (CaptureLogs logs = CaptureLogs.de(TracesConnexion.class)) {
+			assertThatThrownBy(() -> service.connecter("court", MOT_DE_PASSE, IP))
+					.isInstanceOf(ConnexionRefuseeException.class);
+			assertThatThrownBy(() -> service.connecter(IDENTIFIANT, "", IP))
+					.isInstanceOf(ConnexionRefuseeException.class);
+
+			assertThat(logs.lignes()).isEmpty();
 		}
 	}
 
@@ -233,10 +313,26 @@ class LogsConnexionFinitionsTest {
 					.containsEntry("evenement.motif", ProtectionConnexion.ADRESSE_IP_BLOQUEE);
 			sansDonneeSensible(logs.lignes(), IP, IDENTIFIANT);
 		}
+		// L5, écrite par ConnexionService : motif et secondes restantes, sans adresse ni identifiant.
+		ConnexionService avecLimite = avecLogs(new ConnexionService(identifiants, sessions, hacheur,
+				limiteParAdresse, journal, HORLOGE));
+		try (CaptureLogs traces = CaptureLogs.de(TracesConnexion.class)) {
+			assertThatThrownBy(() -> avecLimite.connecter(IDENTIFIANT, MOT_DE_PASSE, IP))
+					.isInstanceOf(TropDeTentativesException.class);
+
+			assertThat(traces.lignes()).singleElement().satisfies(ligne -> {
+				assertThat(ligne.niveau()).isEqualTo("WARN");
+				assertThat(ligne.mdc()).containsEntry("evenementConnexion", TracesConnexion.ADRESSE_IP_BLOQUEE)
+						.containsEntry("motif", ProtectionConnexion.ADRESSE_IP_BLOQUEE)
+						.containsEntry("secondes", "600")
+						.doesNotContainKey("identifiantConnexionId");
+			});
+			sansDonneeSensible(traces.lignes(), IP, IDENTIFIANT);
+		}
 		// L'adresse est bien connue (enregistrée dans le journal en base), mais pas dans les logs.
 		ArgumentCaptor<EvenementSecurite> evenement = ArgumentCaptor.forClass(EvenementSecurite.class);
-		verify(evenements).saveAndFlush(evenement.capture());
-		assertThat(evenement.getValue().getAdresseIp()).isEqualTo(IP);
+		verify(evenements, times(2)).saveAndFlush(evenement.capture());
+		assertThat(evenement.getAllValues()).allSatisfy(valeur -> assertThat(valeur.getAdresseIp()).isEqualTo(IP));
 	}
 
 	@Test
@@ -263,7 +359,8 @@ class LogsConnexionFinitionsTest {
 				MAINTENANT.minus(SessionClient.DELAI_INACTIVITE).minusMinutes(1));
 		when(sessions.findByJetonHache(any())).thenReturn(Optional.of(expiree));
 
-		try (CaptureLogs logs = CaptureLogs.de(LogsMetierAspect.class)) {
+		try (CaptureLogs logs = CaptureLogs.de(LogsMetierAspect.class);
+				CaptureLogs traces = CaptureLogs.de(TracesConnexion.class)) {
 			assertThat(service.etatSession("jeton-expire")).isEmpty();
 			assertThat(service.etatSession("jeton-expire")).isEmpty();
 			assertThat(service.activite("jeton-expire")).isEmpty();
@@ -273,6 +370,13 @@ class LogsConnexionFinitionsTest {
 					.satisfies(ligne -> assertThat(ligne.mdc()).containsEntry("evenement.identifiantConnexionId",
 							String.valueOf(NUMERO)));
 			sansDonneeSensible(logs.lignes(), IP, "jeton-expire");
+			// C8 (L6) : une seule ligne info « inactivité 10 minutes », avec l'identifiant technique.
+			assertThat(traces.lignes()).singleElement().satisfies(ligne -> {
+				assertThat(ligne.niveau()).isEqualTo("INFO");
+				assertThat(ligne.message()).isEqualTo("inactivité 10 minutes");
+				assertThat(ligne.mdc()).containsEntry("evenementConnexion", TracesConnexion.SESSION_INACTIVE)
+						.containsEntry("identifiantConnexionId", String.valueOf(NUMERO));
+			});
 		}
 		verify(evenements).saveAndFlush(any());
 	}
@@ -313,6 +417,7 @@ class LogsConnexionFinitionsTest {
 		when(blocagesIdentifiant.findWithLockByIdentifiant(IDENTIFIANT)).thenReturn(Optional.of(compteur));
 
 		try (CaptureLogs logs = CaptureLogs.de(LogsMetierAspect.class);
+				CaptureLogs traces = CaptureLogs.de(TracesConnexion.class);
 				CaptureLogs erreurs = CaptureLogs.de(JournalSecurite.class)) {
 			assertThatThrownBy(() -> service.connecter(IDENTIFIANT, "mauvais-mot", IP))
 					.isInstanceOf(ConnexionRefuseeException.class);
@@ -323,6 +428,8 @@ class LogsConnexionFinitionsTest {
 
 			assertThat(erreurs.lignes()).isEmpty();
 			sansDonneeSensible(logs.lignes(), IDENTIFIANT, MOT_DE_PASSE, "mauvais-mot", IP,
+					resultat.jetonSession());
+			sansDonneeSensible(traces.lignes(), IDENTIFIANT, MOT_DE_PASSE, "mauvais-mot", IP,
 					resultat.jetonSession());
 		}
 	}
