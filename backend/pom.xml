@@ -24,6 +24,14 @@
 			<artifactId>spring-boot-starter-webmvc</artifactId>
 		</dependency>
 
+		<!-- Swagger : description des API (/v3/api-docs) et page pour les essayer
+		     (/swagger-ui.html), en local, dev et qualif uniquement (SWAGGER_ACTIF) -->
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>3.2.0</version>
+		</dependency>
+
 		<!-- Base PostgreSQL : connexion lue dans SPRING_DATASOURCE_* (injectées par la
 		     plateforme, helm.yaml : database), schéma versionné par Flyway -->
 		<dependency>

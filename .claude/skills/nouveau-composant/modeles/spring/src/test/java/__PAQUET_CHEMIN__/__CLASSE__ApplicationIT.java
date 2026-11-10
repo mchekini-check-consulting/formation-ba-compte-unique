@@ -45,4 +45,12 @@ class __CLASSE__ApplicationIT {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("UP"));
     }
+
+    @Test
+    void swaggerDecritLesAdresses() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paths['/']").exists());
+        mockMvc.perform(get("/swagger-ui/index.html")).andExpect(status().isOk());
+    }
 }
