@@ -45,12 +45,18 @@ public class CompteController {
 	public record Refus(String message) {
 	}
 
-	/** CU-11 : un mouvement tel qu'affiché dans la rubrique Versements. */
-	public record MouvementVue(OffsetDateTime date, String libelle, String emetteur, long montantCentimes) {
+	/**
+	 * CU-11 : un mouvement tel qu'affiché dans la rubrique Versements. CU-144 : sens (entrant ou sortant),
+	 * bénéficiaire d'un virement sortant (émetteur vide) et indicateur « simulé ». L'IBAN du bénéficiaire n'est pas
+	 * envoyé à l'écran.
+	 */
+	public record MouvementVue(OffsetDateTime date, String libelle, String emetteur, long montantCentimes,
+			boolean sortant, String beneficiaire, boolean simule) {
 
 		static MouvementVue de(Mouvement mouvement) {
 			return new MouvementVue(mouvement.getEffectueLe(), mouvement.getLibelle(), mouvement.getEmetteur(),
-					mouvement.getMontantCentimes());
+					mouvement.getMontantCentimes(), mouvement.isSortant(), mouvement.getBeneficiaire(),
+					mouvement.isSimule());
 		}
 
 	}

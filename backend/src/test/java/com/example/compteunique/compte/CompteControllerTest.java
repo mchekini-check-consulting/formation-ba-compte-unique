@@ -105,7 +105,22 @@ class CompteControllerTest {
 		RubriqueVersements rubrique = controller.versements("jeton", "5");
 
 		assertEquals("FR76 9999 9000 0199 0000 0000 105", rubrique.iban());
-		assertEquals(List.of(new MouvementVue(date, "Loyer", "Emetteur Test", 1250)), rubrique.mouvements());
+		assertEquals(List.of(new MouvementVue(date, "Loyer", "Emetteur Test", 1250, false, null, true)),
+				rubrique.mouvements());
+	}
+
+	@Test
+	void unVirementSortantEstAfficheAvecSonBeneficiaireSansSonIban() {
+		OffsetDateTime date = OffsetDateTime.parse("2026-11-10T10:00:00Z");
+		Mouvement mouvement = Mouvement.virementSortant(1L, 3000, "Remboursement", "Beneficiaire Test",
+				"DE89370400440532013000", true, date);
+		when(comptes.consulter("jeton", "5")).thenReturn(compte);
+		when(comptes.mouvements(compte)).thenReturn(List.of(mouvement));
+
+		RubriqueVersements rubrique = controller.versements("jeton", "5");
+
+		assertEquals(List.of(new MouvementVue(date, "Remboursement", null, 3000, true, "Beneficiaire Test", true)),
+				rubrique.mouvements());
 	}
 
 	@Test

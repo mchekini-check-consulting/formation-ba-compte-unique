@@ -54,11 +54,15 @@ export function formaterDate(date: string): string {
 }
 
 // CU-11 : un virement reçu, tel qu'affiché dans la rubrique Versements.
+// CU-144 : sortant -> montant débité, au profit de beneficiaire (emetteur vide) ; simule -> bouchon de test.
 export interface Mouvement {
   date: string;
   libelle: string;
-  emetteur: string;
+  emetteur: string | null;
   montantCentimes: number;
+  sortant: boolean;
+  beneficiaire: string | null;
+  simule: boolean;
 }
 
 // CU-11 : IBAN complet à communiquer à l'émetteur (compte actif seulement) et derniers mouvements.

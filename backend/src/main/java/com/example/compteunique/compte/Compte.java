@@ -134,6 +134,25 @@ public class Compte {
 		this.soldeMisAJourLe = le;
 	}
 
+	/**
+	 * CU-144 : virement sortant, diminue le solde et sa date de mise à jour. Refusé si le compte n'est pas actif
+	 * (clôturé), si le montant n'est pas strictement positif ou s'il dépasse le solde : le solde ne devient jamais
+	 * négatif.
+	 */
+	public void debiter(long montantCentimes, OffsetDateTime le) {
+		if (!isActif()) {
+			throw new CompteNonActifException();
+		}
+		if (montantCentimes <= 0) {
+			throw new MontantInvalideException();
+		}
+		if (montantCentimes > soldeCentimes) {
+			throw new SoldeInsuffisantException();
+		}
+		this.soldeCentimes -= montantCentimes;
+		this.soldeMisAJourLe = le;
+	}
+
 	public String getStatut() {
 		return statut;
 	}

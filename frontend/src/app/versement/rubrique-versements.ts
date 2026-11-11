@@ -9,6 +9,8 @@ type Message = { texte: string; erreur: boolean };
 // d'un virement instantané (compte actif) et derniers mouvements (date, libellé, émetteur, montant).
 // CU-143 (TECH-04) : en environnement de test seulement, bouton « Simuler un virement entrant », formulaire
 // prérempli avec l'IBAN du compte. Aucun virement réel n'est émis.
+// CU-144 (TECH-05) : de même, bouton « Simuler un virement sortant » (compte débité prérempli) ; les virements
+// sortants s'affichent en « − » avec leur bénéficiaire, et tout mouvement simulé porte la mention « simulé ».
 @Component({
   selector: 'app-rubrique-versements',
   template: `
@@ -29,8 +31,14 @@ type Message = { texte: string; erreur: boolean };
             @for (m of r.mouvements; track $index) {
               <li>
                 <span class="date">{{ date(m.date) }}</span>
-                <span class="libelle">{{ m.libelle }}<small>{{ m.emetteur }}</small></span>
-                <span class="montant">+{{ montant(m.montantCentimes) }}</span>
+                <span class="libelle">
+                  {{ m.libelle }}
+                  @if (m.simule) {
+                    <em class="simule">simulé</em>
+                  }
+                  <small>{{ m.sortant ? 'Vers ' + m.beneficiaire : m.emetteur }}</small>
+                </span>
+                <span class="montant" [class.debit]="m.sortant">{{ m.sortant ? '−' : '+' }}{{ montant(m.montantCentimes) }}</span>
               </li>
             }
           </ul>
@@ -39,9 +47,30 @@ type Message = { texte: string; erreur: boolean };
 
       @if (bouchon()) {
         <div class="test">
-          <button type="button" (click)="formulaire.set(!formulaire())">Simuler un virement entrant</button>
+          <div class="boutons">
+            <button type="button" (click)="ouvrir('entrant')">Simuler un virement entrant</button>
+            <button type="button" (click)="ouvrir('sortant')">Simuler un virement sortant</button>
+          </div>
           <small>Environnement de test : données factices, aucun virement réel.</small>
-          @if (formulaire()) {
+          @if (formulaire() === 'sortant') {
+            <form
+              class="sortant"
+              (submit)="simulerSortant($event, sorIban.value, sorMontant.value, sorBeneficiaire.value, sorIbanBeneficiaire.value, sorLibelle.value)"
+            >
+              <label for="sor-iban">IBAN du compte débité</label>
+              <input #sorIban id="sor-iban" name="iban" [value]="rubrique()?.iban ?? ''" autocomplete="off" />
+              <label for="sor-montant">Montant (€)</label>
+              <input #sorMontant id="sor-montant" name="montant" inputmode="decimal" autocomplete="off" />
+              <label for="sor-beneficiaire">Nom du bénéficiaire</label>
+              <input #sorBeneficiaire id="sor-beneficiaire" name="beneficiaire" maxlength="70" autocomplete="off" />
+              <label for="sor-iban-beneficiaire">IBAN du bénéficiaire</label>
+              <input #sorIbanBeneficiaire id="sor-iban-beneficiaire" name="ibanBeneficiaire" maxlength="42" autocomplete="off" />
+              <label for="sor-libelle">Libellé</label>
+              <input #sorLibelle id="sor-libelle" name="libelle" maxlength="140" autocomplete="off" />
+              <button type="submit" [disabled]="envoi()">Simuler</button>
+            </form>
+          }
+          @if (formulaire() === 'entrant') {
             <form (submit)="simuler($event, iban.value, montantSaisi.value, emetteur.value, libelle.value)">
               <label for="sim-iban">IBAN du compte</label>
               <input #iban id="sim-iban" name="iban" [value]="rubrique()?.iban ?? ''" autocomplete="off" />
@@ -73,7 +102,10 @@ type Message = { texte: string; erreur: boolean };
     .libelle { color: #0f1b33; overflow-wrap: anywhere; }
     .libelle small { display: block; color: #5d6887; }
     .montant { color: #0a7d63; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .montant.debit { color: #0f1b33; }
+    .simule { font-style: normal; font-size: 12px; color: #8a5a00; background: #fff4d6; border-radius: 6px; padding: 1px 6px; margin-left: 6px; }
     .test { margin-top: 24px; padding: 16px; border: 1px dashed #b7c3d9; border-radius: 12px; }
+    .boutons { display: flex; flex-wrap: wrap; gap: 8px; }
     .test small { display: block; color: #5d6887; margin-top: 6px; }
     form { display: grid; gap: 6px; margin-top: 12px; max-width: 420px; }
     label { font-size: 14px; color: #0f1b33; margin-top: 6px; }
@@ -89,7 +121,10 @@ type Message = { texte: string; erreur: boolean };
 })
 export class RubriqueVersements implements OnInit {
   readonly compteId = input.required<string>();
-  /** Un virement simulé a été crédité : la page recharge le compte pour afficher le nouveau solde. */
+  /**
+   * Un virement simulé a été crédité (CU-143) ou débité (CU-144) : la page recharge le compte pour afficher le
+   * nouveau solde.
+   */
   readonly credite = output<void>();
 
   private readonly comptes = inject(ComptesService);
@@ -98,7 +133,7 @@ export class RubriqueVersements implements OnInit {
   protected readonly rubrique = signal<Rubrique | null>(null);
   protected readonly erreur = signal(false);
   protected readonly bouchon = signal(false);
-  protected readonly formulaire = signal(false);
+  protected readonly formulaire = signal<'entrant' | 'sortant' | null>(null);
   protected readonly envoi = signal(false);
   protected readonly message = signal<Message | null>(null);
 
@@ -125,6 +160,50 @@ export class RubriqueVersements implements OnInit {
     });
   }
 
+  /** Ouvre le formulaire demandé, ou le referme s'il était déjà ouvert. */
+  protected ouvrir(sens: 'entrant' | 'sortant'): void {
+    this.formulaire.set(this.formulaire() === sens ? null : sens);
+    this.message.set(null);
+  }
+
+  // CU-144 : virement sortant simulé depuis le compte affiché. Refus du backend affichés tels quels
+  // (« Solde insuffisant », « IBAN invalide », « Compte clôturé »...).
+  protected simulerSortant(
+    evenement: Event,
+    iban: string,
+    montant: string,
+    beneficiaire: string,
+    ibanBeneficiaire: string,
+    libelle: string,
+  ): void {
+    evenement.preventDefault();
+    const montantCentimes = montantEnCentimes(montant);
+    if (montantCentimes === null) {
+      this.message.set({ texte: 'Montant invalide', erreur: true });
+      return;
+    }
+    this.envoi.set(true);
+    this.message.set(null);
+    this.virements.simulerSortant({ iban, montantCentimes, beneficiaire, ibanBeneficiaire, libelle }).subscribe({
+      next: (resultat) => {
+        this.envoi.set(false);
+        this.message.set({ texte: resultat.message, erreur: false });
+        this.charger();
+        this.credite.emit();
+      },
+      error: (erreur: HttpErrorResponse) => this.refus(erreur),
+    });
+  }
+
+  private refus(erreur: HttpErrorResponse): void {
+    this.envoi.set(false);
+    const texte: unknown = erreur.error?.message;
+    this.message.set({
+      texte: typeof texte === 'string' ? texte : 'La simulation n’a pas pu aboutir. Veuillez réessayer.',
+      erreur: true,
+    });
+  }
+
   protected simuler(evenement: Event, iban: string, montant: string, emetteur: string, libelle: string): void {
     evenement.preventDefault();
     const montantCentimes = montantEnCentimes(montant);
@@ -143,14 +222,7 @@ export class RubriqueVersements implements OnInit {
           this.credite.emit();
         }
       },
-      error: (erreur: HttpErrorResponse) => {
-        this.envoi.set(false);
-        const texte: unknown = erreur.error?.message;
-        this.message.set({
-          texte: typeof texte === 'string' ? texte : 'La simulation n’a pas pu aboutir. Veuillez réessayer.',
-          erreur: true,
-        });
-      },
+      error: (erreur: HttpErrorResponse) => this.refus(erreur),
     });
   }
 }
