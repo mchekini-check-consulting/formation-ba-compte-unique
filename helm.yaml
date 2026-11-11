@@ -13,7 +13,7 @@ applications:
     # remplace tout jusqu'à la fin de la ligne.
     tag:
       dev: 917b758
-      qualif: 8be9f9c
+      qualif: 917b758
       preprod: ""
       prod: ""
     containerPort: 8080
@@ -84,7 +84,7 @@ applications:
     # remplace tout jusqu'à la fin de la ligne.
     tag:
       dev: 1de1e37
-      qualif: c62c0a6
+      qualif: 1de1e37
       preprod: ""
       prod: ""
     containerPort: 8080
