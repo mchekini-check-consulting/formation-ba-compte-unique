@@ -34,6 +34,24 @@ public class CompteService {
 		return mouvements.findTop50ByCompteIdOrderByEffectueLeDescIdDesc(compte.getId());
 	}
 
+	/**
+	 * CU-146 et CU-147 : compte courant de la cliente connectée (celui rattaché à son identifiant de connexion) ;
+	 * refus « compte inaccessible » si elle n'en a pas.
+	 */
+	public Compte compteCourant(String jetonSession) {
+		return comptes.findByIdentifiantConnexionId(cliente(jetonSession))
+				.orElseThrow(CompteInaccessibleException::new);
+	}
+
+	/**
+	 * CU-147 : identifiant du compte courant de la cliente connectée, sans charger le compte : la signature d'un
+	 * virement le relit ensuite verrouillé, avec son solde à jour.
+	 */
+	public Long compteCourantId(String jetonSession) {
+		return comptes.idParIdentifiantConnexion(cliente(jetonSession))
+				.orElseThrow(CompteInaccessibleException::new);
+	}
+
 	public List<Compte> mesComptes(String jetonSession) {
 		return customerId(cliente(jetonSession)).map(comptes::findByCustomerId).orElseGet(List::of);
 	}

@@ -55,6 +55,8 @@ export function formaterDate(date: string): string {
 
 // CU-11 : un virement reçu, tel qu'affiché dans la rubrique Versements.
 // CU-144 : sortant -> montant débité, au profit de beneficiaire (emetteur vide) ; simule -> bouchon de test.
+// CU-147 : recredit -> virement refusé par la banque destinataire, montant recrédité ; ibanMasque du bénéficiaire
+// (quatre derniers caractères), statut du virement (« exécuté », « refusé »), motif du refus, virementId.
 export interface Mouvement {
   date: string;
   libelle: string;
@@ -63,6 +65,11 @@ export interface Mouvement {
   sortant: boolean;
   beneficiaire: string | null;
   simule: boolean;
+  recredit?: boolean;
+  ibanMasque?: string | null;
+  statut?: string | null;
+  motif?: string | null;
+  virementId?: number | null;
 }
 
 // CU-11 : IBAN complet à communiquer à l'émetteur (compte actif seulement) et derniers mouvements.

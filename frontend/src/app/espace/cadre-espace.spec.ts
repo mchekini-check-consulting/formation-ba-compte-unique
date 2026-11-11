@@ -45,6 +45,7 @@ describe('CadreEspace', () => {
 
   it.each([
     ['virement', 'Faire un virement', 'Virement'],
+    ['beneficiaires', 'Mes bénéficiaires', 'Bénéficiaires'],
     ['comptes', 'Mes comptes', 'Mes comptes'],
   ] as const)('marque la page %s dans les deux menus', async (cible, menu, mobile) => {
     const page = await afficher(cible);
