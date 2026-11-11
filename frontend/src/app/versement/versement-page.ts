@@ -5,6 +5,7 @@ import { CarteCompte } from '../comptes/carte-compte';
 import { Compte, ComptesService } from '../comptes/comptes';
 import { CadreEspace } from '../espace/cadre-espace';
 import { SuiviSession } from '../session/suivi-session';
+import { FormulaireVirement } from './formulaire-virement';
 import { RubriqueVersements } from './rubrique-versements';
 
 type Etat = { lu: false } | { lu: true; erreur: boolean; compte: Compte | null };
@@ -13,9 +14,11 @@ type Etat = { lu: false } | { lu: true; erreur: boolean; compte: Compte | null }
 // (haut de page et actions du compte courant). Même menu et même style que l'espace (CadreEspace) :
 // solde du compte courant, IBAN à communiquer à l'émetteur, mouvements et, en test, simulation d'un
 // virement entrant (CU-143) ou sortant (CU-144). Sans session, retour à la connexion.
+// CU-147 : virement vers un de mes bénéficiaires (FormulaireVirement) ; une fois exécuté, le solde et les
+// mouvements sont relus.
 @Component({
   selector: 'app-versement-page',
-  imports: [CadreEspace, CarteCompte, RouterLink, RubriqueVersements],
+  imports: [CadreEspace, CarteCompte, FormulaireVirement, RouterLink, RubriqueVersements],
   template: `
     <app-cadre-espace page="virement" [identifiant]="identifiant()">
       <section class="block">
@@ -23,8 +26,9 @@ type Etat = { lu: false } | { lu: true; erreur: boolean; compte: Compte | null }
           <div class="eyebrow">Mes comptes · Compte courant</div>
           <h1 class="titre">Faire un virement</h1>
           <p class="lead">
-            Recevez un virement instantané depuis un compte à votre nom : communiquez votre IBAN à l’émetteur. Les
-            virements reçus et émis apparaissent dans vos mouvements et votre solde est mis à jour.
+            Envoyez de l’argent à un de vos <a routerLink="/beneficiaires">bénéficiaires</a>, confirmé par un code reçu
+            par SMS. Pour recevoir un virement, communiquez votre IBAN à l’émetteur. Les virements reçus et émis
+            apparaissent dans vos mouvements et votre solde est mis à jour.
           </p>
           @if (etat(); as e) {
             @if (!e.lu) {
@@ -34,7 +38,14 @@ type Etat = { lu: false } | { lu: true; erreur: boolean; compte: Compte | null }
             } @else if (compte(); as compte) {
               <div class="feature versement">
                 <app-carte-compte [compte]="compte" />
-                <app-rubrique-versements [compteId]="'' + compte.id" (credite)="lireCompte()" />
+                <div class="colonne">
+                  <app-formulaire-virement (execute)="apresVirement()" />
+                  <app-rubrique-versements
+                    [compteId]="'' + compte.id"
+                    [actualisation]="actualisation()"
+                    (credite)="lireCompte()"
+                  />
+                </div>
               </div>
             } @else {
               <div class="noacct">
@@ -53,6 +64,7 @@ type Etat = { lu: false } | { lu: true; erreur: boolean; compte: Compte | null }
   `,
   styles: `
     .feature.versement { align-items: start; }
+    .colonne { min-width: 0; }
   `,
 })
 export class VersementPage {
@@ -61,6 +73,8 @@ export class VersementPage {
 
   protected readonly identifiant = signal('');
   protected readonly etat = signal<Etat>({ lu: false });
+  /** Augmenté après un virement exécuté : la rubrique relit les mouvements. */
+  protected readonly actualisation = signal(0);
   protected readonly compte = computed(() => {
     const etat = this.etat();
     return etat.lu ? etat.compte : null;
@@ -76,6 +90,12 @@ export class VersementPage {
       },
       error: () => undefined,
     });
+  }
+
+  /** CU-147 : virement exécuté -> nouveau solde et nouveaux mouvements. */
+  protected apresVirement(): void {
+    this.lireCompte();
+    this.actualisation.update((n) => n + 1);
   }
 
   /** Compte courant de la cliente (premier compte) ; relu après un virement crédité (nouveau solde). */

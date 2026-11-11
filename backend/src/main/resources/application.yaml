@@ -40,7 +40,13 @@ app:
     journal-consultable: ${JOURNAL_CONSULTABLE:true}
     # CU-143 : bouchon « Simuler un virement entrant » (/test/virements-entrants) en test (local, dev,
     # qualif) ; false en preprod et prod (helm.yaml) : le point d'accès n'existe alors pas.
+    # Même interrupteur pour CU-145 (bouchon de vérification du nom du bénéficiaire, /test/verification-beneficiaire ;
+    # IBAN de test acceptés) et CU-147 (/test/virements/{id}/refus). Le bouchon de virement sortant de CU-144 a été
+    # retiré : un virement sortant ne part que vers un bénéficiaire (CU-147).
     virements-simules: ${VIREMENTS_SIMULES:true}
+  virements:
+    # CU-147 critère 5 : plafond d'un virement en centimes, à valider avec la conformité. 0 = pas de plafond.
+    plafond-centimes: ${VIREMENTS_PLAFOND_CENTIMES:0}
 
 logging:
   level:

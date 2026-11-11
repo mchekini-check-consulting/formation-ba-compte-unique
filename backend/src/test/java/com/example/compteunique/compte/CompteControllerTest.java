@@ -105,12 +105,12 @@ class CompteControllerTest {
 		RubriqueVersements rubrique = controller.versements("jeton", "5");
 
 		assertEquals("FR76 9999 9000 0199 0000 0000 105", rubrique.iban());
-		assertEquals(List.of(new MouvementVue(date, "Loyer", "Emetteur Test", 1250, false, null, true)),
-				rubrique.mouvements());
+		assertEquals(List.of(new MouvementVue(date, "Loyer", "Emetteur Test", 1250, false, null, true, false, null,
+				null, null, null)), rubrique.mouvements());
 	}
 
 	@Test
-	void unVirementSortantEstAfficheAvecSonBeneficiaireSansSonIban() {
+	void unVirementSortantEstAfficheAvecSonBeneficiaireEtSonIbanMasque() {
 		OffsetDateTime date = OffsetDateTime.parse("2026-11-10T10:00:00Z");
 		Mouvement mouvement = Mouvement.virementSortant(1L, 3000, "Remboursement", "Beneficiaire Test",
 				"DE89370400440532013000", true, date);
@@ -119,8 +119,29 @@ class CompteControllerTest {
 
 		RubriqueVersements rubrique = controller.versements("jeton", "5");
 
-		assertEquals(List.of(new MouvementVue(date, "Remboursement", null, 3000, true, "Beneficiaire Test", true)),
-				rubrique.mouvements());
+		assertEquals(List.of(new MouvementVue(date, "Remboursement", null, 3000, true, "Beneficiaire Test", true,
+				false, "•••• 3000", null, null, null)), rubrique.mouvements());
+	}
+
+	@Test
+	void unVirementVersUnBeneficiaireAfficheSonStatutEtUnRecreditSonMotif() {
+		OffsetDateTime date = OffsetDateTime.parse("2026-11-11T10:00:00Z");
+		Mouvement debit = Mouvement.virementSortant(1L, 3000, "Loyer", "Test Cliente-B", "FR7699999000019900000000202",
+				false, date).duVirement(9L);
+		ReflectionTestUtils.setField(debit, "statutVirement", "REFUSE");
+		Mouvement recredit = Mouvement.recredit(1L, 3000, "Loyer", "Test Cliente-B", "FR7699999000019900000000202",
+				9L, date);
+		ReflectionTestUtils.setField(recredit, "statutVirement", "REFUSE");
+		ReflectionTestUtils.setField(recredit, "motifRefus", "Compte clôturé");
+		when(comptes.consulter("jeton", "5")).thenReturn(compte);
+		when(comptes.mouvements(compte)).thenReturn(List.of(recredit, debit));
+
+		List<MouvementVue> vues = controller.versements("jeton", "5").mouvements();
+
+		assertEquals(new MouvementVue(date, "Loyer", null, 3000, false, "Test Cliente-B", false, true, "•••• 0202",
+				"refusé", "Compte clôturé", 9L), vues.get(0));
+		assertEquals("refusé", vues.get(1).statut());
+		assertEquals(9L, vues.get(1).virementId());
 	}
 
 	@Test

@@ -5,6 +5,7 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { vi } from 'vitest';
 import { sessionFermee } from '../session/session-fermee';
+import { FormulaireVirement } from './formulaire-virement';
 import { RubriqueVersements } from './rubrique-versements';
 import { VersementPage } from './versement-page';
 
@@ -26,7 +27,17 @@ const COMPTE = {
 })
 class RubriqueVersementsSimulee {
   readonly compteId = input.required<string>();
+  readonly actualisation = input(0);
   readonly credite = output<void>();
+}
+
+// Le formulaire de virement est testé dans formulaire-virement.spec.ts.
+@Component({
+  selector: 'app-formulaire-virement',
+  template: '<button class="execute" (click)="execute.emit()"></button>',
+})
+class FormulaireVirementSimule {
+  readonly execute = output<void>();
 }
 
 describe('VersementPage', () => {
@@ -34,8 +45,8 @@ describe('VersementPage', () => {
 
   beforeEach(async () => {
     TestBed.overrideComponent(VersementPage, {
-      remove: { imports: [RubriqueVersements] },
-      add: { imports: [RubriqueVersementsSimulee] },
+      remove: { imports: [RubriqueVersements, FormulaireVirement] },
+      add: { imports: [RubriqueVersementsSimulee, FormulaireVirementSimule] },
     });
     await TestBed.configureTestingModule({
       imports: [VersementPage],
@@ -72,6 +83,15 @@ describe('VersementPage', () => {
     http.expectOne(COMPTES).flush([{ ...COMPTE, soldeCentimes: 1250, premierVersementAttendu: false }]);
     await TestBed.inject(ApplicationRef).whenStable();
     expect(page.querySelector('.solde')?.textContent).toContain('12,50');
+  });
+
+  it('CU-147 : après un virement exécuté, relit le solde', async () => {
+    const page = await ouvrir([{ ...COMPTE, soldeCentimes: 10000, premierVersementAttendu: false }]);
+    expect(page.querySelector('app-formulaire-virement')).not.toBeNull();
+    (page.querySelector('.execute') as HTMLButtonElement).click();
+    http.expectOne(COMPTES).flush([{ ...COMPTE, soldeCentimes: 7000, premierVersementAttendu: false }]);
+    await TestBed.inject(ApplicationRef).whenStable();
+    expect(page.querySelector('.solde')?.textContent).toContain('70,00');
   });
 
   it('invite à ouvrir un compte quand la cliente n’en a pas', async () => {

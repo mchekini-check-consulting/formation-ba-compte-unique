@@ -2,6 +2,7 @@ package com.example.compteunique.compte;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.compteunique.connexion.ConnexionController;
+import com.example.compteunique.virement.IbanBeneficiaire;
 
 // CU-20 : GET /comptes (mes comptes) ; GET /comptes/{id} (un compte dont je suis titulaire).
 // CU-11 : GET /comptes/{id}/versements (rubrique Versements : IBAN complet et derniers mouvements).
@@ -47,16 +49,25 @@ public class CompteController {
 
 	/**
 	 * CU-11 : un mouvement tel qu'affiché dans la rubrique Versements. CU-144 : sens (entrant ou sortant),
-	 * bénéficiaire d'un virement sortant (émetteur vide) et indicateur « simulé ». L'IBAN du bénéficiaire n'est pas
-	 * envoyé à l'écran.
+	 * bénéficiaire d'un virement sortant (émetteur vide) et indicateur « simulé ». CU-147 critères 14 et 15 :
+	 * recrédit d'un virement refusé, IBAN du bénéficiaire masqué (jamais complet), statut du virement (« exécuté »,
+	 * « refusé ») et motif de refus, identifiant du virement.
 	 */
 	public record MouvementVue(OffsetDateTime date, String libelle, String emetteur, long montantCentimes,
-			boolean sortant, String beneficiaire, boolean simule) {
+			boolean sortant, String beneficiaire, boolean simule, boolean recredit, String ibanMasque,
+			String statut, String motif, Long virementId) {
+
+		private static final Map<String, String> STATUTS = Map.of("EXECUTE", "exécuté",
+				"REFUSE", "refusé");
 
 		static MouvementVue de(Mouvement mouvement) {
+			String iban = mouvement.getIbanBeneficiaire();
 			return new MouvementVue(mouvement.getEffectueLe(), mouvement.getLibelle(), mouvement.getEmetteur(),
 					mouvement.getMontantCentimes(), mouvement.isSortant(), mouvement.getBeneficiaire(),
-					mouvement.isSimule());
+					mouvement.isSimule(), mouvement.isRecredit(),
+					iban == null ? null : IbanBeneficiaire.masquer(iban),
+					mouvement.getStatutVirement() == null ? null : STATUTS.get(mouvement.getStatutVirement()),
+					mouvement.getMotifRefus(), mouvement.getVirementId());
 		}
 
 	}

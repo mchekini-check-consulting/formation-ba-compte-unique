@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { SuiviSession, formaterRestant } from '../session/suivi-session';
 
 /** Page de l'espace ouverte dans le cadre, marquée dans le menu. */
-export type PageDuCadre = 'virement' | 'comptes';
+export type PageDuCadre = 'virement' | 'beneficiaires' | 'comptes';
 
 // Cadre commun des pages de l'espace hors accueil (« Faire un virement », « Mes comptes », détail
 // d'un compte) : même menu latéral, même barre du haut (minuteur de session, retour à l'espace,
@@ -21,6 +21,7 @@ export type PageDuCadre = 'virement' | 'comptes';
           <div class="sep">Mes comptes</div>
           <a routerLink="/espace" fragment="compte"><i></i>Compte courant</a>
           <a routerLink="/versement" [attr.aria-current]="courant('virement')"><i></i>Faire un virement</a>
+          <a routerLink="/beneficiaires" [attr.aria-current]="courant('beneficiaires')"><i></i>Mes bénéficiaires</a>
           <a routerLink="/comptes" [attr.aria-current]="courant('comptes')"><i></i>Mes comptes</a>
           <a routerLink="/espace" fragment="epargne"><i></i>Épargne et placements</a>
         </nav>
@@ -32,6 +33,7 @@ export type PageDuCadre = 'virement' | 'comptes';
         <nav class="row" aria-label="Mon espace (mobile)">
           <a routerLink="/espace">Accueil</a>
           <a routerLink="/versement" [attr.aria-current]="courant('virement')">Virement</a>
+          <a routerLink="/beneficiaires" [attr.aria-current]="courant('beneficiaires')">Bénéficiaires</a>
           <a routerLink="/comptes" [attr.aria-current]="courant('comptes')">Mes comptes</a>
         </nav>
       </div>

@@ -1,5 +1,6 @@
 import { Route, Routes } from '@angular/router';
 import { ActivationPage } from './activation/activation-page';
+import { MesBeneficiaires } from './beneficiaires/mes-beneficiaires';
 import { DetailCompte } from './comptes/detail-compte';
 import { MesComptes } from './comptes/mes-comptes';
 import { ConnexionPage } from './connexion-page/connexion-page';
@@ -11,6 +12,7 @@ import { PageInfo } from './page-info/page-info';
 import { MotDePasseOublie } from './reinitialisation/mot-de-passe-oublie';
 import { ReinitialisationPage } from './reinitialisation/reinitialisation-page';
 import { connexionPublique, espaceProtege } from './session/garde-session';
+import { VerificationTest } from './verification-test/verification-test';
 import { VersementPage } from './versement/versement-page';
 
 // CU-170 : refus par défaut. Seules les pages de PAGES_PUBLIQUES s'ouvrent sans session ; toutes
@@ -27,6 +29,7 @@ export const PAGES_PUBLIQUES: Routes = [
   { path: 'test/emails', component: MessagesTest, data: { canal: 'emails' } },
   { path: 'test/sms', component: MessagesTest, data: { canal: 'sms' } },
   { path: 'test/journal-securite', component: JournalTest },
+  { path: 'test/verification-beneficiaire', component: VerificationTest },
   { path: 'mentions-legales', component: PageInfo, data: { titre: 'Mentions légales' } },
   { path: 'protection-des-donnees', component: PageInfo, data: { titre: 'Politique de protection des données' } },
   { path: 'accessibilite', component: PageInfo, data: { titre: 'Accessibilité' } },
@@ -38,6 +41,8 @@ const PAGES_DE_L_ESPACE: Routes = [
   { path: 'comptes/:id', component: DetailCompte },
   // CU-11 : ouverte par les boutons « Faire un virement » de l'espace.
   { path: 'versement', component: VersementPage },
+  // CU-146 : rubrique « Mes bénéficiaires ».
+  { path: 'beneficiaires', component: MesBeneficiaires },
 ];
 
 const protegee = (route: Route): Route => ({ ...route, canActivate: [espaceProtege, ...(route.canActivate ?? [])] });

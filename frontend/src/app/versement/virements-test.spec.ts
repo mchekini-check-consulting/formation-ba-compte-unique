@@ -58,20 +58,4 @@ describe('VirementsTestService', () => {
     requete.flush({ resultat: 'CREDITE', message: 'Virement reçu' });
     expect(await resultat).toEqual({ resultat: 'CREDITE', message: 'Virement reçu' });
   });
-
-  it('envoie le virement sortant simulé au backend (CU-144)', async () => {
-    const virement = {
-      iban: 'FR76',
-      montantCentimes: 3000,
-      beneficiaire: 'Beneficiaire',
-      ibanBeneficiaire: 'DE89',
-      libelle: 'Libellé',
-    };
-    const resultat = firstValueFrom(service.simulerSortant(virement));
-    const requete = http.expectOne('/api/backend/test/virements-sortants');
-    expect(requete.request.method).toBe('POST');
-    expect(requete.request.body).toEqual(virement);
-    requete.flush({ message: 'Virement émis', soldeCentimes: 7000 });
-    expect(await resultat).toEqual({ message: 'Virement émis', soldeCentimes: 7000 });
-  });
 });

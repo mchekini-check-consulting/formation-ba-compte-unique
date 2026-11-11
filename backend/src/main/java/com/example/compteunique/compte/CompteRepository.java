@@ -33,4 +33,19 @@ public interface CompteRepository extends JpaRepository<Compte, Long> {
 	@Query("select c from Compte c where c.iban = :iban")
 	Optional<Compte> verrouillerParIban(@Param("iban") String iban);
 
+	/** CU-147 : identifiant du compte de la cliente, sans le charger (il est ensuite lu verrouillé). */
+	@Query("select c.id from Compte c where c.identifiantConnexionId = :identifiantConnexionId")
+	Optional<Long> idParIdentifiantConnexion(@Param("identifiantConnexionId") Long identifiantConnexionId);
+
+	/** CU-145 : compte d'un IBAN de test, pour retrouver le nom de son titulaire. */
+	Optional<Compte> findByIban(String iban);
+
+	/**
+	 * CU-147 : compte débité par un virement, verrouillé jusqu'à la fin de la transaction : deux virements signés
+	 * en même temps sont traités l'un après l'autre et le solde ne devient jamais négatif.
+	 */
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("select c from Compte c where c.id = :id")
+	Optional<Compte> verrouiller(@Param("id") Long id);
+
 }
