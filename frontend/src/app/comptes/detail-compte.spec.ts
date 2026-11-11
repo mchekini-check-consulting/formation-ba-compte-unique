@@ -1,5 +1,6 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { vi } from 'vitest';
@@ -11,7 +12,12 @@ import { DetailCompte } from './detail-compte';
 describe('DetailCompte', () => {
   let http: HttpTestingController;
   // CU-17 : suivi de la session simulé (testé dans suivi-session.spec.ts).
-  const suivi = { ouvrir: vi.fn(() => of({ identifiant: 'ABC', expireDansSecondes: 600 })), arreter: vi.fn() };
+  const suivi = {
+    ouvrir: vi.fn(() => of({ identifiant: 'ABC', expireDansSecondes: 600 })),
+    arreter: vi.fn(),
+    deconnecter: vi.fn(),
+    restant: signal<number | null>(600),
+  };
 
   async function preparer(id: string | null) {
     await TestBed.configureTestingModule({
@@ -50,6 +56,10 @@ describe('DetailCompte', () => {
     });
     expect(page.textContent).toContain('FR76 •••• •••• 0105');
     expect(page.querySelector('.solde')?.textContent).toBe('1 240,50 €');
+    // Cadre de l'espace : menu, « Mes comptes » marqué, identifiant de la cliente.
+    expect(page.querySelector('aside a[aria-current="page"]')?.textContent).toContain('Mes comptes');
+    expect(page.querySelector('.hello')?.textContent).toContain('ABC');
+    expect(page.querySelector('h1.titre')?.textContent).toBe('Mon compte');
   });
 
   it('affiche le message exact et aucune information pour un compte refusé', async () => {

@@ -74,15 +74,19 @@ describe('Espace', () => {
     expect(page.querySelector('.toast')?.textContent).toBe('Souscription Livret A : bientôt disponible.');
   });
 
-  it('les deux boutons « Faire un versement » ouvrent la page de versement (CU-11)', async () => {
+  it('les deux boutons « Faire un virement » ouvrent la page de virement (CU-11)', async () => {
     const { page } = await ouvrir([COMPTE]);
     const boutons = Array.from(page.querySelectorAll('a')).filter((lien) =>
-      lien.textContent?.includes('Faire un versement'),
+      lien.textContent?.includes('Faire un virement'),
     );
     expect(boutons).toHaveLength(2);
     for (const bouton of boutons) {
       expect(bouton.getAttribute('href')).toBe('/versement');
     }
+    expect(page.textContent).not.toContain('Faire un versement');
+    expect(page.querySelector('a.tile[href="/versement"]')?.textContent).toContain(
+      'Virement entrant ou sortant, depuis ou vers votre compte.',
+    );
   });
 
   it('affiche le compte à rebours de la session', async () => {

@@ -58,9 +58,9 @@ describe('VersementPage', () => {
 
   it('affiche le compte courant et la rubrique Versements de ce compte, dans le menu de l’espace', async () => {
     const page = await ouvrir([COMPTE]);
-    expect(page.querySelector('h1')?.textContent).toBe('Faire un versement');
+    expect(page.querySelector('h1')?.textContent).toBe('Faire un virement');
     expect(page.querySelector('.hello')?.textContent).toContain('ABC');
-    expect(page.querySelector('aside a[aria-current="page"]')?.textContent).toContain('Faire un versement');
+    expect(page.querySelector('aside a[aria-current="page"]')?.textContent).toContain('Faire un virement');
     expect(page.querySelector('a[href="/espace"]')).not.toBeNull();
     expect(page.querySelector('app-carte-compte')).not.toBeNull();
     expect(page.querySelector('.compte-id')?.textContent).toBe('5');

@@ -80,6 +80,9 @@
   .alt { background: var(--soft); }
   h2 { font-size: 34px; line-height: 1.15; margin: 10px 0 12px; letter-spacing: -.02em; color: var(--navy); text-wrap: balance; }
   h3 { color: var(--navy); }
+  /* Titre des pages du cadre de l'espace (CadreEspace : virement, mes comptes, détail d'un compte) */
+  .titre { font-size: 40px; line-height: 1.1; letter-spacing: -.02em; color: var(--navy); margin: 10px 0 12px; }
+  a.card { text-decoration: none; color: inherit; }
   .lead { color: var(--muted); font-size: 17px; line-height: 1.6; max-width: 680px; margin: 0 0 34px; }
 
   /* Cartes */
@@ -190,6 +193,7 @@
     .proof div:nth-child(2) { border-right: 0; }
     .proof div:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
     section.block { padding: 52px 20px; }
+    .titre { font-size: 32px; }
     .opt-grid, .sim-row { grid-template-columns: 1fr; }
     .tiles { grid-template-columns: 1fr 1fr; }
     .dark { padding: 28px 22px; }

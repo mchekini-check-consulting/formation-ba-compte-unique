@@ -36,7 +36,7 @@ const PAGES_DE_L_ESPACE: Routes = [
   { path: 'espace', component: Espace },
   { path: 'comptes', component: MesComptes },
   { path: 'comptes/:id', component: DetailCompte },
-  // CU-11 : ouverte par les boutons « Faire un versement » de l'espace.
+  // CU-11 : ouverte par les boutons « Faire un virement » de l'espace.
   { path: 'versement', component: VersementPage },
 ];
 

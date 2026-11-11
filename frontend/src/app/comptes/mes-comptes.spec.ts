@@ -1,5 +1,6 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { vi } from 'vitest';
@@ -11,7 +12,12 @@ import { MesComptes } from './mes-comptes';
 describe('MesComptes', () => {
   let http: HttpTestingController;
   // CU-17 : suivi de la session simulé (testé dans suivi-session.spec.ts).
-  const suivi = { ouvrir: vi.fn(() => of({ identifiant: 'ABC', expireDansSecondes: 600 })), arreter: vi.fn() };
+  const suivi = {
+    ouvrir: vi.fn(() => of({ identifiant: 'ABC', expireDansSecondes: 600 })),
+    arreter: vi.fn(),
+    deconnecter: vi.fn(),
+    restant: signal<number | null>(600),
+  };
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -42,6 +48,20 @@ describe('MesComptes', () => {
     expect(page.textContent).toContain('FR76 •••• •••• 0105');
     expect(page.textContent).toContain('Actif');
     expect(page.querySelector('a.compte')?.getAttribute('href')).toBe('/comptes/5');
+  });
+
+  it("s'affiche dans le cadre de l'espace, « Mes comptes » marqué dans le menu", async () => {
+    const page = await afficher([{ id: 5, ibanMasque: 'FR76 •••• •••• 0105', statut: 'ACTIF' }]);
+    expect(page.querySelector('.espace aside')).not.toBeNull();
+    expect(page.querySelector('h1.titre')?.textContent).toBe('Mes comptes');
+    expect(page.querySelector('.hello')?.textContent).toContain('ABC');
+    expect(page.querySelector('aside a[aria-current="page"]')?.textContent).toContain('Mes comptes');
+    expect(page.querySelector('.card.compte .tag')?.className).toContain('t-mint');
+  });
+
+  it('distingue un compte clôturé', async () => {
+    const page = await afficher([{ id: 7, ibanMasque: 'FR76 •••• •••• 0107', statut: 'CLOTURE' }]);
+    expect(page.querySelector('.card.compte .tag')?.className).toContain('t-blue');
   });
 
   it("invite à ouvrir un compte quand la cliente n'en a pas", async () => {

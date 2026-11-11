@@ -5,7 +5,7 @@ import { VirementsTestService, montantEnCentimes } from './virements-test';
 
 type Message = { texte: string; erreur: boolean };
 
-// CU-11 (US-06) : rubrique Versements de la page « Faire un versement » : IBAN complet à communiquer à l'émetteur
+// CU-11 (US-06) : rubrique Versements de la page « Faire un virement » : IBAN complet à communiquer à l'émetteur
 // d'un virement instantané (compte actif) et derniers mouvements (date, libellé, émetteur, montant).
 // CU-143 (TECH-04) : en environnement de test seulement, bouton « Simuler un virement entrant », formulaire
 // prérempli avec l'IBAN du compte. Aucun virement réel n'est émis.
