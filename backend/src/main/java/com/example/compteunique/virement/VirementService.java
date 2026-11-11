@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.OffsetDateTime;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,6 +23,7 @@ import com.example.compteunique.compte.CompteRepository;
 import com.example.compteunique.compte.CompteService;
 import com.example.compteunique.compte.Mouvement;
 import com.example.compteunique.compte.MouvementRepository;
+import com.example.compteunique.dossier.DossierRepository;
 import com.example.compteunique.logging.Loggable;
 
 // CU-147 (US-21) : virement depuis le compte courant de la cliente vers un de ses bénéficiaires actifs (CU-146).
@@ -30,6 +32,9 @@ import com.example.compteunique.logging.Loggable;
 // 2. signer : avec le bon code dans les 5 minutes, compte verrouillé, solde contrôlé à nouveau (deux virements
 //    simultanés : un seul passe), débit, mouvement du jour et statut « exécuté ».
 // 3. refuserParBanque (bouchon de test) : recrédit, mouvement de recrédit et statut « refusé » avec le motif.
+// CU-250 : bénéficiaire dont l'IBAN est un compte de la banque (virement interne) : à la signature, dans la même
+//    transaction, son compte est crédité avec un mouvement « virement reçu » au nom de l'émettrice ; compte
+//    clôturé : virement refusé (AC04), émettrice recréditée, compte du bénéficiaire inchangé.
 // Pas de découvert : le solde ne devient jamais négatif. Jamais d'IBAN, de nom, de libellé ni de code dans les logs.
 @Service
 @Loggable
@@ -56,9 +61,13 @@ public class VirementService {
 	static final String NON_EXECUTE = "Seul un virement exécuté peut être refusé par la banque destinataire";
 	static final String MOTIF_PAR_DEFAUT = "Refusé par la banque destinataire";
 	static final String RECREDITE = "Virement refusé par la banque destinataire : le montant a été recrédité.";
+	static final String BENEFICIAIRE_CLOTURE = "Compte clôturé (AC04)";
+	static final String REFUSE_BENEFICIAIRE_CLOTURE = "Virement refusé : le compte du bénéficiaire est clôturé (AC04). "
+			+ "Le montant a été recrédité.";
 
 	private final CompteService compteService;
 	private final CompteRepository comptes;
+	private final DossierRepository dossiers;
 	private final MouvementRepository mouvements;
 	private final VirementRepository virements;
 	private final BeneficiaireService beneficiaires;
@@ -77,19 +86,20 @@ public class VirementService {
 	}
 
 	@Autowired
-	public VirementService(CompteService compteService, CompteRepository comptes, MouvementRepository mouvements,
-			VirementRepository virements, BeneficiaireService beneficiaires, CodesSms codes,
-			@Value("${app.test.virements-simules}") boolean ibanDeTestAcceptes,
+	public VirementService(CompteService compteService, CompteRepository comptes, DossierRepository dossiers,
+			MouvementRepository mouvements, VirementRepository virements, BeneficiaireService beneficiaires,
+			CodesSms codes, @Value("${app.test.virements-simules}") boolean ibanDeTestAcceptes,
 			@Value("${app.virements.plafond-centimes:0}") long plafondCentimes) {
-		this(compteService, comptes, mouvements, virements, beneficiaires, codes, ibanDeTestAcceptes,
+		this(compteService, comptes, dossiers, mouvements, virements, beneficiaires, codes, ibanDeTestAcceptes,
 				plafondCentimes, Clock.systemDefaultZone());
 	}
 
-	VirementService(CompteService compteService, CompteRepository comptes, MouvementRepository mouvements,
-			VirementRepository virements, BeneficiaireService beneficiaires, CodesSms codes,
-			boolean ibanDeTestAcceptes, long plafondCentimes, Clock horloge) {
+	VirementService(CompteService compteService, CompteRepository comptes, DossierRepository dossiers,
+			MouvementRepository mouvements, VirementRepository virements, BeneficiaireService beneficiaires,
+			CodesSms codes, boolean ibanDeTestAcceptes, long plafondCentimes, Clock horloge) {
 		this.compteService = compteService;
 		this.comptes = comptes;
+		this.dossiers = dossiers;
 		this.mouvements = mouvements;
 		this.virements = virements;
 		this.beneficiaires = beneficiaires;
@@ -164,8 +174,18 @@ public class VirementService {
 				// suite ci-dessous
 			}
 		}
-		// Compte relu verrouillé : un autre virement signé en même temps attend la fin de celui-ci.
-		Compte compte = comptes.verrouiller(compteId).orElseThrow(CompteInaccessibleException::new);
+		// Comptes relus verrouillés : un autre virement signé en même temps attend la fin de celui-ci. CU-250 :
+		// le compte du bénéficiaire, s'il est dans la banque, est verrouillé aussi, toujours dans l'ordre des
+		// identifiants (deux virements croisés A -> B et B -> A ne s'attendent pas mutuellement).
+		Optional<Long> interneId = comptes.idParIban(virement.getIbanBeneficiaire());
+		Compte destinataire = null;
+		if (interneId.isPresent() && interneId.get() < compteId) {
+			destinataire = verrouiller(interneId.get());
+		}
+		Compte compte = verrouiller(compteId);
+		if (interneId.isPresent() && destinataire == null) {
+			destinataire = interneId.get().equals(compteId) ? compte : verrouiller(interneId.get());
+		}
 		if (!compte.isActif()) {
 			virement.annuler(COMPTE_CLOTURE);
 			throw new DemandeRefusee(HttpStatus.CONFLICT, COMPTE_CLOTURE, true);
@@ -179,7 +199,44 @@ public class VirementService {
 				virement.getNomBeneficiaire(), virement.getIbanBeneficiaire(), false, maintenant)
 				.duVirement(virement.getId()));
 		virement.executer(maintenant);
+		if (destinataire != null) {
+			return verserEnInterne(virement, compte, destinataire, maintenant);
+		}
 		return new Execution(VIREMENT_EXECUTE, compte.getSoldeCentimes());
+	}
+
+	/**
+	 * CU-250 : virement interne déjà débité. Compte du bénéficiaire actif : crédité, avec un mouvement « virement
+	 * reçu » au nom de l'émettrice. Clôturé : virement refusé (AC04) et émettrice recréditée ; le compte du
+	 * bénéficiaire n'est pas modifié.
+	 */
+	private Execution verserEnInterne(Virement virement, Compte compte, Compte destinataire,
+			OffsetDateTime maintenant) {
+		long montant = virement.getMontantCentimes();
+		if (!destinataire.isActif()) {
+			compte.crediter(montant, maintenant);
+			virement.refuser(BENEFICIAIRE_CLOTURE);
+			mouvements.save(Mouvement.recredit(compte.getId(), montant, virement.getLibelle(),
+					virement.getNomBeneficiaire(), virement.getIbanBeneficiaire(), virement.getId(), maintenant));
+			return new Execution(REFUSE_BENEFICIAIRE_CLOTURE, compte.getSoldeCentimes());
+		}
+		destinataire.crediter(montant, maintenant);
+		mouvements.save(new Mouvement(destinataire.getId(), montant, virement.getLibelle(), emettrice(compte), false,
+				maintenant));
+		return new Execution(VIREMENT_EXECUTE, compte.getSoldeCentimes());
+	}
+
+	/** Nom de l'émettrice affiché au bénéficiaire : prénoms et nom de naissance du dossier (70 caractères au plus). */
+	private String emettrice(Compte compte) {
+		String nom = dossiers.findById(compte.getDossierId())
+				.map(dossier -> (dossier.getPrenoms() + " " + dossier.getNomNaissance()).strip())
+				.filter(texte -> !texte.isEmpty())
+				.orElse("Cliente de la banque");
+		return nom.length() > VirementEntrant.EMETTEUR_MAX ? nom.substring(0, VirementEntrant.EMETTEUR_MAX) : nom;
+	}
+
+	private Compte verrouiller(Long id) {
+		return comptes.verrouiller(id).orElseThrow(CompteInaccessibleException::new);
 	}
 
 	/**

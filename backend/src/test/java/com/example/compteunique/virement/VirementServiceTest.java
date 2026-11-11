@@ -5,8 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -25,6 +27,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -38,6 +41,8 @@ import com.example.compteunique.compte.CompteService;
 import com.example.compteunique.compte.Iban;
 import com.example.compteunique.compte.Mouvement;
 import com.example.compteunique.compte.MouvementRepository;
+import com.example.compteunique.dossier.Dossier;
+import com.example.compteunique.dossier.DossierRepository;
 import com.example.compteunique.virement.VirementService.Execution;
 import com.example.compteunique.virement.VirementService.Recapitulatif;
 
@@ -53,6 +58,7 @@ class VirementServiceTest {
 
 	private final CompteService compteService = mock(CompteService.class);
 	private final CompteRepository comptes = mock(CompteRepository.class);
+	private final DossierRepository dossiers = mock(DossierRepository.class);
 	private final MouvementRepository mouvements = mock(MouvementRepository.class);
 	private final VirementRepository virements = mock(VirementRepository.class);
 	private final BeneficiaireService beneficiaires = mock(BeneficiaireService.class);
@@ -61,7 +67,7 @@ class VirementServiceTest {
 	private final Compte compte = new Compte(3L, CLIENTE, Iban.de("99000000001"), 7L, MAINTENANT.minusDays(30));
 
 	private VirementService service(boolean ibanDeTestAcceptes, long plafond) {
-		return new VirementService(compteService, comptes, mouvements, virements, beneficiaires, codes,
+		return new VirementService(compteService, comptes, dossiers, mouvements, virements, beneficiaires, codes,
 				ibanDeTestAcceptes, plafond, HORLOGE);
 	}
 
@@ -248,6 +254,113 @@ class VirementServiceTest {
 
 		refus(HttpStatus.CONFLICT, "Compte clôturé", () -> service.signer(JETON, 21L, CODE));
 		assertEquals(Virement.ANNULE, virement.getStatut());
+	}
+
+	// CU-250 : virement interne, le bénéficiaire a un compte dans la banque.
+
+	private Compte compteInterne(Long id, String statut) {
+		Compte interne = new Compte(4L, UUID.randomUUID(), Iban.de("99000000002"), 9L, MAINTENANT.minusDays(30));
+		ReflectionTestUtils.setField(interne, "id", id);
+		ReflectionTestUtils.setField(interne, "soldeCentimes", 1_000L);
+		ReflectionTestUtils.setField(interne, "statut", statut);
+		when(comptes.idParIban(IBAN_BENEFICIAIRE)).thenReturn(Optional.of(id));
+		when(comptes.verrouiller(id)).thenReturn(Optional.of(interne));
+		return interne;
+	}
+
+	private void emettrice(String prenoms, String nom) {
+		Dossier dossier = mock(Dossier.class);
+		when(dossier.getPrenoms()).thenReturn(prenoms);
+		when(dossier.getNomNaissance()).thenReturn(nom);
+		when(dossiers.findById(3L)).thenReturn(Optional.of(dossier));
+	}
+
+	private Mouvement[] mouvementsEnregistres(int nombre) {
+		ArgumentCaptor<Mouvement> enregistres = ArgumentCaptor.forClass(Mouvement.class);
+		verify(mouvements, times(nombre)).save(enregistres.capture());
+		return enregistres.getAllValues().toArray(Mouvement[]::new);
+	}
+
+	@Test
+	void cu250_unVirementInterneDebiteLEmettriceEtCrediteLeBeneficiaireAvecUnVirementRecu() {
+		Virement virement = virementEnAttente(3000, MAINTENANT, 0);
+		Compte interne = compteInterne(6L, Compte.ACTIF);
+		emettrice("Test", "Cliente-A");
+
+		Execution execution = service.signer(JETON, 21L, CODE);
+
+		assertEquals(new Execution(VirementService.VIREMENT_EXECUTE, 97_000L), execution);
+		assertEquals(Virement.EXECUTE, virement.getStatut());
+		assertEquals(4_000L, interne.getSoldeCentimes());
+		Mouvement[] enregistres = mouvementsEnregistres(2);
+		assertThat(enregistres[0].isSortant()).isTrue();
+		assertEquals(5L, enregistres[0].getCompteId());
+		Mouvement recu = enregistres[1];
+		assertEquals(Mouvement.VIREMENT_ENTRANT, recu.getType());
+		assertEquals(6L, recu.getCompteId());
+		assertEquals(3000L, recu.getMontantCentimes());
+		assertEquals("Loyer", recu.getLibelle());
+		assertEquals("Test Cliente-A", recu.getEmetteur());
+		assertThat(recu.isSimule()).isFalse();
+		assertEquals(MAINTENANT, recu.getEffectueLe());
+	}
+
+	@Test
+	void cu250_unBeneficiaireClotureRefuseLeVirementAC04EtRecrediteLEmettrice() {
+		Virement virement = virementEnAttente(3000, MAINTENANT, 0);
+		Compte interne = compteInterne(6L, Compte.CLOTURE);
+
+		Execution execution = service.signer(JETON, 21L, CODE);
+
+		assertEquals(new Execution(VirementService.REFUSE_BENEFICIAIRE_CLOTURE, 100_000L), execution);
+		assertEquals(Virement.REFUSE, virement.getStatut());
+		assertEquals(VirementService.BENEFICIAIRE_CLOTURE, virement.getMotifRefus());
+		assertEquals(1_000L, interne.getSoldeCentimes());
+		Mouvement[] enregistres = mouvementsEnregistres(2);
+		assertThat(enregistres[1].isRecredit()).isTrue();
+		assertEquals(5L, enregistres[1].getCompteId());
+	}
+
+	@Test
+	void cu250_lesComptesSontVerrouillesDansLOrdreDeLeursIdentifiants() {
+		virementEnAttente(3000, MAINTENANT, 0);
+		compteInterne(2L, Compte.ACTIF);
+		emettrice("Test", "Cliente-A");
+
+		service.signer(JETON, 21L, CODE);
+
+		InOrder ordre = inOrder(comptes);
+		ordre.verify(comptes).verrouiller(2L);
+		ordre.verify(comptes).verrouiller(5L);
+	}
+
+	@Test
+	void cu250_sansDossierLEmetteurEstGeneriqueEtUnNomTropLongEstCoupe() {
+		virementEnAttente(1000, MAINTENANT, 0);
+		compteInterne(6L, Compte.ACTIF);
+		service.signer(JETON, 21L, CODE);
+
+		emettrice("A".repeat(60), "B".repeat(20));
+		virementEnAttente(1000, MAINTENANT, 0);
+		service.signer(JETON, 21L, CODE);
+
+		Mouvement[] enregistres = mouvementsEnregistres(4);
+		assertEquals("Cliente de la banque", enregistres[1].getEmetteur());
+		assertEquals(VirementEntrant.EMETTEUR_MAX, enregistres[3].getEmetteur().length());
+	}
+
+	@Test
+	void cu250_unVirementVersSonPropreCompteDebiteEtRecrediteLeMemeCompte() {
+		virementEnAttente(3000, MAINTENANT, 0);
+		when(comptes.idParIban(IBAN_BENEFICIAIRE)).thenReturn(Optional.of(5L));
+		emettrice("Test", "Cliente-A");
+
+		Execution execution = service.signer(JETON, 21L, CODE);
+
+		assertEquals(new Execution(VirementService.VIREMENT_EXECUTE, 100_000L), execution);
+		assertEquals(100_000L, compte.getSoldeCentimes());
+		verify(comptes, times(1)).verrouiller(5L);
+		assertEquals(Mouvement.VIREMENT_ENTRANT, mouvementsEnregistres(2)[1].getType());
 	}
 
 	@Test
