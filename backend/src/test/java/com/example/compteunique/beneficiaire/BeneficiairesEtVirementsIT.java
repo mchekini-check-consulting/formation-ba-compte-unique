@@ -147,6 +147,7 @@ class BeneficiairesEtVirementsIT {
 				() -> virements.preparer(clienteA, new Demande(papa.id(), "500,01", "Loyer")));
 		assertEquals("Premier virement vers ce bénéficiaire : montant limité à 500 €", premier.getMessage());
 		long avant = solde(IBAN_A);
+		long avantB = solde(IBAN_B);
 		Recapitulatif recap = virements.preparer(clienteA, new Demande(papa.id(), "12,50", "Loyer")).getBody();
 		assertEquals(avant, solde(IBAN_A));
 		Execution execution = virements.signer(clienteA, recap.virementId(),
@@ -159,6 +160,16 @@ class BeneficiairesEtVirementsIT {
 		assertEquals("Test Cliente-B", debit.beneficiaire());
 		assertEquals("•••• 0202", debit.ibanMasque());
 		assertEquals("Loyer", debit.libelle());
+
+		// CU-250 : B a un compte dans la banque (virement interne) : crédité dans la même opération, avec un
+		// virement reçu au nom de l'émettrice.
+		assertEquals(avantB + 1250, solde(IBAN_B));
+		MouvementVue recu = mouvements(clienteB, IBAN_B).get(0);
+		assertThat(recu.sortant()).isFalse();
+		assertThat(recu.simule()).isFalse();
+		assertEquals(1250, recu.montantCentimes());
+		assertEquals("Test Cliente-A", recu.emetteur());
+		assertEquals("Loyer", recu.libelle());
 
 		// Critère 13 : deux virements signés en même temps dont la somme dépasse le solde : un seul passe.
 		long moitieEtPlus = solde(IBAN_A) / 2 + 100;

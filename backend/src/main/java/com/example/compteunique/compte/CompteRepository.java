@@ -37,6 +37,13 @@ public interface CompteRepository extends JpaRepository<Compte, Long> {
 	@Query("select c.id from Compte c where c.identifiantConnexionId = :identifiantConnexionId")
 	Optional<Long> idParIdentifiantConnexion(@Param("identifiantConnexionId") Long identifiantConnexionId);
 
+	/**
+	 * CU-250 : identifiant du compte de la banque qui porte cet IBAN (virement interne), sans le charger : il est
+	 * ensuite lu verrouillé, dans l'ordre des identifiants pour que deux virements croisés ne se bloquent pas.
+	 */
+	@Query("select c.id from Compte c where c.iban = :iban")
+	Optional<Long> idParIban(@Param("iban") String iban);
+
 	/** CU-145 : compte d'un IBAN de test, pour retrouver le nom de son titulaire. */
 	Optional<Compte> findByIban(String iban);
 
