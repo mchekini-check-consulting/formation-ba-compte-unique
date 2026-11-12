@@ -19,6 +19,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import com.example.compteunique.beneficiaire.DemandeRefusee;
+import com.example.compteunique.compte.ClienteNonConnecteeException;
+import com.example.compteunique.compte.CompteInaccessibleException;
 import com.example.compteunique.livreta.LivretAController.Eligibilite;
 import com.example.compteunique.livreta.LivretAController.Refus;
 import com.example.compteunique.livreta.LivretAController.ResultatInterrogation;
@@ -105,8 +107,10 @@ class LivretAControllerTest {
 
 	@Test
 	void sansSessionOuSansCompte() {
-		assertEquals(HttpStatus.UNAUTHORIZED, controleur.nonConnectee().getStatusCode());
-		ResponseEntity<Refus> sansCompte = controleur.sansCompte();
+		ResponseEntity<Refus> nonConnectee = controleur.refus(new ClienteNonConnecteeException());
+		assertEquals(HttpStatus.UNAUTHORIZED, nonConnectee.getStatusCode());
+		assertNull(nonConnectee.getBody());
+		ResponseEntity<Refus> sansCompte = controleur.refus(new CompteInaccessibleException());
 		assertEquals(HttpStatus.NOT_FOUND, sansCompte.getStatusCode());
 		assertEquals(LivretAController.SANS_COMPTE, sansCompte.getBody().message());
 	}

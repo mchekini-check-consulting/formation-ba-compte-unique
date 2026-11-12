@@ -34,7 +34,7 @@ public class LivretATestController {
 
 	@ExceptionHandler(DemandeRefusee.class)
 	public ResponseEntity<Refus> refus(DemandeRefusee refus) {
-		return ResponseEntity.status(refus.getStatut()).body(new Refus(refus.getMessage(), refus.isTermine()));
+		return LivretAController.reponseDe(refus);
 	}
 
 }

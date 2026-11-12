@@ -69,19 +69,20 @@ public class LivretAController {
 				.de(service.enregistrerReponse(jetonSession, reference, lu.interrogationId(), lu.resultat()));
 	}
 
-	@ExceptionHandler(DemandeRefusee.class)
-	public ResponseEntity<Refus> refus(DemandeRefusee refus) {
-		return ResponseEntity.status(refus.getStatut()).body(new Refus(refus.getMessage(), refus.isTermine()));
+	/** Sans session : 401 sans corps ; sans compte courant : 404 ; demande refusée : son code et son message. */
+	@ExceptionHandler({ DemandeRefusee.class, ClienteNonConnecteeException.class, CompteInaccessibleException.class })
+	public ResponseEntity<Refus> refus(RuntimeException erreur) {
+		return reponseDe(erreur);
 	}
 
-	@ExceptionHandler(ClienteNonConnecteeException.class)
-	public ResponseEntity<Void> nonConnectee() {
+	static ResponseEntity<Refus> reponseDe(RuntimeException erreur) {
+		if (erreur instanceof DemandeRefusee demande) {
+			return ResponseEntity.status(demande.getStatut()).body(new Refus(demande.getMessage(), demande.isTermine()));
+		}
+		if (erreur instanceof CompteInaccessibleException) {
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new Refus(SANS_COMPTE, true));
+		}
 		return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-	}
-
-	@ExceptionHandler(CompteInaccessibleException.class)
-	public ResponseEntity<Refus> sansCompte() {
-		return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new Refus(SANS_COMPTE, true));
 	}
 
 }
