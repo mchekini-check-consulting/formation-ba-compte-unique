@@ -35,6 +35,22 @@ public interface DossierRepository extends JpaRepository<Dossier, Long> {
 			@Param("prenoms") String prenomsNormalises, @Param("dateNaissance") LocalDate dateNaissance,
 			@Param("commune") String communeNormalisee, @Param("paysNaissance") String paysNaissance);
 
+	/**
+	 * CU-31 : dossiers de la même identité (nom de naissance, prénoms, date, commune et pays de naissance),
+	 * quelle que soit la pièce : une pièce renouvelée ne permet pas d'ouvrir un second Livret A. Même
+	 * normalisation que memePersonne.
+	 */
+	@Query(value = """
+			select d.id from dossier d
+			where d.date_naissance = :dateNaissance and d.pays_naissance = :paysNaissance
+			and upper(translate(d.nom_naissance, ' -', '')) = :nom
+			and upper(translate(d.prenoms, ' -', '')) = :prenoms
+			and upper(translate(d.commune_naissance, ' -', '')) = :commune
+			""", nativeQuery = true)
+	List<Long> idsMemeIdentite(@Param("nom") String nomNormalise, @Param("prenoms") String prenomsNormalises,
+			@Param("dateNaissance") LocalDate dateNaissance, @Param("commune") String communeNormalisee,
+			@Param("paysNaissance") String paysNaissance);
+
 	/** CU-9 : dossiers sans action de la cliente depuis une date (annulation pour inactivité). */
 	List<Dossier> findByStatutAndAttenteAnalysteFalseAndDerniereActionLeBefore(StatutDossier statut,
 			OffsetDateTime limite);

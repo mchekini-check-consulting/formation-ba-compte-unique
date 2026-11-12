@@ -72,6 +72,34 @@ Docusign ni envoi de SMS.
 
 Enregistré : chaque appel (date, dossier, enveloppe, code reçu, résultat).
 
+## Administration fiscale, Livret A (CU-295)
+
+Simule l'interrogation du fichier FICOBA pour le contrôle « un seul Livret A par personne »
+(CU-31), sans aucun appel réel.
+
+`POST /administration-fiscale/interrogations`
+`{demandeId, nom, prenoms, sexe (F ou M), dateNaissance, lieuNaissance, partageDetailAutorise, casDeTest?}`
+
+`casDeTest` est choisi dans le panneau de test de l'écran « Ouvrir mon Livret A ». Sans cas :
+`SANS_LIVRET_A`.
+
+| `casDeTest` | Réponse (`resultat`) |
+|---|---|
+| `SANS_LIVRET_A` | `AUCUN_LIVRET_A` : « aucun autre Livret A », l'ouverture est validée |
+| `DETENU_AILLEURS` | `LIVRET_A_EXISTANT`, avec `detail` (Banque Exemple, Agence Paris Centre, 02/03/2015) seulement si `partageDetailAutorise` vaut `true`, sinon sans détail |
+| `SANS_REPONSE` | `SANS_REPONSE` : pas de réponse, la demande reste en attente (délai de 2 jours ouvrés) |
+| `INDISPONIBLE` | `INDISPONIBLE` : service indisponible, la demande reste en attente |
+
+Pour simuler l'expiration du délai de 2 jours ouvrés sans attendre, utiliser le bouton du
+panneau de test, qui appelle le backend :
+`POST /backend/test/livret-a/demandes/{reference}/expiration-delai`.
+
+Enregistré : chaque appel (date, référence de la demande, cas de test, résultat, détail
+communiqué ou non). Jamais l'identité transmise.
+
+Actif seulement en local, dev et qualif (`BOUCHON_FISCAL_ACTIF`, `helm.yaml`) : en preprod et
+prod, l'adresse n'existe pas (404).
+
 ## En local
 
 - Base : `docker compose up -d` (PostgreSQL sur le port **5433**, base `bouchons_identite`)

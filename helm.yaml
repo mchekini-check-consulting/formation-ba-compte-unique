@@ -53,6 +53,9 @@ applications:
       # CU-143 : bouchon « Simuler un virement entrant » (/test/virements-entrants) en dev et qualif.
       - key: VIREMENTS_SIMULES
         value: {dev: "true", qualif: "true", preprod: "false", prod: "false"}
+      # CU-295 : « Simuler l'expiration du délai » de l'administration fiscale (/test/livret-a/...) en dev et qualif.
+      - key: LIVRET_A_SIMULE
+        value: {dev: "true", qualif: "true", preprod: "false", prod: "false"}
       # Comptes de test (db/demo) en dev et qualif, jamais en preprod ni en prod.
       - key: SPRING_FLYWAY_LOCATIONS
         value:
@@ -121,4 +124,7 @@ applications:
         value: {dev: debug, qualif: info, preprod: info, prod: warn}
       # Swagger (.../gateway/bouchons-identite/swagger-ui.html) en dev et qualif, jamais en preprod ni en prod.
       - key: SWAGGER_ACTIF
+        value: {dev: "true", qualif: "true", preprod: "false", prod: "false"}
+      # CU-295 : bouchon de l'administration fiscale (/administration-fiscale/...) en dev et qualif seulement.
+      - key: BOUCHON_FISCAL_ACTIF
         value: {dev: "true", qualif: "true", preprod: "false", prod: "false"}

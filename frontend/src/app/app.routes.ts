@@ -7,6 +7,7 @@ import { ConnexionPage } from './connexion-page/connexion-page';
 import { Espace } from './espace/espace';
 import { JournalTest } from './journal-test/journal-test';
 import { Landing } from './landing/landing';
+import { LivretAPage } from './livret-a/livret-a-page';
 import { MessagesTest } from './messages-test/messages-test';
 import { PageInfo } from './page-info/page-info';
 import { MotDePasseOublie } from './reinitialisation/mot-de-passe-oublie';
@@ -43,6 +44,8 @@ const PAGES_DE_L_ESPACE: Routes = [
   { path: 'versement', component: VersementPage },
   // CU-146 : rubrique « Mes bénéficiaires ».
   { path: 'beneficiaires', component: MesBeneficiaires },
+  // CU-31 : ouverture d'un Livret A (éligibilité et contrôle de multidétention).
+  { path: 'livret-a', component: LivretAPage },
 ];
 
 const protegee = (route: Route): Route => ({ ...route, canActivate: [espaceProtege, ...(route.canActivate ?? [])] });

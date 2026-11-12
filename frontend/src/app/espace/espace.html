@@ -172,9 +172,14 @@
                   <span class="min">{{ produit.minimum }}</span>
                   <div class="foot">
                     <span class="note">{{ produit.note }}</span>
-                    <button class="btn p sm" type="button" (click)="annoncer('Souscription ' + produit.nom + ' : bientôt disponible.')">
-                      Souscrire
-                    </button>
+                    @if (produit.nom === 'Livret A') {
+                      <!-- CU-31 : ouverture d'un Livret A (éligibilité). -->
+                      <a class="btn p sm" routerLink="/livret-a">Ouvrir mon Livret A</a>
+                    } @else {
+                      <button class="btn p sm" type="button" (click)="annoncer('Souscription ' + produit.nom + ' : bientôt disponible.')">
+                        Souscrire
+                      </button>
+                    }
                   </div>
                 </div>
               </div>
