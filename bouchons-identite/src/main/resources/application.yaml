@@ -12,6 +12,12 @@ spring:
     hibernate:
       ddl-auto: validate   # le schéma vient uniquement des migrations Flyway
 
+app:
+  bouchon-fiscal:
+    # CU-295 critère 8 : bouchon de l'administration fiscale (/administration-fiscale/...) en test
+    # (local, dev, qualif) ; false en preprod et prod (helm.yaml) : le point d'accès n'existe alors pas.
+    actif: ${BOUCHON_FISCAL_ACTIF:true}
+
 logging:
   level:
     root: ${LOG_LEVEL:INFO}

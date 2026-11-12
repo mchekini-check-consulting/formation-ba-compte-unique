@@ -69,9 +69,16 @@ describe('Espace', () => {
 
   it('annonce les parcours pas encore développés, sans rien envoyer', async () => {
     const { fixture, page } = await ouvrir([COMPTE]);
-    page.querySelector<HTMLButtonElement>('#epargne .produit .btn')!.click();
+    page.querySelectorAll<HTMLButtonElement>('#epargne .produit .btn')[1].click();
     await fixture.whenStable();
-    expect(page.querySelector('.toast')?.textContent).toBe('Souscription Livret A : bientôt disponible.');
+    expect(page.querySelector('.toast')?.textContent).toBe('Souscription LDDS : bientôt disponible.');
+  });
+
+  it('la carte Livret A ouvre la page « Ouvrir mon Livret A » (CU-31)', async () => {
+    const { page } = await ouvrir([COMPTE]);
+    const lien = page.querySelector<HTMLAnchorElement>('#epargne .produit .btn')!;
+    expect(lien.textContent?.trim()).toBe('Ouvrir mon Livret A');
+    expect(lien.getAttribute('href')).toBe('/livret-a');
   });
 
   it('les deux boutons « Faire un virement » ouvrent la page de virement (CU-11)', async () => {

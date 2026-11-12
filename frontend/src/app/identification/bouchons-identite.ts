@@ -70,6 +70,30 @@ export interface ReponseDocusign {
   message: string;
 }
 
+/** CU-295 : cas de test du bouchon de l'administration fiscale, choisis dans le panneau de test du Livret A. */
+export type CasFiscal = 'SANS_LIVRET_A' | 'DETENU_AILLEURS' | 'SANS_REPONSE' | 'INDISPONIBLE';
+export type ResultatFiscal = 'AUCUN_LIVRET_A' | 'LIVRET_A_EXISTANT' | 'SANS_REPONSE' | 'INDISPONIBLE';
+
+/** CU-31 : informations transmises à l'administration fiscale (date au format AAAA-MM-JJ). */
+export interface InterrogationFiscale {
+  demandeId: string;
+  nom: string;
+  prenoms: string;
+  sexe: string;
+  dateNaissance: string;
+  lieuNaissance: string;
+  partageDetailAutorise: boolean;
+  casDeTest?: CasFiscal;
+}
+
+export interface ReponseFiscale {
+  interrogationId: string;
+  resultat: ResultatFiscal;
+  /** Seulement pour LIVRET_A_EXISTANT, si la cliente a autorisé le partage du détail. */
+  detail: { etablissement: string; agence: string; dateOuverture: string } | null;
+  message: string;
+}
+
 /** CUB-8 : sans réponse des listes sanctions/PEP sous 5 secondes, la vérification est impossible. */
 export const DELAI_SANCTIONS_MS = 5000;
 
@@ -113,6 +137,11 @@ export class BouchonsIdentiteService {
       `${this.base}/docusign/enveloppes/${encodeURIComponent(enveloppeId)}/annulation`,
       {},
     );
+  }
+
+  /** CU-295 : interrogation de l'administration fiscale sur la détention d'un Livret A (bouchon). */
+  interrogerAdministrationFiscale(interrogation: InterrogationFiscale): Observable<ReponseFiscale> {
+    return this.http.post<ReponseFiscale>(`${this.base}/administration-fiscale/interrogations`, interrogation);
   }
 
   /** selfie : code d'un selfie de test du bouchon (aucune image n'est envoyée). */

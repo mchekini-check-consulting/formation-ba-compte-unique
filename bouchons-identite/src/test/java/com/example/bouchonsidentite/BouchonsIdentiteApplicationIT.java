@@ -21,6 +21,11 @@ import com.example.bouchonsidentite.document.VerificationDocumentService;
 import com.example.bouchonsidentite.docusign.AppelDocusignRepository;
 import com.example.bouchonsidentite.docusign.DocusignService;
 import com.example.bouchonsidentite.docusign.ResultatDocusign;
+import com.example.bouchonsidentite.fiscal.AdministrationFiscaleService;
+import com.example.bouchonsidentite.fiscal.CasFiscal;
+import com.example.bouchonsidentite.fiscal.FiscalRequetes.Interrogation;
+import com.example.bouchonsidentite.fiscal.InterrogationFiscaleRepository;
+import com.example.bouchonsidentite.fiscal.ResultatFiscal;
 import com.example.bouchonsidentite.selfie.ResultatSelfie;
 import com.example.bouchonsidentite.selfie.VerificationSelfieRepository;
 import com.example.bouchonsidentite.selfie.VerificationSelfieRequete;
@@ -71,6 +76,29 @@ class BouchonsIdentiteApplicationIT {
 			assertThat(appel.getCodeRecu()).isEqualTo("000000");
 			assertThat(appel.getResultat()).isEqualTo(ResultatDocusign.CODE_FAUX);
 			assertThat(appel.getAppeleLe()).isNotNull();
+		});
+	}
+
+	@Autowired
+	private AdministrationFiscaleService administrationFiscale;
+
+	@Autowired
+	private InterrogationFiscaleRepository interrogationsFiscales;
+
+	// CU-295 critère 9 : chaque interrogation est tracée (date, référence de la demande, résultat).
+	@Test
+	void interrogationsFiscalesTracees() {
+		var reponse = administrationFiscale.interroger(new Interrogation("demande-it", "Cliente-A", "Test", "F",
+				LocalDate.of(1990, 5, 14), "Paris", false, CasFiscal.DETENU_AILLEURS));
+
+		assertThat(reponse.resultat()).isEqualTo(ResultatFiscal.LIVRET_A_EXISTANT);
+		assertThat(reponse.detail()).isNull();
+		assertThat(interrogationsFiscales.findAll()).anySatisfy(trace -> {
+			assertThat(trace.getInterrogationId()).isEqualTo(reponse.interrogationId());
+			assertThat(trace.getDemandeId()).isEqualTo("demande-it");
+			assertThat(trace.getResultat()).isEqualTo(ResultatFiscal.LIVRET_A_EXISTANT);
+			assertThat(trace.isDetailCommunique()).isFalse();
+			assertThat(trace.getAppeleLe()).isNotNull();
 		});
 	}
 

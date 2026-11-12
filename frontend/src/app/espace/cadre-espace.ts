@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { SuiviSession, formaterRestant } from '../session/suivi-session';
 
 /** Page de l'espace ouverte dans le cadre, marquée dans le menu. */
-export type PageDuCadre = 'virement' | 'beneficiaires' | 'comptes';
+export type PageDuCadre = 'virement' | 'beneficiaires' | 'comptes' | 'livret-a';
 
 // Cadre commun des pages de l'espace hors accueil (« Faire un virement », « Mes comptes », détail
 // d'un compte) : même menu latéral, même barre du haut (minuteur de session, retour à l'espace,

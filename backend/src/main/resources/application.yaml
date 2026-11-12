@@ -44,6 +44,9 @@ app:
     # IBAN de test acceptés) et CU-147 (/test/virements/{id}/refus). Le bouchon de virement sortant de CU-144 a été
     # retiré : un virement sortant ne part que vers un bénéficiaire (CU-147).
     virements-simules: ${VIREMENTS_SIMULES:true}
+    # CU-295 critère 5 : « Simuler l'expiration du délai » de l'administration fiscale
+    # (/test/livret-a/...) en test (local, dev, qualif) ; false en preprod et prod (helm.yaml).
+    livret-a-simule: ${LIVRET_A_SIMULE:true}
   virements:
     # CU-147 critère 5 : plafond d'un virement en centimes, à valider avec la conformité. 0 = pas de plafond.
     plafond-centimes: ${VIREMENTS_PLAFOND_CENTIMES:0}
