@@ -198,6 +198,31 @@ public class Dossier {
 		derniereActionLe = maintenant;
 	}
 
+	/**
+	 * CU-28 : coordonnées corrigées par la cliente à l'étape identité de l'ouverture d'un Livret A, enregistrées
+	 * tout de suite (décision métier). Valeurs déjà contrôlées et nettoyées. Renvoie true si l'une a changé.
+	 */
+	public boolean corrigerCoordonnees(Coordonnees nouvelles, OffsetDateTime maintenant) {
+		Coordonnees actuelles = new Coordonnees(voie, complement, codePostal, ville, paysAdresse, email, mobile);
+		if (actuelles.equals(nouvelles)) {
+			return false;
+		}
+		voie = nouvelles.voie();
+		complement = nouvelles.complement();
+		codePostal = nouvelles.codePostal();
+		ville = nouvelles.ville();
+		paysAdresse = nouvelles.paysAdresse();
+		email = nouvelles.email();
+		mobile = nouvelles.mobile();
+		derniereActionLe = maintenant;
+		return true;
+	}
+
+	/** CU-28 : coordonnées modifiables par la cliente (complément d'adresse facultatif, null si vide). */
+	public record Coordonnees(String voie, String complement, String codePostal, String ville, String paysAdresse,
+			String email, String mobile) {
+	}
+
 	/** CUB-8 : tout contrôle en échec (sanctions ou PEP) annule le dossier (CU-9 : annulé par contrôle). */
 	void enregistrerControles(ResultatControle sanctions, ResultatControle pep, OffsetDateTime maintenant) {
 		controleSanctions = sanctions;

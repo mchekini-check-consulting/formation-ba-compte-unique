@@ -21,7 +21,12 @@ import org.springframework.http.ResponseEntity;
 import com.example.compteunique.beneficiaire.DemandeRefusee;
 import com.example.compteunique.compte.ClienteNonConnecteeException;
 import com.example.compteunique.compte.CompteInaccessibleException;
+import com.example.compteunique.dossier.Dossier.Coordonnees;
+import com.example.compteunique.livreta.IdentiteLivretAService.Identite;
+import com.example.compteunique.livreta.IdentiteLivretAService.IdentiteAControler;
+import com.example.compteunique.livreta.LivretAController.Confirmation;
 import com.example.compteunique.livreta.LivretAController.Eligibilite;
+import com.example.compteunique.livreta.LivretAController.ResultatControle;
 import com.example.compteunique.livreta.LivretAController.Refus;
 import com.example.compteunique.livreta.LivretAController.ResultatInterrogation;
 import com.example.compteunique.livreta.LivretAService.Suivi;
@@ -34,7 +39,8 @@ class LivretAControllerTest {
 	private static final Transmission TRANSMISSION = new Transmission("N", "P", "F", LocalDate.of(1990, 1, 1), "Paris");
 
 	private final LivretAService service = mock(LivretAService.class);
-	private final LivretAController controleur = new LivretAController(service);
+	private final IdentiteLivretAService identites = mock(IdentiteLivretAService.class);
+	private final LivretAController controleur = new LivretAController(service, identites);
 
 	private static DemandeLivretA demande() {
 		return new DemandeLivretA(7L, UUID.randomUUID(), true, MAINTENANT);
@@ -121,10 +127,77 @@ class LivretAControllerTest {
 		demande.recevoirReponse("i", ReponseFiscale.SANS_REPONSE, MAINTENANT);
 		demande.alerterConseiller(MAINTENANT);
 		when(service.simulerExpirationDelai("ref")).thenReturn(demande);
-		LivretATestController test = new LivretATestController(service);
+		LivretATestController test = new LivretATestController(service, identites);
 		assertTrue(test.expirerDelai("ref").retard());
 		ResponseEntity<Refus> refus = test.refus(new DemandeRefusee(HttpStatus.CONFLICT, "z"));
 		assertEquals(HttpStatus.CONFLICT, refus.getStatusCode());
+	}
+
+	// CU-28 : routes de l'étape « Mon identité ».
+	private static final Coordonnees COORDONNEES = new Coordonnees("1 rue", null, "75011", "Paris", "France",
+			"a@b.fr", "0612345678");
+	private static final IdentiteAControler A_CONTROLER = new IdentiteAControler("N", "P", LocalDate.of(1990, 1, 1),
+			"FRANCE");
+
+	private static ControleIdentiteLivretA controle() {
+		return new ControleIdentiteLivretA(7L, UUID.randomUUID(), false, MAINTENANT);
+	}
+
+	@Test
+	void identitePreRemplieEtDernierControle() {
+		Identite identite = new Identite("Mme", "N", "P", LocalDate.of(1990, 1, 1), COORDONNEES, "France");
+		when(identites.identite("j")).thenReturn(identite);
+		when(identites.dernierControle("j")).thenReturn(Optional.empty());
+		assertEquals(identite, controleur.identite("j").identite());
+		assertNull(controleur.identite("j").controle());
+		ControleIdentiteLivretA controle = controle();
+		when(identites.dernierControle("j")).thenReturn(Optional.of(new IdentiteLivretAService.Suivi(controle, A_CONTROLER)));
+		ControleIdentiteVue vue = controleur.identite("j").controle();
+		assertEquals(controle.getReference(), vue.reference());
+		assertEquals(ControleIdentiteVue.EN_COURS, vue.message());
+		assertEquals(A_CONTROLER, vue.aControler());
+	}
+
+	@Test
+	void identiteConfirmeeEn201() {
+		ControleIdentiteLivretA controle = controle();
+		when(identites.confirmer("j", COORDONNEES, true))
+				.thenReturn(new IdentiteLivretAService.Suivi(controle, A_CONTROLER));
+		ResponseEntity<ControleIdentiteVue> reponse = controleur.confirmerIdentite("j", new Confirmation(COORDONNEES, true));
+		assertEquals(HttpStatus.CREATED, reponse.getStatusCode());
+		assertEquals(StatutControleIdentite.EN_COURS, reponse.getBody().statut());
+		when(identites.confirmer("j", null, null)).thenThrow(new DemandeRefusee(HttpStatus.BAD_REQUEST, "x"));
+		assertThrows(DemandeRefusee.class, () -> controleur.confirmerIdentite("j", null));
+	}
+
+	@Test
+	void resultatDuControleEtMessages() {
+		ControleIdentiteLivretA controle = controle();
+		controle.recevoirResultat(ResultatSanctions.CORRESPONDANCE_SANCTIONS, 1, MAINTENANT);
+		when(identites.enregistrerResultat("j", "ref", ResultatSanctions.CORRESPONDANCE_SANCTIONS, 1))
+				.thenReturn(new IdentiteLivretAService.Suivi(controle, null));
+		ControleIdentiteVue vue = controleur.resultatControle("j", "ref",
+				new ResultatControle(ResultatSanctions.CORRESPONDANCE_SANCTIONS, 1));
+		assertEquals(ControleIdentiteVue.BLOQUE, vue.message());
+		assertNull(vue.aControler());
+		when(identites.enregistrerResultat("j", "ref", null, null)).thenThrow(new DemandeRefusee(HttpStatus.BAD_REQUEST, "x"));
+		assertThrows(DemandeRefusee.class, () -> controleur.resultatControle("j", "ref", null));
+		assertEquals(ControleIdentiteVue.VALIDE, ControleIdentiteVue.message(StatutControleIdentite.VALIDE));
+		assertEquals(ControleIdentiteVue.ATTENTE_RESPONSABLE,
+				ControleIdentiteVue.message(StatutControleIdentite.ATTENTE_RESPONSABLE));
+		assertEquals(ControleIdentiteVue.EN_ATTENTE, ControleIdentiteVue.message(StatutControleIdentite.EN_ATTENTE));
+	}
+
+	@Test
+	void controleurDeTestValideUnePPE() {
+		ControleIdentiteLivretA controle = controle();
+		controle.recevoirResultat(ResultatSanctions.CORRESPONDANCE_PEP, 1, MAINTENANT);
+		controle.validerParResponsable(MAINTENANT);
+		when(identites.validerParResponsable("ref")).thenReturn(controle);
+		LivretATestController test = new LivretATestController(service, identites);
+		ControleIdentiteVue vue = test.validerParResponsable("ref");
+		assertEquals(StatutControleIdentite.VALIDE, vue.statut());
+		assertTrue(vue.utilisable());
 	}
 
 }

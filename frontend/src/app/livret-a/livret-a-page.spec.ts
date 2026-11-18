@@ -6,8 +6,8 @@ import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { BouchonsIdentiteService, ReponseFiscale } from '../identification/bouchons-identite';
 import { SuiviSession } from '../session/suivi-session';
-import { DemandeLivretA, LivretAService } from './livret-a';
-import { ATTESTATION_OBLIGATOIRE, CHOIX_OBLIGATOIRE, LivretAPage } from './livret-a-page';
+import { ControleIdentite, DemandeLivretA, IdentiteLivretA, LivretAService } from './livret-a';
+import { ATTESTATION_OBLIGATOIRE, CAS_SANCTIONS, CHOIX_OBLIGATOIRE, LivretAPage, SANS_IDENTITE_CONFIRMEE } from './livret-a-page';
 
 const EN_COURS: DemandeLivretA = {
   reference: 'ref-1',
@@ -33,10 +33,30 @@ const VALIDEE: DemandeLivretA = {
 const SANS_REPONSE: DemandeLivretA = { ...EN_COURS, interrogationLe: '2026-11-12T09:00:00Z', reponseFiscale: 'SANS_REPONSE' };
 const REPONSE: ReponseFiscale = { interrogationId: 'i-1', resultat: 'AUCUN_LIVRET_A', detail: null, message: 'Aucun autre Livret A' };
 
+// CU-28 : identité déjà confirmée, l'éligibilité s'affiche directement.
+const IDENTITE: IdentiteLivretA = {
+  civilite: 'Mme',
+  nom: 'Cliente-A',
+  prenoms: 'Test',
+  dateNaissance: '1990-05-14',
+  coordonnees: { voie: '1 rue de Test', complement: null, codePostal: '75001', ville: 'Paris', paysAdresse: 'France', email: 'a@exemple.fr', mobile: '0600000000' },
+  residenceFiscale: 'France',
+};
+const IDENTITE_VALIDEE: ControleIdentite = { reference: 'ci-1', statut: 'VALIDE', message: 'Identité confirmée.', utilisable: true, aControler: null };
+
 const refus = (status: number, error: unknown) => throwError(() => new HttpErrorResponse({ status, error }));
 
 describe('LivretAPage (CU-31)', () => {
-  const service = { etat: vi.fn(), demander: vi.fn(), transmettreReponse: vi.fn(), simulerExpirationDelai: vi.fn() };
+  const service = {
+    etat: vi.fn(),
+    demander: vi.fn(),
+    transmettreReponse: vi.fn(),
+    simulerExpirationDelai: vi.fn(),
+    identite: vi.fn(),
+    confirmerIdentite: vi.fn(),
+    transmettreControle: vi.fn(),
+    simulerValidationResponsable: vi.fn(),
+  };
   const bouchons = { interrogerAdministrationFiscale: vi.fn() };
   const suivi = {
     ouvrir: vi.fn(() => of({ identifiant: 'ABC', expireDansSecondes: 600 })),
@@ -50,6 +70,7 @@ describe('LivretAPage (CU-31)', () => {
       appel.mockReset();
     }
     service.etat.mockReturnValue(of({ demande: null }));
+    service.identite.mockReturnValue(of({ identite: IDENTITE, controle: IDENTITE_VALIDEE }));
     service.demander.mockReturnValue(of(EN_COURS));
     service.transmettreReponse.mockReturnValue(of(VALIDEE));
     bouchons.interrogerAdministrationFiscale.mockReturnValue(of(REPONSE));
@@ -194,6 +215,73 @@ describe('LivretAPage (CU-31)', () => {
     await fixture.whenStable();
     fixture.detectChanges();
     expect(page.querySelector('.message')?.textContent).toContain('momentanément indisponible');
+  });
+
+  // CU-28 : étape « Mon identité » avant l'éligibilité.
+  it('sans identité confirmée, l’étape « Mon identité » s’affiche avant l’éligibilité', async () => {
+    service.identite.mockReturnValue(of({ identite: IDENTITE, controle: null }));
+    const { page } = await afficher();
+    expect(page.querySelector('app-etape-identite-livret-a h2')?.textContent).toContain('Mon identité');
+    expect(page.querySelector('form.eligibilite')).toBeNull();
+  });
+
+  it('identité déjà utilisée par une autre ouverture : à confirmer à nouveau', async () => {
+    service.identite.mockReturnValue(of({ identite: IDENTITE, controle: { ...IDENTITE_VALIDEE, utilisable: false } }));
+    const { page } = await afficher();
+    expect(page.querySelector('app-etape-identite-livret-a')).not.toBeNull();
+  });
+
+  it('identité indisponible : message de chargement en erreur', async () => {
+    service.identite.mockReturnValue(refus(500, null));
+    const { page } = await afficher();
+    expect(page.querySelector('[role=alert]')?.textContent).toContain('momentanément indisponible');
+  });
+
+  it('PPE : « Simuler la validation du responsable » ouvre l’éligibilité', async () => {
+    const attente: ControleIdentite = { ...IDENTITE_VALIDEE, statut: 'ATTENTE_RESPONSABLE', utilisable: false, message: 'En cours d’examen.' };
+    service.identite.mockReturnValue(of({ identite: IDENTITE, controle: attente }));
+    service.simulerValidationResponsable.mockReturnValue(of(IDENTITE_VALIDEE));
+    const { fixture, page } = await afficher();
+    expect(page.querySelector('.identite .message')?.textContent).toBe('En cours d’examen.');
+    Array.from(page.querySelectorAll<HTMLButtonElement>('button.secondaire'))
+      .find((b) => b.textContent?.includes('responsable'))!
+      .click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(service.simulerValidationResponsable).toHaveBeenCalledWith('ci-1');
+    expect(page.querySelector('form.eligibilite')).not.toBeNull();
+  });
+
+  it('PPE : validation refusée, message affiché', async () => {
+    const attente: ControleIdentite = { ...IDENTITE_VALIDEE, statut: 'ATTENTE_RESPONSABLE', utilisable: false };
+    service.identite.mockReturnValue(of({ identite: IDENTITE, controle: attente }));
+    service.simulerValidationResponsable.mockReturnValue(refus(409, { message: 'Pas en attente.' }));
+    const { fixture, page } = await afficher();
+    Array.from(page.querySelectorAll<HTMLButtonElement>('button.secondaire'))
+      .find((b) => b.textContent?.includes('responsable'))!
+      .click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(page.querySelector('.livret > .message')?.textContent).toBe('Pas en attente.');
+  });
+
+  it('éligibilité refusée faute d’identité confirmée : retour à l’étape « Mon identité »', async () => {
+    service.demander.mockReturnValue(refus(409, { message: SANS_IDENTITE_CONFIRMEE }));
+    const { fixture, page } = await afficher();
+    page.querySelector<HTMLInputElement>('input[name=attestation]')!.click();
+    page.querySelector<HTMLInputElement>('input[name=partage][value=oui]')!.click();
+    await valider(fixture, page);
+    expect(page.querySelector('app-etape-identite-livret-a')).not.toBeNull();
+  });
+
+  it('le cadre de test choisit la réponse du contrôle sanctions/PPE', async () => {
+    service.identite.mockReturnValue(of({ identite: IDENTITE, controle: null }));
+    const { fixture, page } = await afficher();
+    const radios = page.querySelectorAll<HTMLInputElement>('input[name=cas-sanctions]');
+    expect(radios.length).toBe(CAS_SANCTIONS.length);
+    radios[2].click();
+    fixture.detectChanges();
+    expect(radios[2].checked).toBe(true);
   });
 
   it('transmission refusée avec une session expirée : aucun message', async () => {

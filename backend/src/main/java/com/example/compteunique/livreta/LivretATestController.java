@@ -16,20 +16,30 @@ import com.example.compteunique.livreta.LivretAService.Suivi;
 // (app.test.livret-a-simule ; false en preprod et prod, helm.yaml : 404).
 // POST /test/livret-a/demandes/{reference}/expiration-delai : demande transmise et sans réponse -> conseiller
 // alerté, comme au bout de 2 jours ouvrés.
+// POST /test/livret-a/identite/{reference}/validation-responsable : CU-28, PPE validée par un responsable.
 @RestController
 @RequestMapping("/test/livret-a")
 @ConditionalOnProperty(name = "app.test.livret-a-simule", havingValue = "true")
 public class LivretATestController {
 
 	private final LivretAService service;
+	private final IdentiteLivretAService identites;
 
-	public LivretATestController(LivretAService service) {
+	public LivretATestController(LivretAService service, IdentiteLivretAService identites) {
 		this.service = service;
+		this.identites = identites;
 	}
 
 	@PostMapping("/demandes/{reference}/expiration-delai")
 	public DemandeLivretAVue expirerDelai(@PathVariable String reference) {
 		return DemandeLivretAVue.de(new Suivi(service.simulerExpirationDelai(reference), null));
+	}
+
+	/** CU-28 critère 9 (test) : « Simuler la validation du responsable » pour une personne politiquement exposée. */
+	@PostMapping("/identite/{reference}/validation-responsable")
+	public ControleIdentiteVue validerParResponsable(@PathVariable String reference) {
+		return ControleIdentiteVue
+				.de(new IdentiteLivretAService.Suivi(identites.validerParResponsable(reference), null));
 	}
 
 	@ExceptionHandler(DemandeRefusee.class)

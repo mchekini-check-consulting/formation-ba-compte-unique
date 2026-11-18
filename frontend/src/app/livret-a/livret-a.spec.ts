@@ -36,6 +36,37 @@ describe('LivretAService (CU-31) et bouchon fiscal (CU-295)', () => {
     expect(reponse.request.body).toEqual({ interrogationId: 'i-1', resultat: 'AUCUN_LIVRET_A' });
   });
 
+  it('appelle les routes /livret-a/identite du backend (CU-28) avec le cookie de session', () => {
+    const service = TestBed.inject(LivretAService);
+    const coordonnees = {
+      voie: '1 rue de la Paix',
+      complement: null,
+      codePostal: '75002',
+      ville: 'Paris',
+      paysAdresse: 'France',
+      email: 'cliente@example.com',
+      mobile: '0612345678',
+    };
+    service.identite().subscribe();
+    service.confirmerIdentite(coordonnees, true).subscribe();
+    service.transmettreControle('ci 1', 'CORRESPONDANCE_PEP', 2).subscribe();
+    service.simulerValidationResponsable('ci 1').subscribe();
+
+    const identite = http.expectOne({ method: 'GET', url: '/api/backend/livret-a/identite' });
+    const confirmer = http.expectOne({ method: 'POST', url: '/api/backend/livret-a/identite' });
+    const resultat = http.expectOne({ method: 'POST', url: '/api/backend/livret-a/identite/ci%201/resultat' });
+    const responsable = http.expectOne({
+      method: 'POST',
+      url: '/api/backend/test/livret-a/identite/ci%201/validation-responsable',
+    });
+    for (const requete of [identite, confirmer, resultat, responsable]) {
+      expect(requete.request.withCredentials).toBe(true);
+      requete.flush(null);
+    }
+    expect(confirmer.request.body).toEqual({ coordonnees, residenceFiscaleConfirmee: true });
+    expect(resultat.request.body).toEqual({ resultat: 'CORRESPONDANCE_PEP', tentatives: 2 });
+  });
+
   it('interroge le bouchon de l’administration fiscale via bouchons-identite', () => {
     const interrogation = {
       demandeId: 'ref',
