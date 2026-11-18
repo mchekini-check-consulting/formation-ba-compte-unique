@@ -123,6 +123,26 @@ describe('ConnexionPage', () => {
     expect(oeil.textContent).toContain('Afficher');
   });
 
+  it('CU-27 : une fois connectée, revient à la page demandée (parcours Livret A)', async () => {
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [ConnexionPage],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({ suite: '/livret-a' }) } } },
+      ],
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+    const navigation = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    const fixture = TestBed.createComponent(ConnexionPage);
+    await fixture.whenStable();
+    soumettre(fixture.nativeElement);
+    http.expectOne('/api/backend/connexion').flush({ identifiant: 'ABC' });
+    expect(navigation).toHaveBeenCalledWith('/livret-a');
+  });
+
   it('affiche « Session expirée » après 10 minutes sans activité (CU-17)', async () => {
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({

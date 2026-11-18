@@ -33,6 +33,12 @@ describe('Routes', () => {
     expect(ecran.querySelector('a')?.getAttribute('href')).toBe('/');
   });
 
+  it('CU-27 : la page Livret A est publique', async () => {
+    const route = PAGES_PUBLIQUES.find((r) => r.path === 'epargne/livret-a');
+    expect(route?.canActivate).toBeUndefined();
+    const harness = await RouterTestingHarness.create('/epargne/livret-a');
+    expect(harness.routeNativeElement?.querySelector('h1')?.textContent).toContain('Livret A');
+  });
 });
 
 // CU-170 : refus par défaut. Toute page absente de PAGES_PUBLIQUES exige une session ; une page
@@ -80,7 +86,8 @@ describe('Routes protégées par défaut', () => {
       async (adresse) => {
         const harness = await RouterTestingHarness.create();
         await harness.navigateByUrl(adresse);
-        expect(TestBed.inject(Router).url).toBe('/connexion');
+        // CU-27 : la page demandée est transmise à la connexion (paramètre « suite »).
+        expect(TestBed.inject(Router).url.split('?')[0]).toBe('/connexion');
       },
     );
   });

@@ -3,6 +3,7 @@ import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AccesLayout } from '../acces/acces-layout';
 import { ConnexionService, RefusConnexion } from '../connexion';
+import { destinationApresConnexion } from '../session/garde-session';
 import { MOTIF_EXPIREE, MOTIF_SESSION_EXPIREE } from '../session/suivi-session';
 
 const MESSAGE_INDISPONIBLE = 'Connexion impossible pour le moment, réessayez plus tard.';
@@ -41,7 +42,10 @@ export class ConnexionPage {
   protected readonly invitation = signal('');
   protected readonly enCours = signal(false);
   protected readonly visible = signal(false);
-  private readonly motif = inject(ActivatedRoute).snapshot.queryParamMap.get('motif');
+  private readonly parametres = inject(ActivatedRoute).snapshot.queryParamMap;
+  private readonly motif = this.parametres.get('motif');
+  /** CU-27 critère 7 : page où revenir une fois connectée (par défaut, l'espace). */
+  private readonly destination = destinationApresConnexion(this.parametres.get('suite'));
   /** CU-17 : arrivée après 10 minutes sans activité dans l'espace. */
   protected readonly sessionExpiree = this.motif === MOTIF_EXPIREE;
   /** CU-169 : session refusée par le serveur (expirée ou révoquée) pendant la navigation. */
@@ -58,7 +62,7 @@ export class ConnexionPage {
     this.invitation.set('');
     this.enCours.set(true);
     this.api.connecter(identifiant.value.trim(), motDePasse.value).subscribe({
-      next: () => void this.router.navigateByUrl('/espace'),
+      next: () => void this.router.navigateByUrl(this.destination),
       error: (e: HttpErrorResponse) => {
         this.enCours.set(false);
         motDePasse.value = '';

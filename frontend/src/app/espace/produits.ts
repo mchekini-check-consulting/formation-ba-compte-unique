@@ -1,3 +1,5 @@
+import { DETAIL_TAUX_LIVRET_A, LIVRET_A, TAUX_LIVRET_A, euros } from '../livret-a/parametres';
+
 // Produits proposés à la souscription dans l'espace client (maquette « Espace client Hi-Tech Bank »).
 export interface Produit {
   nom: string;
@@ -16,10 +18,11 @@ export const EPARGNE: Produit[] = [
     nom: 'Livret A',
     categorie: 'Épargne réglementée',
     teinte: 'mint',
-    description: "Une épargne disponible à tout moment, au taux fixé par l'État. Plafond de versements de 22 950 €.",
-    taux: '1,70 %',
-    tauxDetail: 'net / an',
-    minimum: 'Ouverture dès 10 €',
+    // CU-27 critère 5 : taux, plafond et minimum repris des paramètres uniques du Livret A.
+    description: `Une épargne disponible à tout moment, au taux fixé par l'État. Plafond de versements de ${euros(LIVRET_A.plafond)}.`,
+    taux: TAUX_LIVRET_A,
+    tauxDetail: DETAIL_TAUX_LIVRET_A,
+    minimum: `Ouverture dès ${euros(LIVRET_A.versementMinimum)}`,
     note: "Exonéré d'impôt sur le revenu",
   },
   {

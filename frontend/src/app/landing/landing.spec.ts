@@ -201,12 +201,22 @@ describe('Landing', () => {
     expect(page.querySelector('.hero')).not.toBeNull();
   });
 
-  it('envoie les cartes épargne vers le compte courant, sans ouvrir le parcours', async () => {
-    const cartes = page.querySelectorAll<HTMLAnchorElement>('#epargne .card');
+  it('envoie la carte Livret A vers sa page (CU-27) et les autres cartes épargne vers le compte courant', async () => {
+    const cartes = Array.from(page.querySelectorAll<HTMLAnchorElement>('#epargne .card'));
     expect(cartes.length).toBe(5);
-    cartes.forEach((carte) => expect(carte.getAttribute('href')).toBe('#compte'));
-    await cliquer('#epargne .card');
+    const [livretA, ...autres] = cartes;
+    expect(livretA.getAttribute('href')).toBe('/epargne/livret-a');
+    autres.forEach((carte) => expect(carte.getAttribute('href')).toBe('#compte'));
+    autres[0].click();
+    await fixture.whenStable();
     expect(page.querySelector('.parcours')).toBeNull();
+  });
+
+  it('CU-27 : affiche le taux du Livret A en net, depuis les paramètres', () => {
+    const carte = page.querySelector('#epargne .card')!.textContent!;
+    expect(carte).toContain('1,70 % net / an');
+    expect(carte).toContain('22 950 €');
+    expect(carte).toContain('Ouverture dès 10 €');
   });
 
   it("annonce le lien d'activation et le Livret A à la fin du parcours", async () => {

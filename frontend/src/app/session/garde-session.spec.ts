@@ -5,7 +5,7 @@ import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { Observable, of, throwError } from 'rxjs';
 import { ConnexionService, SessionEnCours } from '../connexion';
-import { connexionPublique, espaceProtege } from './garde-session';
+import { connexionPublique, destinationApresConnexion, espaceProtege } from './garde-session';
 
 @Component({ template: '<h1>Mon espace</h1><p class="solde">1 240,50 €</p>' })
 class EspaceFactice {}
@@ -15,6 +15,9 @@ class ConnexionFactice {}
 
 @Component({ template: '<h1>Mot de passe oublié</h1>' })
 class PagePubliqueFactice {}
+
+@Component({ template: '<h1>Ouvrir mon Livret A</h1>' })
+class LivretAFactice {}
 
 const SESSION: SessionEnCours = { identifiant: '12345678', expireDansSecondes: 600 };
 const refus = (error: unknown = null) =>
@@ -33,6 +36,7 @@ describe('Garde de session', () => {
           { path: 'espace', component: EspaceFactice, canActivate: [espaceProtege] },
           { path: 'connexion', component: ConnexionFactice, canActivate: [connexionPublique] },
           { path: 'mot-de-passe-oublie', component: PagePubliqueFactice },
+          { path: 'livret-a', component: LivretAFactice, canActivate: [espaceProtege] },
         ]),
         {
           provide: ConnexionService,
@@ -84,6 +88,38 @@ describe('Garde de session', () => {
     reponse = of(SESSION);
     const { url } = await ouvrir('/connexion');
     expect(url).toBe('/espace');
+  });
+
+  it('CU-27 : sans session, une autre page protégée est transmise à la connexion', async () => {
+    reponse = refus();
+    const { url } = await ouvrir('/livret-a');
+    expect(url).toBe('/connexion?suite=%2Flivret-a');
+  });
+
+  it('CU-27 : session expirée, le motif et la page demandée sont transmis', async () => {
+    reponse = refus({ motif: 'EXPIREE' });
+    const { url } = await ouvrir('/livret-a');
+    expect(url).toBe('/connexion?motif=expiree&suite=%2Flivret-a');
+  });
+
+  it('CU-27 : déjà connectée, la connexion renvoie vers la page demandée', async () => {
+    reponse = of(SESSION);
+    const { harness, url } = await ouvrir('/connexion?suite=%2Flivret-a');
+    expect(url).toBe('/livret-a');
+    expect(harness.routeNativeElement?.querySelector('h1')?.textContent).toBe('Ouvrir mon Livret A');
+  });
+
+  it.each([
+    [null, '/espace'],
+    ['/livret-a', '/livret-a'],
+    ['/comptes/5?onglet=2', '/comptes/5?onglet=2'],
+    ['https://exemple.com', '/espace'],
+    ['//exemple.com', '/espace'],
+    ['/\\exemple.com', '/espace'],
+    ['/connexion', '/espace'],
+    ['', '/espace'],
+  ])('CU-27 : après la connexion, « %s » mène à %s', (suite, destination) => {
+    expect(destinationApresConnexion(suite)).toBe(destination);
   });
 
   it("une page publique s'affiche sans session et sans vérification", async () => {

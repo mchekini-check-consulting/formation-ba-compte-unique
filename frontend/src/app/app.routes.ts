@@ -31,6 +31,8 @@ export const PAGES_PUBLIQUES: Routes = [
   { path: 'test/sms', component: MessagesTest, data: { canal: 'sms' } },
   { path: 'test/journal-securite', component: JournalTest },
   { path: 'test/verification-beneficiaire', component: VerificationTest },
+  // CU-27 : présentation du Livret A, ouverte à toutes ; son bouton d'ouverture mène à /livret-a (protégée).
+  { path: 'epargne/livret-a', loadComponent: () => import('./livret-a/presentation-livret-a').then((m) => m.PresentationLivretA) },
   { path: 'mentions-legales', component: PageInfo, data: { titre: 'Mentions légales' } },
   { path: 'protection-des-donnees', component: PageInfo, data: { titre: 'Politique de protection des données' } },
   { path: 'accessibilite', component: PageInfo, data: { titre: 'Accessibilité' } },

@@ -6,6 +6,7 @@ import { EtapePiece } from '../identification/etape-piece';
 import { EtapeQuestions } from '../identification/etape-questions';
 import { EtapeSelfie } from '../identification/etape-selfie';
 import { Identite } from '../identification/regles';
+import { DETAIL_TAUX_LIVRET_A, LIVRET_A, TAUX_LIVRET_A, euros } from '../livret-a/parametres';
 import { EtapeCompteOuvert } from '../ouverture/etape-compte-ouvert';
 import { EtapeSignature } from '../ouverture/etape-signature';
 import { OuvertureService, dossierEnSignature, memoriserDossierEnSignature } from '../ouverture/ouverture';
@@ -28,6 +29,13 @@ export class Landing {
   private readonly injector = inject(Injector);
   private readonly ouvertures = inject(OuvertureService);
   private readonly dossiers = inject(DossierService);
+  /** CU-27 critère 5 : fiche Livret A alimentée par les paramètres uniques du Livret A. */
+  protected readonly livretA = {
+    taux: TAUX_LIVRET_A,
+    detailTaux: DETAIL_TAUX_LIVRET_A,
+    plafond: euros(LIVRET_A.plafond),
+    minimum: euros(LIVRET_A.versementMinimum),
+  };
   protected readonly parcoursOuvert = signal(false);
   protected readonly etape = signal(1);
   protected readonly totalEtapes = DERNIERE_ETAPE;
