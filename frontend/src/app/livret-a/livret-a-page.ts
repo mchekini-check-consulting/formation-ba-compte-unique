@@ -1,12 +1,13 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { refusDe } from '../beneficiaires/beneficiaires';
 import { CadreEspace } from '../espace/cadre-espace';
 import { BouchonsIdentiteService, CasDeTest, CasFiscal, ReponseFiscale } from '../identification/bouchons-identite';
 import { SuiviSession } from '../session/suivi-session';
 import { EtapeIdentiteLivretA } from './etape-identite-livret-a';
-import { ControleIdentite, DemandeLivretA, IdentiteLivretA, LivretAService } from './livret-a';
+import { EtapePieceLivretA, pieceAFournir } from './etape-piece-livret-a';
+import { ControleIdentite, DemandeLivretA, EtapePiece, IdentiteLivretA, LivretAService } from './livret-a';
 
 type Message = { texte: string; erreur: boolean };
 type Chargement = { lu: false } | { lu: true; erreur: boolean };
@@ -18,6 +19,8 @@ export const CHOIX_OBLIGATOIRE =
 const INDISPONIBLE = 'Le service est momentanément indisponible. Veuillez réessayer plus tard.';
 /** Message du backend quand l'éligibilité est demandée sans identité confirmée (CU-28). */
 export const SANS_IDENTITE_CONFIRMEE = "Confirmez d'abord votre identité.";
+/** Message du backend quand l'éligibilité est demandée avec une pièce du dossier expirée (CU-29). */
+export const PIECE_EXPIREE = "Votre pièce d'identité a expiré : transmettez-en une nouvelle avant de continuer.";
 
 /** CU-28 : cas de test du bouchon sanctions/PPE (API Gels des avoirs). */
 export const CAS_SANCTIONS: { code: CasDeTest; libelle: string }[] = [
@@ -47,7 +50,7 @@ const STATUTS: Record<DemandeLivretA['statut'], string> = {
 // réponse au backend, qui applique les règles. Suivi de la demande ensuite (en cours, validée, existant).
 @Component({
   selector: 'app-livret-a-page',
-  imports: [CadreEspace, RouterLink, EtapeIdentiteLivretA],
+  imports: [CadreEspace, RouterLink, EtapeIdentiteLivretA, EtapePieceLivretA],
   template: `
     <app-cadre-espace page="livret-a" [identifiant]="identifiant()">
       <section class="block">
@@ -97,13 +100,17 @@ const STATUTS: Record<DemandeLivretA['statut'], string> = {
                 <!-- CU-28 : étape « Mon identité » avant l'éligibilité. -->
                 <app-etape-identite-livret-a
                   [donnees]="etape"
+                  [total]="totalEtapes()"
                   [casSanctions]="casSanctions()"
                   (validee)="identiteValidee.set(true)"
                   (controleChange)="controleIdentite.set($event)"
                 />
+              } @else if (pieceRequise() && etapePiece(); as piece) {
+                <!-- CU-29 : nouvelle pièce et vérification de présence, si la pièce du dossier a expiré. -->
+                <app-etape-piece-livret-a [donnees]="piece" [numero]="2" [total]="totalEtapes()" (validee)="pieceValidee.set(true)" />
               } @else {
                 <form class="eligibilite" (submit)="valider($event, attestation.checked)">
-                  <h2>Éligibilité <span class="etape">Étape 2 sur 2</span></h2>
+                  <h2>Éligibilité <span class="etape">Étape {{ totalEtapes() }} sur {{ totalEtapes() }}</span></h2>
                   <div class="info">
                     <p><b>Un seul Livret A par personne, toutes banques confondues.</b> Détenir plusieurs Livrets A est interdit.</p>
                     <p>
@@ -232,6 +239,13 @@ export class LivretAPage {
   protected readonly etapeIdentite = signal<{ identite: IdentiteLivretA; controle: ControleIdentite | null } | null>(null);
   protected readonly controleIdentite = signal<ControleIdentite | null>(null);
   protected readonly casSanctions = signal<CasDeTest>('CONFORME');
+  /** CU-29 : pièce du dossier expirée ou non, et dernière vérification de nouvelle pièce. */
+  protected readonly etapePiece = signal<EtapePiece | null>(null);
+  protected readonly pieceValidee = signal(false);
+  /** Nouvelle pièce à fournir avant l'éligibilité. */
+  protected readonly pieceRequise = computed(() => pieceAFournir(this.etapePiece()) && !this.pieceValidee());
+  /** 3 étapes si une nouvelle pièce est demandée, sinon 2. */
+  protected readonly totalEtapes = computed(() => (pieceAFournir(this.etapePiece()) ? 3 : 2));
   protected readonly casSanctionsTest = CAS_SANCTIONS;
   protected readonly message = signal<Message | null>(null);
 
@@ -285,7 +299,13 @@ export class LivretAPage {
             this.etapeIdentite.set(etape);
             this.controleIdentite.set(etape.controle);
             this.identiteValidee.set(etape.controle?.statut === 'VALIDE' && etape.controle.utilisable);
-            this.chargement.set({ lu: true, erreur: false });
+            this.service.piece().subscribe({
+              next: (piece) => {
+                this.etapePiece.set(piece);
+                this.chargement.set({ lu: true, erreur: false });
+              },
+              error: echec,
+            });
           },
           error: echec,
         });
@@ -376,6 +396,11 @@ export class LivretAPage {
     // CU-28 : identité à (re)confirmer avant l'éligibilité.
     if (refus.texte === SANS_IDENTITE_CONFIRMEE) {
       this.identiteValidee.set(false);
+    }
+    // CU-29 : pièce du dossier expirée, nouvelle pièce à transmettre.
+    if (refus.texte === PIECE_EXPIREE) {
+      this.pieceValidee.set(false);
+      this.service.piece().subscribe({ next: (piece) => this.etapePiece.set(piece), error: () => undefined });
     }
     if (refus.termine) {
       this.charger();

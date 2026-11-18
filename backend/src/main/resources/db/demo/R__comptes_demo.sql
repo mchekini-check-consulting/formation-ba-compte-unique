@@ -52,3 +52,29 @@ set solde_centimes = excluded.solde_centimes,
     solde_mis_a_jour_le = excluded.solde_mis_a_jour_le,
     statut = excluded.statut,
     ouvert_le = excluded.ouvert_le;
+
+-- CU-29 : cliente fictive dont la pièce d'identité a expiré (01/01/2024), pour l'étape « Ma pièce d'identité »
+-- de l'ouverture d'un Livret A. Même mot de passe que TEST-ACTIF. Une pièce vérifiée remplace celle du dossier :
+-- pour rejouer le cas, remettre date_expiration_piece au 2024-01-01 (base locale, dev ou qualif).
+insert into identifiant_connexion (identifiant, mot_de_passe_hache, statut, mot_de_passe_defini_le)
+values ('TEST-CLIENTE-PIECE', '$argon2id$v=19$m=19456,t=2,p=1$F9EBJ5M+w6iRouSP4fTqLw$mszuIh0THXtxwJXxiPuBv2aRVrwsKVdZGq9750nhk2k', 'ACTIF', now())
+on conflict (identifiant) do update
+set mot_de_passe_hache = excluded.mot_de_passe_hache,
+    statut = excluded.statut,
+    mot_de_passe_defini_le = excluded.mot_de_passe_defini_le;
+
+insert into dossier (reference, civilite, nom_naissance, prenoms, date_naissance, commune_naissance, pays_naissance,
+    indice_americain, nationalite, voie, code_postal, ville, pays_adresse, email, mobile, type_piece, numero_piece,
+    date_expiration_piece, residence_francaise, saisi_le, controle_sanctions, controle_pep, controle_le, statut, customer_id)
+values ('demo-cliente-piece', 'Mme', 'Cliente-Piece', 'Test', date '1990-01-01', 'Paris', 'FRANCE', false, 'FRANCE',
+    '1 rue de Test', '75001', 'Paris', 'France', 'cliente-piece@example.test', '0600000000', 'CARTE_NATIONALE_IDENTITE',
+    'DEMOE', date '2024-01-01', true, now(), 'OK', 'OK', now(), 'COMPTE_OUVERT', '00000000-0000-4000-8000-00000000000e'::uuid)
+on conflict do nothing;
+
+insert into compte (dossier_id, customer_id, iban, numero_compte, solde_centimes, solde_mis_a_jour_le, statut, ouvert_le, identifiant_connexion_id)
+select d.id, d.customer_id, 'FR7699999000019900000000590', '99000000005', 50000, now(), 'ACTIF',
+    timestamptz '2026-10-01 09:00:00+02', i.id
+from dossier d
+join identifiant_connexion i on i.identifiant = 'TEST-CLIENTE-PIECE'
+where d.reference = 'demo-cliente-piece'
+on conflict (dossier_id) do nothing;

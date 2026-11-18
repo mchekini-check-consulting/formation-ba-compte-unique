@@ -66,7 +66,7 @@ export function validerCoordonnees(c: Coordonnees, residenceConfirmee: boolean):
   selector: 'app-etape-identite-livret-a',
   template: `
     <div class="identite">
-      <h2>Mon identité <span class="etape">Étape 1 sur 2</span></h2>
+      <h2>Mon identité <span class="etape">Étape 1 sur {{ total() }}</span></h2>
       @if (message(); as m) {
         <p class="message" [class.ko]="m.erreur" [attr.role]="m.erreur ? 'alert' : 'status'">{{ m.texte }}</p>
       }
@@ -164,6 +164,8 @@ export class EtapeIdentiteLivretA implements OnInit {
 
   /** Identité pré-remplie et dernier contrôle, chargés par la page. */
   readonly donnees = input.required<{ identite: IdentiteLivretA; controle: ControleIdentite | null }>();
+  /** Nombre d'étapes du parcours (3 si une nouvelle pièce est demandée, CU-29). */
+  readonly total = input(2);
   /** Réponse choisie dans le cadre de test pour le bouchon sanctions/PPE. */
   readonly casSanctions = input<CasDeTest>('CONFORME');
   /** Identité confirmée et contrôle validé : l'éligibilité peut commencer. */

@@ -218,6 +218,22 @@ public class Dossier {
 		return true;
 	}
 
+	/**
+	 * CU-29 : nouvelle pièce d'identité vérifiée (analyse et vérification de présence réussies) à l'ouverture d'un
+	 * Livret A, quand celle du dossier avait expiré. Elle remplace l'ancienne dans le dossier.
+	 */
+	public void remplacerPiece(TypePiece type, String numero, LocalDate expiration, OffsetDateTime maintenant) {
+		typePiece = type;
+		numeroPiece = numero;
+		dateExpiration = expiration;
+		derniereActionLe = maintenant;
+	}
+
+	/** CU-29 : pièce du dossier expirée à cette date (expire le jour même : encore valide). */
+	public boolean pieceExpireeLe(LocalDate jour) {
+		return dateExpiration.isBefore(jour);
+	}
+
 	/** CU-28 : coordonnées modifiables par la cliente (complément d'adresse facultatif, null si vide). */
 	public record Coordonnees(String voie, String complement, String codePostal, String ville, String paysAdresse,
 			String email, String mobile) {

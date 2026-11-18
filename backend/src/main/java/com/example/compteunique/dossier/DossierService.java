@@ -13,6 +13,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.example.compteunique.dossier.Categories.MotifAnnulation;
 import com.example.compteunique.dossier.Categories.StatutDossier;
+import com.example.compteunique.dossier.Categories.TypePiece;
 import com.example.compteunique.logging.Loggable;
 
 // CUB-8 (US-01) : enregistre l'identité saisie puis le résultat des contrôles sanctions et PEP.
@@ -26,6 +27,8 @@ public class DossierService {
 	static final int AGE_MINIMUM = 18;
 	private static final Set<String> CIVILITES = Set.of("M.", "Mme");
 	private static final String CHAMP_REFERENCE = "reference";
+	/** Inscription : le passeport n'est pas accepté (CU-29 l'accepte seulement pour renouveler une pièce). */
+	static final String PASSEPORT_REFUSE = "typePiece : carte nationale d'identité ou titre de séjour";
 	/** CU-9 : annulations que l'écran peut signaler (étapes pièce, selfie, questions). */
 	private static final Set<MotifAnnulation> ANNULATIONS_ECRAN = Set.of(MotifAnnulation.CONTROLE_AUTOMATIQUE,
 			MotifAnnulation.DEMANDE_CLIENTE);
@@ -108,6 +111,9 @@ public class DossierService {
 		LocalDate dateNaissance = present(i.dateNaissance(), "dateNaissance");
 		if (dateNaissance.isAfter(aujourdhui.minusYears(AGE_MINIMUM))) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Vous devez avoir au moins 18 ans");
+		}
+		if (i.typePiece() == TypePiece.PASSEPORT) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, PASSEPORT_REFUSE);
 		}
 		LocalDate dateExpiration = present(i.dateExpiration(), "dateExpiration");
 		if (!dateExpiration.isAfter(aujourdhui)) {

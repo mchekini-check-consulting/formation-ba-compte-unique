@@ -38,6 +38,7 @@ public class LivretAService {
 	static final String DEMANDE_TERMINEE = "Cette demande n'attend plus de réponse de l'administration fiscale.";
 	static final String NON_TRANSMISE = "Cette demande n'a pas encore été transmise à l'administration fiscale.";
 	static final String REPONSE_OBLIGATOIRE = "Réponse de l'administration fiscale obligatoire";
+	static final String PIECE_EXPIREE = "Votre pièce d'identité a expiré : transmettez-en une nouvelle avant de continuer.";
 
 	/** Identité transmise à l'administration fiscale (critère : nom, prénom, sexe, date et lieu de naissance). */
 	public record Transmission(String nom, String prenoms, String sexe, LocalDate dateNaissance,
@@ -84,6 +85,10 @@ public class LivretAService {
 		controlerMultidetentionInterne(dossier);
 		// CU-28 : identité confirmée et contrôle sanctions/PPE validé pour cette ouverture.
 		ControleIdentiteLivretA controleIdentite = identites.controleValide(compte);
+		// CU-29 : pièce du dossier expirée -> nouvelle pièce et selfie vérifiés d'abord (elle remplace alors celle du dossier).
+		if (dossier.pieceExpireeLe(LocalDate.now(horloge))) {
+			throw new DemandeRefusee(HttpStatus.CONFLICT, PIECE_EXPIREE);
+		}
 		if (!Boolean.TRUE.equals(attestation)) {
 			throw new DemandeRefusee(HttpStatus.BAD_REQUEST, ATTESTATION_OBLIGATOIRE);
 		}

@@ -95,6 +95,14 @@ class LivretAServiceTest {
 		verify(demandes, never()).save(any());
 	}
 
+	// CU-29 : pièce du dossier expirée -> nouvelle pièce et selfie vérifiés avant l'éligibilité.
+	@Test
+	void eligibiliteRefuseeTantQueLaPieceDuDossierEstExpiree() {
+		when(dossier.pieceExpireeLe(MAINTENANT.toLocalDate())).thenReturn(true);
+		assertRefus(HttpStatus.CONFLICT, LivretAService.PIECE_EXPIREE, () -> service.demander(JETON, true, true));
+		verify(demandes, never()).save(any());
+	}
+
 	// CU-28 : un contrôle par ouverture, rattaché à la demande créée.
 	@Test
 	void laDemandeUtiliseLeControleDIdentite() {

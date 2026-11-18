@@ -67,6 +67,27 @@ describe('LivretAService (CU-31) et bouchon fiscal (CU-295)', () => {
     expect(resultat.request.body).toEqual({ resultat: 'CORRESPONDANCE_PEP', tentatives: 2 });
   });
 
+  it('appelle les routes /livret-a/piece du backend (CU-29) avec le cookie de session', () => {
+    const service = TestBed.inject(LivretAService);
+    const nouvelle = { typePiece: 'PASSEPORT' as const, numeroPiece: '18AB12345', dateExpiration: '2036-03-01' };
+    service.piece().subscribe();
+    service.soumettrePiece(nouvelle).subscribe();
+    service.transmettreDocument('pi 1', 'VERIFIE', 1).subscribe();
+    service.transmettreSelfie('pi 1', 'CORRESPONDANCE', 96, 2).subscribe();
+
+    const piece = http.expectOne({ method: 'GET', url: '/api/backend/livret-a/piece' });
+    const soumettre = http.expectOne({ method: 'POST', url: '/api/backend/livret-a/piece' });
+    const documentPiece = http.expectOne({ method: 'POST', url: '/api/backend/livret-a/piece/pi%201/document' });
+    const selfie = http.expectOne({ method: 'POST', url: '/api/backend/livret-a/piece/pi%201/selfie' });
+    for (const requete of [piece, soumettre, documentPiece, selfie]) {
+      expect(requete.request.withCredentials).toBe(true);
+      requete.flush(null);
+    }
+    expect(soumettre.request.body).toEqual(nouvelle);
+    expect(documentPiece.request.body).toEqual({ resultat: 'VERIFIE', tentatives: 1 });
+    expect(selfie.request.body).toEqual({ resultat: 'CORRESPONDANCE', score: 96, tentatives: 2 });
+  });
+
   it('interroge le bouchon de l’administration fiscale via bouchons-identite', () => {
     const interrogation = {
       demandeId: 'ref',

@@ -156,6 +156,19 @@ class DossierServiceTest {
 	}
 
 	@Test
+	void passeportRefuseALInscription() {
+		IdentiteRequete i = identite();
+		IdentiteRequete passeport = new IdentiteRequete(i.civilite(), i.nomNaissance(), i.nomUsage(), i.prenoms(),
+				i.dateNaissance(), i.communeNaissance(), i.paysNaissance(), i.nationalite(), i.voie(), i.complement(),
+				i.codePostal(), i.ville(), i.paysAdresse(), i.email(), i.mobile(), i.fixe(),
+				Categories.TypePiece.PASSEPORT, i.numeroPiece(), i.dateExpiration());
+		ResponseStatusException erreur = assertThrows(ResponseStatusException.class,
+				() -> service.renseignerIdentite(REF, passeport));
+		assertEquals(HttpStatus.BAD_REQUEST, erreur.getStatusCode());
+		assertEquals(DossierService.PASSEPORT_REFUSE, erreur.getReason());
+	}
+
+	@Test
 	void pieceExpireeRefusee() {
 		IdentiteRequete expiree = avecDates(LocalDate.of(1990, 5, 14), LocalDate.of(2026, 11, 4));
 		assertRefus(HttpStatus.BAD_REQUEST, () -> service.renseignerIdentite(REF, expiree));
