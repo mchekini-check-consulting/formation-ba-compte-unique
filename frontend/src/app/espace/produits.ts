@@ -18,7 +18,7 @@ export const EPARGNE: Produit[] = [
     teinte: 'mint',
     description: "Une épargne disponible à tout moment, au taux fixé par l'État. Plafond de versements de 22 950 €.",
     taux: '1,70 %',
-    tauxDetail: 'brut / an',
+    tauxDetail: 'net / an',
     minimum: 'Ouverture dès 10 €',
     note: "Exonéré d'impôt sur le revenu",
   },
@@ -29,7 +29,7 @@ export const EPARGNE: Produit[] = [
     description:
       "Livret de développement durable et solidaire : vos fonds financent l'économie sociale et solidaire. Plafond de 12 000 €.",
     taux: '1,70 %',
-    tauxDetail: 'brut / an',
+    tauxDetail: 'net / an',
     minimum: 'Ouverture dès 10 €',
     note: "Exonéré d'impôt sur le revenu",
   },
