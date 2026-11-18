@@ -172,7 +172,12 @@ describe('PresentationLivretA', () => {
     const ligne = page.querySelector('tr.livret-a')!.textContent!;
     expect(ligne).toContain('1,70 % net');
     expect(ligne).toContain('22 950 €');
-    expect(page.querySelectorAll('tbody tr').length).toBe(6);
+    expect(page.querySelectorAll('tbody tr').length).toBe(5);
+  });
+
+  it('ne présente pas le Livret Jeune dans le comparatif', async () => {
+    await creer();
+    expect(page.querySelector('.comparatif')!.textContent).not.toContain('Livret Jeune');
   });
 
   it('ne montre pas la mention « maquette de validation »', async () => {
