@@ -57,7 +57,6 @@ export class PresentationLivretA {
     { compte: 'Livret A', taux: `${TAUX_LIVRET_A} net`, plafond: euros(LIVRET_A.plafond), fiscalite: 'Exonéré', disponibilite: 'Immédiate' },
     { compte: 'LDDS', taux: '1,70 % net', plafond: '12 000 €', fiscalite: 'Exonéré', disponibilite: 'Immédiate' },
     { compte: 'LEP', taux: '2,50 % net', plafond: '10 000 €', fiscalite: 'Exonéré', disponibilite: 'Immédiate' },
-    { compte: 'Livret Jeune', taux: `≥ ${TAUX_LIVRET_A} net`, plafond: '1 600 €', fiscalite: 'Exonéré', disponibilite: 'Immédiate' },
     { compte: 'CEL', taux: '1,25 % brut', plafond: '15 300 €', fiscalite: 'Prélèvement forfaitaire', disponibilite: 'Immédiate' },
     { compte: 'PEL', taux: '2,00 % brut', plafond: '61 200 €', fiscalite: 'Prélèvement forfaitaire', disponibilite: 'Bloqué 4 ans min.' },
   ];
