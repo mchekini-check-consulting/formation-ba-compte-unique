@@ -21,6 +21,7 @@ import org.springframework.http.ResponseEntity;
 import com.example.compteunique.beneficiaire.DemandeRefusee;
 import com.example.compteunique.compte.ClienteNonConnecteeException;
 import com.example.compteunique.compte.CompteInaccessibleException;
+import com.example.compteunique.dossier.Categories.TypePiece;
 import com.example.compteunique.dossier.Dossier.Coordonnees;
 import com.example.compteunique.livreta.IdentiteLivretAService.Identite;
 import com.example.compteunique.livreta.IdentiteLivretAService.IdentiteAControler;
@@ -31,6 +32,10 @@ import com.example.compteunique.livreta.LivretAController.Refus;
 import com.example.compteunique.livreta.LivretAController.ResultatInterrogation;
 import com.example.compteunique.livreta.LivretAService.Suivi;
 import com.example.compteunique.livreta.LivretAService.Transmission;
+import com.example.compteunique.livreta.PieceLivretAService.EtatPiece;
+import com.example.compteunique.livreta.PieceLivretAService.PieceAVerifier;
+import com.example.compteunique.livreta.ResultatsPiece.Document;
+import com.example.compteunique.livreta.ResultatsPiece.Selfie;
 
 // CU-31 : routes /livret-a et vue de la demande (messages affichés à la cliente).
 class LivretAControllerTest {
@@ -40,7 +45,8 @@ class LivretAControllerTest {
 
 	private final LivretAService service = mock(LivretAService.class);
 	private final IdentiteLivretAService identites = mock(IdentiteLivretAService.class);
-	private final LivretAController controleur = new LivretAController(service, identites);
+	private final PieceLivretAService pieces = mock(PieceLivretAService.class);
+	private final LivretAController controleur = new LivretAController(service, identites, pieces);
 
 	private static DemandeLivretA demande() {
 		return new DemandeLivretA(7L, UUID.randomUUID(), true, MAINTENANT);
@@ -198,6 +204,73 @@ class LivretAControllerTest {
 		ControleIdentiteVue vue = test.validerParResponsable("ref");
 		assertEquals(StatutControleIdentite.VALIDE, vue.statut());
 		assertTrue(vue.utilisable());
+	}
+
+
+	// CU-29 : étape « Ma pièce d'identité ».
+	private static final LocalDate EXPIRATION = LocalDate.of(2036, 3, 1);
+	private static final PieceAVerifier A_VERIFIER = new PieceAVerifier("N", "P", LocalDate.of(1990, 1, 1),
+			EXPIRATION);
+
+	private static PieceIdentiteLivretA piece() {
+		return new PieceIdentiteLivretA(7L, UUID.randomUUID(), TypePiece.PASSEPORT, "18AB12345", EXPIRATION,
+				MAINTENANT);
+	}
+
+	@Test
+	void etapePieceRequiseEtDerniereVerification() {
+		when(pieces.etat("j")).thenReturn(new EtatPiece(true, LocalDate.of(2024, 1, 1), null));
+		LivretAController.EtapePiece etape = controleur.piece("j");
+		assertTrue(etape.requise());
+		assertEquals(LocalDate.of(2024, 1, 1), etape.dateExpirationActuelle());
+		assertNull(etape.verification());
+		PieceIdentiteLivretA piece = piece();
+		when(pieces.etat("j")).thenReturn(
+				new EtatPiece(true, LocalDate.of(2024, 1, 1), new PieceLivretAService.Suivi(piece, A_VERIFIER)));
+		PieceLivretAVue vue = controleur.piece("j").verification();
+		assertEquals(piece.getReference(), vue.reference());
+		assertEquals(PieceLivretAVue.PIECE_A_VERIFIER, vue.message());
+		assertEquals(TypePiece.PASSEPORT, vue.typePiece());
+		assertEquals(EXPIRATION, vue.dateExpiration());
+		assertEquals(A_VERIFIER, vue.aVerifier());
+	}
+
+	@Test
+	void nouvellePieceEn201() {
+		when(pieces.soumettre("j", TypePiece.PASSEPORT, "18AB12345", EXPIRATION))
+				.thenReturn(new PieceLivretAService.Suivi(piece(), A_VERIFIER));
+		ResponseEntity<PieceLivretAVue> reponse = controleur.soumettrePiece("j",
+				new LivretAController.NouvellePiece(TypePiece.PASSEPORT, "18AB12345", EXPIRATION));
+		assertEquals(HttpStatus.CREATED, reponse.getStatusCode());
+		assertEquals(StatutPieceLivretA.PIECE_A_VERIFIER, reponse.getBody().statut());
+		when(pieces.soumettre("j", null, null, null)).thenThrow(new DemandeRefusee(HttpStatus.BAD_REQUEST, "x"));
+		assertThrows(DemandeRefusee.class, () -> controleur.soumettrePiece("j", null));
+	}
+
+	@Test
+	void resultatsDeLAnalyseEtDuSelfie() {
+		PieceIdentiteLivretA piece = piece();
+		piece.recevoirDocument(Document.VERIFIE, 1, MAINTENANT);
+		when(pieces.enregistrerDocument("j", "ref", Document.VERIFIE, 1))
+				.thenReturn(new PieceLivretAService.Suivi(piece, null));
+		PieceLivretAVue verifiee = controleur.resultatDocument("j", "ref",
+				new LivretAController.ResultatDocument(Document.VERIFIE, 1));
+		assertEquals(PieceLivretAVue.SELFIE_A_FAIRE, verifiee.message());
+		assertNull(verifiee.aVerifier());
+		when(pieces.enregistrerDocument("j", "ref", null, null)).thenThrow(new DemandeRefusee(HttpStatus.BAD_REQUEST, "x"));
+		assertThrows(DemandeRefusee.class, () -> controleur.resultatDocument("j", "ref", null));
+
+		piece.recevoirSelfie(Selfie.CORRESPONDANCE, 96, 1, MAINTENANT);
+		when(pieces.enregistrerSelfie("j", "ref", Selfie.CORRESPONDANCE, 96, 1))
+				.thenReturn(new PieceLivretAService.Suivi(piece, null));
+		assertEquals(PieceLivretAVue.VALIDE, controleur.resultatSelfie("j", "ref",
+				new LivretAController.ResultatSelfie(Selfie.CORRESPONDANCE, 96, 1)).message());
+		when(pieces.enregistrerSelfie("j", "ref", null, null, null))
+				.thenThrow(new DemandeRefusee(HttpStatus.BAD_REQUEST, "x"));
+		assertThrows(DemandeRefusee.class, () -> controleur.resultatSelfie("j", "ref", null));
+
+		assertEquals(PieceLivretAVue.BLOQUE, PieceLivretAVue.message(StatutPieceLivretA.BLOQUE));
+		assertTrue(PieceLivretAVue.message(StatutPieceLivretA.EN_ATTENTE).endsWith("48 heures ouvrées."));
 	}
 
 }

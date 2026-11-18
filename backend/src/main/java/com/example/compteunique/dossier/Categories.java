@@ -16,9 +16,13 @@ public final class Categories {
 		FRANCE, UE_HORS_FRANCE, HORS_UE
 	}
 
-	/** Pièces acceptées : le passeport n'est pas proposé. Les deux rendent la cliente résidente française. */
+	/**
+	 * Pièces d'identité. Inscription : CNI ou titre de séjour seulement (le passeport n'est pas proposé, les deux
+	 * rendent la cliente résidente française). CU-29 : le passeport est accepté pour renouveler une pièce expirée à
+	 * l'ouverture d'un Livret A.
+	 */
 	public enum TypePiece {
-		CARTE_NATIONALE_IDENTITE, TITRE_SEJOUR
+		CARTE_NATIONALE_IDENTITE, TITRE_SEJOUR, PASSEPORT
 	}
 
 	/** Résultat d'un contrôle sanctions ou PEP. */

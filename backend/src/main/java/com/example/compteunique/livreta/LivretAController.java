@@ -1,5 +1,7 @@
 package com.example.compteunique.livreta;
 
+import java.time.LocalDate;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
@@ -15,8 +17,12 @@ import com.example.compteunique.beneficiaire.DemandeRefusee;
 import com.example.compteunique.compte.ClienteNonConnecteeException;
 import com.example.compteunique.compte.CompteInaccessibleException;
 import com.example.compteunique.connexion.ConnexionController;
+import com.example.compteunique.dossier.Categories.TypePiece;
 import com.example.compteunique.dossier.Dossier.Coordonnees;
 import com.example.compteunique.livreta.IdentiteLivretAService.Identite;
+import com.example.compteunique.livreta.PieceLivretAService.EtatPiece;
+import com.example.compteunique.livreta.ResultatsPiece.Document;
+import com.example.compteunique.livreta.ResultatsPiece.Selfie;
 
 // CU-31 (US-22) : ouverture d'un Livret A par la cliente connectée (session obligatoire), contrôle de
 // multidétention.
@@ -27,6 +33,11 @@ import com.example.compteunique.livreta.IdentiteLivretAService.Identite;
 // GET  /livret-a/identite                                : {"identite", "controle"} pré-remplie depuis le dossier.
 // POST /livret-a/identite                                : {"coordonnees", "residenceFiscaleConfirmee"} -> contrôle (201).
 // POST /livret-a/identite/{reference}/resultat           : {"resultat", "tentatives"} -> contrôle.
+// CU-29 (US-20, avec ex-CU-30) : étape « Ma pièce d'identité », seulement si la pièce du dossier a expiré.
+// GET  /livret-a/piece                                   : {"requise", "dateExpirationActuelle", "verification"}.
+// POST /livret-a/piece                                   : {"typePiece", "numeroPiece", "dateExpiration"} -> vérification (201).
+// POST /livret-a/piece/{reference}/document              : {"resultat", "tentatives"} -> vérification.
+// POST /livret-a/piece/{reference}/selfie                : {"resultat", "score", "tentatives"} -> vérification.
 // Refus : {"message", "termine"} avec le message affiché à la cliente.
 @RestController
 @RequestMapping("/livret-a")
@@ -37,10 +48,12 @@ public class LivretAController {
 
 	private final LivretAService service;
 	private final IdentiteLivretAService identites;
+	private final PieceLivretAService pieces;
 
-	public LivretAController(LivretAService service, IdentiteLivretAService identites) {
+	public LivretAController(LivretAService service, IdentiteLivretAService identites, PieceLivretAService pieces) {
 		this.service = service;
 		this.identites = identites;
+		this.pieces = pieces;
 	}
 
 	/** CU-28 : identité pré-remplie et dernier contrôle (null s'il n'y en a pas). */
@@ -76,6 +89,53 @@ public class LivretAController {
 		ResultatControle lu = resultat == null ? new ResultatControle(null, null) : resultat;
 		return ControleIdentiteVue
 				.de(identites.enregistrerResultat(jetonSession, reference, lu.resultat(), lu.tentatives()));
+	}
+
+	/** CU-29 : nouvelle pièce à fournir ou non, date d'expiration actuelle et dernière vérification. */
+	public record EtapePiece(boolean requise, LocalDate dateExpirationActuelle, PieceLivretAVue verification) {
+	}
+
+	/** CU-29 : nouvelle pièce saisie par la cliente. */
+	public record NouvellePiece(TypePiece typePiece, String numeroPiece, LocalDate dateExpiration) {
+	}
+
+	/** CU-29 : résultat de l'analyse de la pièce et nombre d'essais (1 à 4). */
+	public record ResultatDocument(Document resultat, Integer tentatives) {
+	}
+
+	/** CU-29 : résultat du selfie, score de correspondance et nombre d'essais (1 à 4). */
+	public record ResultatSelfie(Selfie resultat, Integer score, Integer tentatives) {
+	}
+
+	@GetMapping("/piece")
+	public EtapePiece piece(@CookieValue(name = COOKIE, required = false) String jetonSession) {
+		EtatPiece etat = pieces.etat(jetonSession);
+		return new EtapePiece(etat.requise(), etat.dateExpirationActuelle(),
+				etat.suivi() == null ? null : PieceLivretAVue.de(etat.suivi()));
+	}
+
+	@PostMapping("/piece")
+	public ResponseEntity<PieceLivretAVue> soumettrePiece(
+			@CookieValue(name = COOKIE, required = false) String jetonSession,
+			@RequestBody(required = false) NouvellePiece piece) {
+		NouvellePiece lue = piece == null ? new NouvellePiece(null, null, null) : piece;
+		return ResponseEntity.status(HttpStatus.CREATED).body(PieceLivretAVue
+				.de(pieces.soumettre(jetonSession, lue.typePiece(), lue.numeroPiece(), lue.dateExpiration())));
+	}
+
+	@PostMapping("/piece/{reference}/document")
+	public PieceLivretAVue resultatDocument(@CookieValue(name = COOKIE, required = false) String jetonSession,
+			@PathVariable String reference, @RequestBody(required = false) ResultatDocument resultat) {
+		ResultatDocument lu = resultat == null ? new ResultatDocument(null, null) : resultat;
+		return PieceLivretAVue.de(pieces.enregistrerDocument(jetonSession, reference, lu.resultat(), lu.tentatives()));
+	}
+
+	@PostMapping("/piece/{reference}/selfie")
+	public PieceLivretAVue resultatSelfie(@CookieValue(name = COOKIE, required = false) String jetonSession,
+			@PathVariable String reference, @RequestBody(required = false) ResultatSelfie resultat) {
+		ResultatSelfie lu = resultat == null ? new ResultatSelfie(null, null, null) : resultat;
+		return PieceLivretAVue
+				.de(pieces.enregistrerSelfie(jetonSession, reference, lu.resultat(), lu.score(), lu.tentatives()));
 	}
 
 	public record Etat(DemandeLivretAVue demande) {
