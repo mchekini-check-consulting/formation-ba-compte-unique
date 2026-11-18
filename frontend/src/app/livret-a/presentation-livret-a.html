@@ -1,0 +1,205 @@
+<div class="page-livret-a">
+  <header class="entete">
+    <div class="contenu">
+      <a class="logo" routerLink="/"><span class="pastille" aria-hidden="true"></span>Hi-Tech Bank</a>
+      <nav aria-label="Rubriques de la page Livret A">
+        <a href="#presentation" (click)="allerA($event, 'presentation')">Le Livret A</a>
+        <a href="#simulateur" (click)="allerA($event, 'simulateur')">Simulateur</a>
+        <a href="#comparatif" (click)="allerA($event, 'comparatif')">Comparatif</a>
+        <a href="#questions" (click)="allerA($event, 'questions')">Questions</a>
+      </nav>
+      <div class="actions">
+        @if (connectee() === false) {
+          <a class="btn clair" routerLink="/connexion" [queryParams]="{ suite: '/livret-a' }" (click)="garderPosition()">Me connecter</a>
+        }
+        <a class="btn fonce" href="/livret-a" (click)="ouvrir($event)">Ouvrir mon Livret A</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="bandeau" aria-labelledby="titre-livret-a">
+      <div class="contenu deux-colonnes">
+        <div>
+          <p class="badge">Taux en vigueur depuis le {{ dateEffet }}</p>
+          <h1 id="titre-livret-a">Faites grandir votre épargne, en toute sécurité, avec le Livret A.</h1>
+          <p class="accroche">
+            Le placement préféré des Français pour mettre de côté sans risque, garanti par l’État. Déjà cliente&nbsp;?
+            Votre identité et vos coordonnées sont reprises de votre dossier : rien à ressaisir.
+          </p>
+          <div class="boutons">
+            <a class="btn vert" href="/livret-a" (click)="ouvrir($event)">Ouvrir mon Livret A</a>
+            <a class="btn clair" href="#simulateur" (click)="allerA($event, 'simulateur')">Simuler mes intérêts</a>
+          </div>
+          <ul class="garanties">
+            <li>Capital garanti</li>
+            <li>Sans frais d’ouverture</li>
+            <li>Argent disponible à tout moment</li>
+          </ul>
+        </div>
+        <div class="chiffres">
+          <div class="chiffre principal">
+            <span>Livret A</span>
+            <strong>{{ taux }}</strong>
+            <span>Net d’impôt et de prélèvements sociaux · depuis le {{ dateEffet }}</span>
+          </div>
+          <div class="chiffre"><span>Plafond</span><strong>{{ plafond }}</strong></div>
+          <div class="chiffre"><span>Ouverture dès</span><strong>{{ minimum }}</strong></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="presentation" class="fiche" aria-labelledby="titre-fiche">
+      <div class="contenu fiche-grille">
+        <div>
+          <h2 id="titre-fiche">Le Livret A en bref</h2>
+          <p class="intro">Un livret réglementé par l’État pour votre épargne de précaution.</p>
+          <dl class="points">
+            <div><dt>Taux</dt><dd>{{ taux }} {{ detailTaux }}, depuis le {{ dateEffet }}.</dd></div>
+            <div><dt>Plafond</dt><dd>{{ plafond }} de versements, hors intérêts capitalisés.</dd></div>
+            <div><dt>Fiscalité</dt><dd>Intérêts exonérés d’impôt sur le revenu et de prélèvements sociaux.</dd></div>
+            <div><dt>Disponibilité</dt><dd>Votre argent reste disponible à tout moment.</dd></div>
+            <div><dt>Versement initial</dt><dd>{{ minimum }} minimum à l’ouverture.</dd></div>
+          </dl>
+          <div class="regle">
+            <p><b>Un seul Livret A par personne, toutes banques confondues.</b> Avant l’ouverture, nous vérifions auprès de l’administration fiscale que vous n’en détenez pas déjà un.</p>
+            <p>Les taux réglementés sont révisables au 1er février et au 1er août.</p>
+          </div>
+        </div>
+        <aside class="lateral" aria-label="Ouvrir un Livret A">
+          <p class="lateral-titre">Livret A</p>
+          <p class="lateral-taux"><strong>{{ taux }}</strong> {{ detailTaux }}</p>
+          <p>Ouverture en ligne dès {{ minimum }}, pour les clientes titulaires d’un compte courant Hi-Tech Bank.</p>
+          <a class="btn vert" href="/livret-a" (click)="ouvrir($event)">Ouvrir mon Livret A</a>
+        </aside>
+      </div>
+    </section>
+
+    <section id="simulateur" class="simulateur" aria-labelledby="titre-simulateur">
+      <div class="contenu deux-colonnes">
+        <div class="carte">
+          <h2 id="titre-simulateur">Combien va vous rapporter votre Livret A&nbsp;?</h2>
+          <p class="intro">Indiquez le montant que vous souhaitez placer.</p>
+          <label for="montant">Montant placé (en euros)</label>
+          <input
+            id="montant"
+            type="number"
+            inputmode="decimal"
+            min="0"
+            step="1"
+            [value]="montant()"
+            (input)="saisir($any($event.target).value)"
+            aria-describedby="bornes-montant"
+          />
+          <input
+            type="range"
+            aria-label="Montant placé"
+            [min]="minimumNombre"
+            [max]="plafondNombre"
+            step="10"
+            [value]="montant()"
+            (input)="saisir($any($event.target).value)"
+          />
+          <p id="bornes-montant" class="bornes"><span>{{ minimum }}</span><span>{{ plafond }}</span></p>
+        </div>
+        <div class="resultat" aria-live="polite">
+          @if (simulation(); as s) {
+            @if (s.message) {
+              <p class="avertissement">{{ s.message }}</p>
+            }
+            @if (s.interets !== null) {
+              <p>Intérêts estimés sur un an pour {{ euros(s.montantRetenu!) }}</p>
+              <p class="montant">{{ eurosAuCentime(s.interets) }}</p>
+            }
+          } @else {
+            <p>Saisissez un montant pour estimer vos intérêts.</p>
+          }
+          <p>Taux appliqué : {{ taux }} (net d’impôt)</p>
+          <p class="mention">Estimation indicative pour un montant constant pendant 12 mois, hors capitalisation. Ne constitue pas un engagement.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="comparatif" class="comparatif" aria-labelledby="titre-comparatif">
+      <div class="contenu">
+        <h2 id="titre-comparatif">Comparez en un coup d’œil</h2>
+        <div class="tableau">
+          <table>
+            <caption class="invisible">Comparatif des comptes d’épargne</caption>
+            <thead>
+              <tr><th scope="col">Compte</th><th scope="col">Taux</th><th scope="col">Plafond</th><th scope="col">Fiscalité</th><th scope="col">Disponibilité</th></tr>
+            </thead>
+            <tbody>
+              @for (ligne of comparatif; track ligne.compte) {
+                <tr [class.livret-a]="ligne.compte === 'Livret A'">
+                  <th scope="row">{{ ligne.compte }}</th>
+                  <td>{{ ligne.taux }}</td>
+                  <td>{{ ligne.plafond }}</td>
+                  <td>{{ ligne.fiscalite }}</td>
+                  <td>{{ ligne.disponibilite }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <p class="note">Taux en vigueur au {{ dateEffet }}. Les taux réglementés sont révisés au 1er février et au 1er août. Le taux du CEL et du PEL est indiqué brut, avant prélèvements fiscaux et sociaux.</p>
+      </div>
+    </section>
+
+    <section id="questions" class="questions" aria-labelledby="titre-questions">
+      <div class="contenu etroit">
+        <h2 id="titre-questions">Vos questions</h2>
+        <details>
+          <summary>Les intérêts sont-ils imposables&nbsp;?</summary>
+          <p>Non : les intérêts du Livret A sont exonérés d’impôt sur le revenu et de prélèvements sociaux.</p>
+        </details>
+        <details>
+          <summary>Puis-je avoir plusieurs Livrets A&nbsp;?</summary>
+          <p>Non. On ne peut détenir qu’un seul Livret A par personne, toutes banques confondues. Il se cumule en revanche avec un LDDS : jusqu’à 34 950 € disponibles à tout moment, sans impôt sur les intérêts.</p>
+        </details>
+        <details>
+          <summary>Comment les intérêts sont-ils calculés&nbsp;?</summary>
+          <p>Les intérêts sont calculés par quinzaine et versés une fois par an, au 31 décembre. Ils s’ajoutent alors au capital et produisent à leur tour des intérêts. Le simulateur donne une estimation simple, sur un an.</p>
+        </details>
+        <details>
+          <summary>Quand le taux change-t-il&nbsp;?</summary>
+          <p>Le taux du Livret A est fixé par les pouvoirs publics et peut être révisé deux fois par an, au 1er février et au 1er août.</p>
+        </details>
+      </div>
+    </section>
+
+    <section class="appel" aria-labelledby="titre-appel">
+      <div class="contenu">
+        <div class="appel-carte">
+          <div>
+            <h2 id="titre-appel">Prêt à faire travailler votre épargne&nbsp;?</h2>
+            <p>Ouvrez votre Livret A en ligne depuis votre espace client.</p>
+          </div>
+          <div class="boutons">
+            <a class="btn blanc" href="/livret-a" (click)="ouvrir($event)">Ouvrir mon Livret A</a>
+            @if (connectee() === false) {
+              <a class="btn contour" routerLink="/connexion" [queryParams]="{ suite: '/livret-a' }" (click)="garderPosition()">Me connecter</a>
+            }
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="pied">
+    <div class="contenu deux-colonnes">
+      <div>
+        <p class="pied-logo">Hi-Tech Bank</p>
+        <a routerLink="/">Retour à l’accueil</a>
+      </div>
+      <div>
+        <p>Taux annuel en vigueur au {{ dateEffet }}, susceptible d’évoluer.</p>
+        <nav class="liens-legaux" aria-label="Informations légales">
+          <a routerLink="/mentions-legales">Mentions légales</a>
+          <a routerLink="/protection-des-donnees">Politique de protection des données</a>
+          <a routerLink="/accessibilite">Accessibilité</a>
+        </nav>
+      </div>
+    </div>
+  </footer>
+</div>

@@ -41,6 +41,8 @@ const STATUTS: Record<DemandeLivretA['statut'], string> = {
     <app-cadre-espace page="livret-a" [identifiant]="identifiant()">
       <section class="block">
         <div class="wrap">
+          <!-- CU-27 critère 8 : retour à la page Livret A, à l'endroit quitté. -->
+          <a class="retour-site" routerLink="/epargne/livret-a">← Retour au site</a>
           <div class="eyebrow">Épargne · Livret A</div>
           <h1 class="titre">Ouvrir mon Livret A</h1>
 
@@ -167,6 +169,7 @@ const STATUTS: Record<DemandeLivretA['statut'], string> = {
     .message { font-weight: 600; color: #0a7d63; }
     .ko { color: #b3261e; }
     .btn { justify-self: start; }
+    .retour-site { display: inline-block; margin-bottom: 12px; color: #0b2545; font-weight: 700; }
   `,
 })
 export class LivretAPage {
