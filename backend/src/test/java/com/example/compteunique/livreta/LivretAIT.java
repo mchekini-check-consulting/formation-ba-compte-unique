@@ -16,7 +16,10 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import com.example.compteunique.beneficiaire.DemandeRefusee;
 import com.example.compteunique.connexion.ConnexionService;
+import com.example.compteunique.dossier.Dossier.Coordonnees;
+import com.example.compteunique.livreta.LivretAController.Confirmation;
 import com.example.compteunique.livreta.LivretAController.Eligibilite;
+import com.example.compteunique.livreta.LivretAController.ResultatControle;
 import com.example.compteunique.livreta.LivretAController.ResultatInterrogation;
 
 // CU-31 contre un vrai PostgreSQL (migration V22, comptes de test de db/demo) : demande enregistrée, réponses
@@ -47,11 +50,25 @@ class LivretAIT {
 		return connexion.connecter(identifiant, MOT_DE_PASSE, null).jetonSession();
 	}
 
+	/** CU-28 : identité confirmée sans modification, aucune correspondance sanctions/PPE. */
+	private void identiteConfirmee(String jeton) {
+		Coordonnees coordonnees = livretA.identite(jeton).identite().coordonnees();
+		ControleIdentiteVue controle = livretA.confirmerIdentite(jeton, new Confirmation(coordonnees, true)).getBody();
+		livretA.resultatControle(jeton, controle.reference(),
+				new ResultatControle(ResultatSanctions.AUCUNE_CORRESPONDANCE, 1));
+	}
+
 	@Test
 	void duSansReponseALOuvertureValideePuisPlusDeSecondeDemande() {
 		String clienteA = jeton("TEST-CLIENTE-A");
 		assertNull(livretA.etat(clienteA).demande());
 
+		// CU-28 : pas d'éligibilité sans identité confirmée.
+		DemandeRefusee sansIdentite = assertThrows(DemandeRefusee.class,
+				() -> livretA.demander(clienteA, new Eligibilite(true, true)));
+		assertEquals(IdentiteLivretAService.SANS_IDENTITE_CONFIRMEE, sansIdentite.getMessage());
+
+		identiteConfirmee(clienteA);
 		DemandeRefusee sansAttestation = assertThrows(DemandeRefusee.class,
 				() -> livretA.demander(clienteA, new Eligibilite(false, true)));
 		assertEquals(LivretAService.ATTESTATION_OBLIGATOIRE, sansAttestation.getMessage());
@@ -92,6 +109,7 @@ class LivretAIT {
 	@Test
 	void livretAExistantAilleursNOuvrePasEtResteVisibleDeLaSeuleCliente() {
 		String clienteB = jeton("TEST-CLIENTE-B");
+		identiteConfirmee(clienteB);
 		DemandeLivretAVue creee = livretA.demander(clienteB, new Eligibilite(true, true)).getBody();
 		DemandeLivretAVue existant = livretA.reponseFiscale(clienteB, creee.reference(),
 				new ResultatInterrogation("interro-b", ReponseFiscale.LIVRET_A_EXISTANT));

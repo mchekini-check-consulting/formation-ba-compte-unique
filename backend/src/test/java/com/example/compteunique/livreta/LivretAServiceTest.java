@@ -45,11 +45,14 @@ class LivretAServiceTest {
 	private final CompteService comptes = mock(CompteService.class);
 	private final DossierRepository dossiers = mock(DossierRepository.class);
 	private final DemandeLivretARepository demandes = mock(DemandeLivretARepository.class);
+	private final IdentiteLivretAService identites = mock(IdentiteLivretAService.class);
+	private final ControleIdentiteLivretA controleValide = controleValide();
 	private final Dossier dossier = mock(Dossier.class);
 	private final Compte compte = new Compte(7L, CLIENTE, Iban.de("99000000001"), 3L, MAINTENANT.minusDays(30));
 
 	private LivretAService service(OffsetDateTime maintenant) {
-		return new LivretAService(comptes, dossiers, demandes, Clock.fixed(maintenant.toInstant(), ZoneOffset.UTC));
+		return new LivretAService(comptes, dossiers, demandes, identites,
+				Clock.fixed(maintenant.toInstant(), ZoneOffset.UTC));
 	}
 
 	private final LivretAService service = service(MAINTENANT);
@@ -68,10 +71,36 @@ class LivretAServiceTest {
 		when(dossiers.idsMemeIdentite("CLIENTEA", "TEST", LocalDate.of(1990, 5, 14), "PARIS", "FRANCE"))
 				.thenReturn(List.of(7L, 12L));
 		when(demandes.save(any(DemandeLivretA.class))).thenAnswer(invocation -> invocation.getArgument(0));
+		when(identites.controleValide(compte)).thenReturn(controleValide);
 	}
 
 	private static DemandeLivretA demande(boolean partage) {
 		return new DemandeLivretA(7L, CLIENTE, partage, MAINTENANT);
+	}
+
+	/** CU-28 : identité confirmée, aucune correspondance sanctions/PPE. */
+	private static ControleIdentiteLivretA controleValide() {
+		ControleIdentiteLivretA controle = new ControleIdentiteLivretA(7L, CLIENTE, false, MAINTENANT);
+		controle.recevoirResultat(ResultatSanctions.AUCUNE_CORRESPONDANCE, 1, MAINTENANT);
+		return controle;
+	}
+
+	// CU-28 : aucune ouverture sans contrôle d'identité validé.
+	@Test
+	void eligibiliteRefuseeSansIdentiteConfirmee() {
+		when(identites.controleValide(compte)).thenThrow(
+				new DemandeRefusee(HttpStatus.CONFLICT, IdentiteLivretAService.SANS_IDENTITE_CONFIRMEE));
+		assertRefus(HttpStatus.CONFLICT, IdentiteLivretAService.SANS_IDENTITE_CONFIRMEE,
+				() -> service.demander(JETON, true, true));
+		verify(demandes, never()).save(any());
+	}
+
+	// CU-28 : un contrôle par ouverture, rattaché à la demande créée.
+	@Test
+	void laDemandeUtiliseLeControleDIdentite() {
+		DemandeLivretA demande = service.demander(JETON, true, true).demande();
+		assertEquals(demande.getReference(), controleValide.getDemandeReference());
+		assertFalse(controleValide.permetUneDemande());
 	}
 
 	private void avecDemande(DemandeLivretA demande) {

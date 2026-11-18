@@ -51,18 +51,21 @@ public class LivretAService {
 	private final CompteService comptes;
 	private final DossierRepository dossiers;
 	private final DemandeLivretARepository demandes;
+	private final IdentiteLivretAService identites;
 	private final Clock horloge;
 
 	@Autowired
-	public LivretAService(CompteService comptes, DossierRepository dossiers, DemandeLivretARepository demandes) {
-		this(comptes, dossiers, demandes, Clock.systemDefaultZone());
+	public LivretAService(CompteService comptes, DossierRepository dossiers, DemandeLivretARepository demandes,
+			IdentiteLivretAService identites) {
+		this(comptes, dossiers, demandes, identites, Clock.systemDefaultZone());
 	}
 
 	LivretAService(CompteService comptes, DossierRepository dossiers, DemandeLivretARepository demandes,
-			Clock horloge) {
+			IdentiteLivretAService identites, Clock horloge) {
 		this.comptes = comptes;
 		this.dossiers = dossiers;
 		this.demandes = demandes;
+		this.identites = identites;
 		this.horloge = horloge;
 	}
 
@@ -79,6 +82,8 @@ public class LivretAService {
 		Compte compte = comptes.compteCourant(jetonSession);
 		Dossier dossier = dossier(compte.getDossierId());
 		controlerMultidetentionInterne(dossier);
+		// CU-28 : identité confirmée et contrôle sanctions/PPE validé pour cette ouverture.
+		ControleIdentiteLivretA controleIdentite = identites.controleValide(compte);
 		if (!Boolean.TRUE.equals(attestation)) {
 			throw new DemandeRefusee(HttpStatus.BAD_REQUEST, ATTESTATION_OBLIGATOIRE);
 		}
@@ -87,6 +92,7 @@ public class LivretAService {
 		}
 		DemandeLivretA demande = demandes.save(new DemandeLivretA(dossier.getId(), compte.getCustomerId(),
 				partageDetailAutorise, OffsetDateTime.now(horloge)));
+		controleIdentite.utiliserPour(demande.getReference());
 		return new Suivi(demande, transmission(dossier));
 	}
 

@@ -3,9 +3,10 @@ import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { refusDe } from '../beneficiaires/beneficiaires';
 import { CadreEspace } from '../espace/cadre-espace';
-import { BouchonsIdentiteService, CasFiscal, ReponseFiscale } from '../identification/bouchons-identite';
+import { BouchonsIdentiteService, CasDeTest, CasFiscal, ReponseFiscale } from '../identification/bouchons-identite';
 import { SuiviSession } from '../session/suivi-session';
-import { DemandeLivretA, LivretAService } from './livret-a';
+import { EtapeIdentiteLivretA } from './etape-identite-livret-a';
+import { ControleIdentite, DemandeLivretA, IdentiteLivretA, LivretAService } from './livret-a';
 
 type Message = { texte: string; erreur: boolean };
 type Chargement = { lu: false } | { lu: true; erreur: boolean };
@@ -15,6 +16,16 @@ export const ATTESTATION_OBLIGATOIRE =
 export const CHOIX_OBLIGATOIRE =
   'Indiquez si vous autorisez l’administration fiscale à communiquer le détail d’un éventuel Livret A existant.';
 const INDISPONIBLE = 'Le service est momentanément indisponible. Veuillez réessayer plus tard.';
+/** Message du backend quand l'éligibilité est demandée sans identité confirmée (CU-28). */
+export const SANS_IDENTITE_CONFIRMEE = "Confirmez d'abord votre identité.";
+
+/** CU-28 : cas de test du bouchon sanctions/PPE (API Gels des avoirs). */
+export const CAS_SANCTIONS: { code: CasDeTest; libelle: string }[] = [
+  { code: 'CONFORME', libelle: 'Aucune correspondance' },
+  { code: 'SANCTIONNE', libelle: 'Gel des avoirs' },
+  { code: 'PEP', libelle: 'Personne politiquement exposée' },
+  { code: 'INDISPONIBLE', libelle: 'Sans réponse (5 s par essai)' },
+];
 
 /** CU-295 : cas de test du bouchon de l'administration fiscale. */
 export const CAS_FISCAUX: { code: CasFiscal; libelle: string }[] = [
@@ -36,7 +47,7 @@ const STATUTS: Record<DemandeLivretA['statut'], string> = {
 // réponse au backend, qui applique les règles. Suivi de la demande ensuite (en cours, validée, existant).
 @Component({
   selector: 'app-livret-a-page',
-  imports: [CadreEspace, RouterLink],
+  imports: [CadreEspace, RouterLink, EtapeIdentiteLivretA],
   template: `
     <app-cadre-espace page="livret-a" [identifiant]="identifiant()">
       <section class="block">
@@ -82,9 +93,17 @@ const STATUTS: Record<DemandeLivretA['statut'], string> = {
                   }
                   <a class="btn m" routerLink="/espace">Retour à mon espace</a>
                 </div>
+              } @else if (!identiteValidee() && etapeIdentite(); as etape) {
+                <!-- CU-28 : étape « Mon identité » avant l'éligibilité. -->
+                <app-etape-identite-livret-a
+                  [donnees]="etape"
+                  [casSanctions]="casSanctions()"
+                  (validee)="identiteValidee.set(true)"
+                  (controleChange)="controleIdentite.set($event)"
+                />
               } @else {
                 <form class="eligibilite" (submit)="valider($event, attestation.checked)">
-                  <h2>Éligibilité</h2>
+                  <h2>Éligibilité <span class="etape">Étape 2 sur 2</span></h2>
                   <div class="info">
                     <p><b>Un seul Livret A par personne, toutes banques confondues.</b> Détenir plusieurs Livrets A est interdit.</p>
                     <p>
@@ -123,6 +142,28 @@ const STATUTS: Record<DemandeLivretA['statut'], string> = {
 
           <section class="test" aria-labelledby="titre-test-fiscal">
             <div class="tag">Environnement de test uniquement</div>
+            <h2 id="titre-test-sanctions">Bouchon du contrôle sanctions et PPE (CU-28)</h2>
+            <div class="cas" role="group" aria-labelledby="titre-test-sanctions">
+              @for (c of casSanctionsTest; track c.code) {
+                <label class="case">
+                  <input
+                    type="radio"
+                    name="cas-sanctions"
+                    [value]="c.code"
+                    [checked]="casSanctions() === c.code"
+                    (change)="casSanctions.set(c.code)"
+                  />
+                  {{ c.libelle }}
+                </label>
+              }
+            </div>
+            @if (controleIdentite(); as ci) {
+              @if (ci.statut === 'ATTENTE_RESPONSABLE') {
+                <button type="button" class="secondaire" [disabled]="envoi()" (click)="validerResponsable(ci.reference)">
+                  Simuler la validation du responsable
+                </button>
+              }
+            }
             <h2 id="titre-test-fiscal">Bouchon de l’administration fiscale (CU-295)</h2>
             <div class="cas" role="group" aria-label="Réponse de l'administration fiscale">
               @for (c of casFiscaux; track c.code) {
@@ -169,6 +210,7 @@ const STATUTS: Record<DemandeLivretA['statut'], string> = {
     .message { font-weight: 600; color: #0a7d63; }
     .ko { color: #b3261e; }
     .btn { justify-self: start; }
+    .etape { font-size: 13px; font-weight: 400; color: #5d6887; }
     .retour-site { display: inline-block; margin-bottom: 12px; color: #0b2545; font-weight: 700; }
   `,
 })
@@ -185,6 +227,12 @@ export class LivretAPage {
   protected readonly partage = signal<boolean | null>(null);
   protected readonly cas = signal<CasFiscal>('SANS_LIVRET_A');
   protected readonly envoi = signal(false);
+  /** CU-28 : identité confirmée et contrôle sanctions/PPE validé ; l'éligibilité peut s'afficher. */
+  protected readonly identiteValidee = signal(false);
+  protected readonly etapeIdentite = signal<{ identite: IdentiteLivretA; controle: ControleIdentite | null } | null>(null);
+  protected readonly controleIdentite = signal<ControleIdentite | null>(null);
+  protected readonly casSanctions = signal<CasDeTest>('CONFORME');
+  protected readonly casSanctionsTest = CAS_SANCTIONS;
   protected readonly message = signal<Message | null>(null);
 
   constructor() {
@@ -217,18 +265,32 @@ export class LivretAPage {
     return `${jour}/${mois}/${annee}`;
   }
 
+  // Demande en cours ; sans demande, CU-28 : identité pré-remplie et dernier contrôle d'identité.
   private charger(): void {
+    const echec = (erreur: HttpErrorResponse) => {
+      // 401 : retour à la connexion par l'intercepteur sessionFermee (CU-169).
+      if (erreur.status !== 401) {
+        this.chargement.set({ lu: true, erreur: true });
+      }
+    };
     this.service.etat().subscribe({
       next: (etat) => {
         this.demande.set(etat.demande);
-        this.chargement.set({ lu: true, erreur: false });
-      },
-      error: (erreur: HttpErrorResponse) => {
-        // 401 : retour à la connexion par l'intercepteur sessionFermee (CU-169).
-        if (erreur.status !== 401) {
-          this.chargement.set({ lu: true, erreur: true });
+        if (etat.demande) {
+          this.chargement.set({ lu: true, erreur: false });
+          return;
         }
+        this.service.identite().subscribe({
+          next: (etape) => {
+            this.etapeIdentite.set(etape);
+            this.controleIdentite.set(etape.controle);
+            this.identiteValidee.set(etape.controle?.statut === 'VALIDE' && etape.controle.utilisable);
+            this.chargement.set({ lu: true, erreur: false });
+          },
+          error: echec,
+        });
       },
+      error: echec,
     });
   }
 
@@ -311,8 +373,26 @@ export class LivretAPage {
     }
     const refus = refusDe(erreur, INDISPONIBLE);
     this.message.set({ texte: refus.texte, erreur: true });
+    // CU-28 : identité à (re)confirmer avant l'éligibilité.
+    if (refus.texte === SANS_IDENTITE_CONFIRMEE) {
+      this.identiteValidee.set(false);
+    }
     if (refus.termine) {
       this.charger();
     }
+  }
+
+  /** CU-28 critère 9 (test) : un responsable valide la démarche d'une personne politiquement exposée. */
+  protected validerResponsable(reference: string): void {
+    this.envoi.set(true);
+    this.message.set(null);
+    this.service.simulerValidationResponsable(reference).subscribe({
+      next: (controle) => {
+        this.envoi.set(false);
+        this.controleIdentite.set(controle);
+        this.identiteValidee.set(controle.statut === 'VALIDE' && controle.utilisable);
+      },
+      error: (erreur: HttpErrorResponse) => this.refus(erreur),
+    });
   }
 }
