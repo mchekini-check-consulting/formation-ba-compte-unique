@@ -10,6 +10,7 @@ import { Espace } from './espace';
 const ACTIVITE = '/api/backend/connexion/session/activite';
 const DECONNEXION = '/api/backend/connexion/deconnexion';
 const COMPTES = '/api/backend/comptes';
+const PROFIL = '/api/backend/profil';
 const COMPTE = {
   id: 1,
   ibanMasque: 'FR76 •••• •••• 0105',
@@ -41,6 +42,7 @@ describe('Espace', () => {
     const comptes = http.expectOne(COMPTES);
     expect(comptes.request.withCredentials).toBe(true);
     comptes.flush(reponse as never, options);
+    http.expectOne(PROFIL).flush({ statut: 'A_COMPLETER', profil: null });
     await fixture.whenStable();
     return { fixture, page: fixture.nativeElement as HTMLElement };
   }
@@ -54,6 +56,12 @@ describe('Espace', () => {
     expect(page.querySelector('.proof')?.textContent).toContain('05/11/2026');
     expect(page.querySelector('.proof')?.textContent).toContain('Actif');
     expect(page.querySelector('.noacct')).toBeNull();
+  });
+
+  it('affiche le statut du profil investisseur et un lien vers /profil (CU-10)', async () => {
+    const { page } = await ouvrir([COMPTE]);
+    expect(page.querySelector('.statut-profil')?.textContent).toBe('À compléter');
+    expect(page.querySelector('a[href="/profil"]')?.textContent).toContain('Voir mon profil');
   });
 
   it('affiche tous les produits ouverts à la souscription, épargne et crédits', async () => {

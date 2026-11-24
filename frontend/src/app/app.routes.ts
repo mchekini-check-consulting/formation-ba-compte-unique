@@ -50,6 +50,8 @@ const PAGES_DE_L_ESPACE: Routes = [
   { path: 'beneficiaires', component: MesBeneficiaires },
   // CU-31 : ouverture d'un Livret A (éligibilité et contrôle de multidétention).
   { path: 'livret-a', loadComponent: () => import('./livret-a/livret-a-page').then((m) => m.LivretAPage) },
+  // CU-10 : profil client, requis avant une souscription de PER ou d'assurance vie.
+  { path: 'profil', loadComponent: () => import('./profil/profil-page').then((m) => m.ProfilPage) },
 ];
 
 const protegee = (route: Route): Route => ({ ...route, canActivate: [espaceProtege, ...(route.canActivate ?? [])] });
