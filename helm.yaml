@@ -56,6 +56,9 @@ applications:
       # CU-295 : « Simuler l'expiration du délai » de l'administration fiscale (/test/livret-a/...) en dev et qualif.
       - key: LIVRET_A_SIMULE
         value: {dev: "true", qualif: "true", preprod: "false", prod: "false"}
+      # CU-380 (TECH-12) : date métier modifiable (/test/date-metier) en dev et qualif ; heure réelle de Paris, non modifiable, en preprod et prod.
+      - key: DATE_METIER_MODIFIABLE
+        value: {dev: "true", qualif: "true", preprod: "false", prod: "false"}
       # Comptes de test (db/demo) en dev et qualif, jamais en preprod ni en prod.
       - key: SPRING_FLYWAY_LOCATIONS
         value:

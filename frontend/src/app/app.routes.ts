@@ -4,6 +4,7 @@ import { MesBeneficiaires } from './beneficiaires/mes-beneficiaires';
 import { DetailCompte } from './comptes/detail-compte';
 import { MesComptes } from './comptes/mes-comptes';
 import { ConnexionPage } from './connexion-page/connexion-page';
+import { DateMetierTest } from './date-metier-test/date-metier-test';
 import { Espace } from './espace/espace';
 import { JournalTest } from './journal-test/journal-test';
 import { Landing } from './landing/landing';
@@ -30,6 +31,8 @@ export const PAGES_PUBLIQUES: Routes = [
   { path: 'test/sms', component: MessagesTest, data: { canal: 'sms' } },
   { path: 'test/journal-securite', component: JournalTest },
   { path: 'test/verification-beneficiaire', component: VerificationTest },
+  // CU-380 : date métier ; modifiable en test seulement (le backend refuse en preprod et prod).
+  { path: 'test/date-metier', component: DateMetierTest },
   // CU-27 : présentation du Livret A, ouverte à toutes ; son bouton d'ouverture mène à /livret-a (protégée).
   { path: 'epargne/livret-a', loadComponent: () => import('./livret-a/presentation-livret-a').then((m) => m.PresentationLivretA) },
   { path: 'mentions-legales', component: PageInfo, data: { titre: 'Mentions légales' } },

@@ -47,6 +47,9 @@ app:
     # CU-295 critère 5 : « Simuler l'expiration du délai » de l'administration fiscale
     # (/test/livret-a/...) en test (local, dev, qualif) ; false en preprod et prod (helm.yaml).
     livret-a-simule: ${LIVRET_A_SIMULE:true}
+    # CU-380 (TECH-12) : date métier modifiable sur /test/date-metier en test (local, dev, qualif) ;
+    # false en preprod et prod (helm.yaml) : heure réelle de Paris, tout changement refusé (403).
+    date-metier-modifiable: ${DATE_METIER_MODIFIABLE:true}
   virements:
     # CU-147 critère 5 : plafond d'un virement en centimes, à valider avec la conformité. 0 = pas de plafond.
     plafond-centimes: ${VIREMENTS_PLAFOND_CENTIMES:0}
