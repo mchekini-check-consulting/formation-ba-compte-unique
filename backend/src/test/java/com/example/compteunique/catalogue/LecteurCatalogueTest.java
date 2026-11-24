@@ -1,7 +1,7 @@
 package com.example.compteunique.catalogue;
 
-import static com.example.compteunique.catalogue.FichiersTest.fichier;
-import static com.example.compteunique.catalogue.FichiersTest.ligne;
+import static com.example.compteunique.catalogue.FichiersCatalogue.fichier;
+import static com.example.compteunique.catalogue.FichiersCatalogue.ligne;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
@@ -26,7 +26,7 @@ class LecteurCatalogueTest {
 	@Test
 	@DisplayName("Le fichier de test principal se lit entièrement : 102 supports, aucun rejet")
 	void fichierPrincipal() {
-		Lecture lecture = LecteurCatalogue.lire(FichiersTest.principal(), DATE_FICHIER);
+		Lecture lecture = LecteurCatalogue.lire(FichiersCatalogue.principal(), DATE_FICHIER);
 
 		assertThat(lecture.lignes()).hasSize(102);
 		assertThat(lecture.rejets()).isEmpty();
@@ -47,7 +47,7 @@ class LecteurCatalogueTest {
 	@DisplayName("Avec les 6 anomalies : les 6 lignes de test et la ligne d'origine de l'ISIN en double sont rejetées "
 			+ "avec leur motif, les 101 autres sont lues")
 	void fichierAvecAnomalies() {
-		Lecture lecture = LecteurCatalogue.lire(FichiersTest.avecAnomalies(), DATE_FICHIER);
+		Lecture lecture = LecteurCatalogue.lire(FichiersCatalogue.avecAnomalies(), DATE_FICHIER);
 
 		assertThat(lecture.lignes()).hasSize(101);
 		assertThat(lecture.rejets()).extracting("numeroLigne", "codeIsin", "motif").containsExactly(

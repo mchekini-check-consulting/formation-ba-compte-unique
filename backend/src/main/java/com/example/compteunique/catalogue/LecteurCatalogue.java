@@ -16,13 +16,31 @@ import java.util.stream.Collectors;
 // rejetée avec son motif ; les autres sont chargées. Un fichier sans l'en-tête attendu est illisible.
 final class LecteurCatalogue {
 
-	static final List<String> COLONNES = List.of("code_isin", "nom", "type", "categorie", "produits_ouverts",
-			"niveau_risque", "cote", "frais_support_pct", "statut", "valeur_liquidative", "date_vl", "devise",
-			"periodicite_vl", "label", "societe_gestion");
+	private static final String CODE_ISIN = "code_isin";
+	private static final String NOM = "nom";
+	private static final String TYPE = "type";
+	private static final String CATEGORIE = "categorie";
+	private static final String PRODUITS_OUVERTS = "produits_ouverts";
+	private static final String NIVEAU_RISQUE = "niveau_risque";
+	private static final String COTE = "cote";
+	private static final String FRAIS = "frais_support_pct";
+	private static final String STATUT = "statut";
+	private static final String VALEUR_LIQUIDATIVE = "valeur_liquidative";
+	private static final String DATE_VL = "date_vl";
+	private static final String DEVISE = "devise";
+	private static final String PERIODICITE_VL = "periodicite_vl";
+	private static final String LABEL = "label";
+	private static final String SOCIETE_GESTION = "societe_gestion";
+
+	static final List<String> COLONNES = List.of(CODE_ISIN, NOM, TYPE, CATEGORIE, PRODUITS_OUVERTS, NIVEAU_RISQUE,
+			COTE, FRAIS, STATUT, VALEUR_LIQUIDATIVE, DATE_VL, DEVISE, PERIODICITE_VL, LABEL, SOCIETE_GESTION);
 
 	/** Longueurs maximales des colonnes texte (V27__catalogue_uc.sql). */
-	private static final Map<String, Integer> LONGUEURS = Map.of("nom", 200, "type", 50, "categorie", 100,
-			"devise", 3, "periodicite_vl", 30, "label", 100, "societe_gestion", 200);
+	private static final Map<String, Integer> LONGUEURS = Map.of(NOM, 200, TYPE, 50, CATEGORIE, 100, DEVISE, 3,
+			PERIODICITE_VL, 30, LABEL, 100, SOCIETE_GESTION, 200);
+
+	/** Marque d'ordre des octets (BOM) que certains logiciels placent au début d'un fichier UTF-8. */
+	private static final String BOM = String.valueOf((char) 0xFEFF);
 
 	static final String MOTIF_DOUBLON = "Code ISIN présent deux fois dans le fichier";
 
@@ -53,7 +71,7 @@ final class LecteurCatalogue {
 	}
 
 	static Lecture lire(String contenu, LocalDate dateFichier) {
-		String texte = contenu == null ? "" : contenu.replace("﻿", "");
+		String texte = contenu == null ? "" : contenu.replace(BOM, "");
 		String[] lignes = texte.split("\r?\n", -1);
 		if (lignes[0].isBlank()) {
 			throw new FichierIllisible("fichier vide");
@@ -118,7 +136,7 @@ final class LecteurCatalogue {
 	}
 
 	private static String isin(Brute brute, Map<String, Integer> index) {
-		return valeur(brute, index, "code_isin").toUpperCase(Locale.ROOT);
+		return valeur(brute, index, CODE_ISIN).toUpperCase(Locale.ROOT);
 	}
 
 	private static LigneCatalogue controler(Brute brute, Map<String, Integer> index, LocalDate dateFichier) {
@@ -133,22 +151,22 @@ final class LecteurCatalogue {
 		if (!CodeIsin.estValide(isin)) {
 			throw new LigneInvalide("Code ISIN invalide (clé de contrôle fausse)");
 		}
-		int niveauRisque = niveauRisque(lu.apply("niveau_risque"));
-		String produits = produitsOuverts(lu.apply("produits_ouverts"));
-		BigDecimal valeurLiquidative = valeurLiquidative(lu.apply("valeur_liquidative"));
-		LocalDate dateVl = dateVl(lu.apply("date_vl"), dateFichier);
-		boolean cote = cote(lu.apply("cote"));
-		String statut = statut(lu.apply("statut"));
-		BigDecimal frais = frais(lu.apply("frais_support_pct"));
+		int niveauRisque = niveauRisque(lu.apply(NIVEAU_RISQUE));
+		String produits = produitsOuverts(lu.apply(PRODUITS_OUVERTS));
+		BigDecimal valeurLiquidative = valeurLiquidative(lu.apply(VALEUR_LIQUIDATIVE));
+		LocalDate dateVl = dateVl(lu.apply(DATE_VL), dateFichier);
+		boolean cote = cote(lu.apply(COTE));
+		String statut = statut(lu.apply(STATUT));
+		BigDecimal frais = frais(lu.apply(FRAIS));
 		for (Map.Entry<String, Integer> longueur : LONGUEURS.entrySet()) {
 			if (lu.apply(longueur.getKey()).length() > longueur.getValue()) {
 				throw new LigneInvalide("Valeur trop longue dans la colonne " + longueur.getKey());
 			}
 		}
-		return new LigneCatalogue(brute.numero(), isin, lu.apply("nom"), lu.apply("type"), lu.apply("categorie"),
+		return new LigneCatalogue(brute.numero(), isin, lu.apply(NOM), lu.apply(TYPE), lu.apply(CATEGORIE),
 				produits, niveauRisque, cote, frais, statut, valeurLiquidative, dateVl,
-				lu.apply("devise").toUpperCase(Locale.ROOT), lu.apply("periodicite_vl"), lu.apply("label"),
-				lu.apply("societe_gestion"));
+				lu.apply(DEVISE).toUpperCase(Locale.ROOT), lu.apply(PERIODICITE_VL), lu.apply(LABEL),
+				lu.apply(SOCIETE_GESTION));
 	}
 
 	private static int niveauRisque(String valeur) {

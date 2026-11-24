@@ -4,8 +4,10 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -36,6 +38,8 @@ public class ChargementCatalogue {
 
 	private static final Logger log = LoggerFactory.getLogger(ChargementCatalogue.class);
 
+	private static final Set<DayOfWeek> WEEK_END = EnumSet.of(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY);
+
 	static final Pattern NOM_FICHIER = Pattern.compile("catalogue_uc_(\\d{4}-\\d{2}-\\d{2})\\.csv");
 
 	/** Taille maximale d'un fichier déposé (le fichier de test fait 15 ko). */
@@ -61,7 +65,7 @@ public class ChargementCatalogue {
 
 	/** Jours ouvrés : du lundi au vendredi (pas de calendrier des jours fériés dans le prototype). */
 	static boolean estOuvre(LocalDate jour) {
-		return jour.getDayOfWeek() != DayOfWeek.SATURDAY && jour.getDayOfWeek() != DayOfWeek.SUNDAY;
+		return !WEEK_END.contains(jour.getDayOfWeek());
 	}
 
 	/** Vrai si le batch automatique a déjà tourné (terminé ou en échec) pour ce jour métier. */

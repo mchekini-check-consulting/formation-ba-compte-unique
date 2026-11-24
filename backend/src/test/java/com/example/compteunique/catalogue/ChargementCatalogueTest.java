@@ -1,7 +1,7 @@
 package com.example.compteunique.catalogue;
 
-import static com.example.compteunique.catalogue.FichiersTest.fichier;
-import static com.example.compteunique.catalogue.FichiersTest.ligne;
+import static com.example.compteunique.catalogue.FichiersCatalogue.fichier;
+import static com.example.compteunique.catalogue.FichiersCatalogue.ligne;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
@@ -122,7 +122,7 @@ class ChargementCatalogueTest {
 	@DisplayName("Critère 1 : étant donné le fichier du 23/11/2026 et un catalogue vide, quand le batch s'exécute, "
 			+ "alors 102 supports sont enregistrés avec leur VL et sa date, et le journal indique 102 ajoutés, 0 rejeté")
 	void critere1CatalogueVide() {
-		deposer(FichiersTest.principal());
+		deposer(FichiersCatalogue.principal());
 
 		JournalBatch journal = chargement.lancer(Declenchement.AUTOMATIQUE);
 
@@ -152,7 +152,7 @@ class ChargementCatalogueTest {
 	@DisplayName("Critère 2 : étant donné le même fichier chargé une deuxième fois, alors le catalogue compte "
 			+ "toujours 102 supports et le journal indique 0 ajouté, 0 modifié")
 	void critere2RejouerNeChangeRien() {
-		deposer(FichiersTest.principal());
+		deposer(FichiersCatalogue.principal());
 		chargement.lancer(Declenchement.AUTOMATIQUE);
 
 		JournalBatch deuxieme = chargement.lancer(Declenchement.MANUEL);
@@ -168,7 +168,7 @@ class ChargementCatalogueTest {
 	@DisplayName("Critère 3 : étant donné le fichier complété des 6 anomalies, alors les 6 lignes de test et la "
 			+ "ligne d'origine de l'ISIN en double sont rejetées avec leur motif, et les 101 autres supports chargés")
 	void critere3Anomalies() {
-		deposer(FichiersTest.avecAnomalies());
+		deposer(FichiersCatalogue.avecAnomalies());
 
 		JournalBatch journal = chargement.lancer(Declenchement.AUTOMATIQUE);
 
@@ -291,7 +291,7 @@ class ChargementCatalogueTest {
 	@DisplayName("Critère 9 : après le batch, l'exécution des ordres lit les VL chargées et sait que le catalogue "
 			+ "est à jour pour la date métier")
 	void critere9ValeursPourLesOrdres() {
-		deposer(FichiersTest.principal());
+		deposer(FichiersCatalogue.principal());
 		chargement.lancer(Declenchement.AUTOMATIQUE);
 
 		assertThat(catalogue.catalogueMisAJour(LocalDate.of(2026, 11, 23))).isTrue();
@@ -348,7 +348,7 @@ class ChargementCatalogueTest {
 	void routesDeTest() {
 		CatalogueTestController routes = new CatalogueTestController(chargement);
 
-		assertThat(routes.deposer(new Depot(" catalogue_uc_2026-11-23.csv ", FichiersTest.avecAnomalies())))
+		assertThat(routes.deposer(new Depot(" catalogue_uc_2026-11-23.csv ", FichiersCatalogue.avecAnomalies())))
 				.satisfies(f -> assertThat(f.dateFichier()).isEqualTo(LocalDate.of(2026, 11, 23)));
 		JournalVue vue = routes.lancer();
 

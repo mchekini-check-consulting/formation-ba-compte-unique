@@ -9,11 +9,11 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 // CU-381 : fichiers de test joints à CAT-01 (CU-337), dans src/test/resources/catalogue/.
-final class FichiersTest {
+final class FichiersCatalogue {
 
 	static final String ENTETE = String.join(";", LecteurCatalogue.COLONNES);
 
-	private FichiersTest() {
+	private FichiersCatalogue() {
 	}
 
 	/** catalogue_uc_2026-11-23.csv : 102 supports (80 cotés, 22 non cotés, 3 retirés). */
@@ -52,7 +52,7 @@ final class FichiersTest {
 	}
 
 	private static String lire(String nom) {
-		try (InputStream flux = FichiersTest.class.getResourceAsStream("/catalogue/" + nom)) {
+		try (InputStream flux = FichiersCatalogue.class.getResourceAsStream("/catalogue/" + nom)) {
 			if (flux == null) {
 				throw new IllegalStateException("Fichier de test absent : " + nom);
 			}

@@ -47,7 +47,7 @@ class CatalogueIT {
 	@Test
 	void leFichierEstChargeRejoueEtSesAnomaliesRejetees() {
 		dateMetier.changer(LocalDateTime.of(2026, 11, 23, 2, 0), "Test CU-381");
-		chargement.deposer("catalogue_uc_2026-11-23.csv", FichiersTest.principal());
+		chargement.deposer("catalogue_uc_2026-11-23.csv", FichiersCatalogue.principal());
 
 		JournalBatch premier = chargement.lancer(Declenchement.AUTOMATIQUE);
 		assertThat(premier.getStatut()).isEqualTo(Statut.TERMINE);
@@ -63,7 +63,7 @@ class CatalogueIT {
 		assertThat(supports.count()).isEqualTo(102);
 		assertThat(historique.count()).isEqualTo(102);
 
-		chargement.deposer("catalogue_uc_2026-11-23.csv", FichiersTest.avecAnomalies());
+		chargement.deposer("catalogue_uc_2026-11-23.csv", FichiersCatalogue.avecAnomalies());
 		JournalBatch anomalies = chargement.lancer(Declenchement.MANUEL);
 		assertThat(anomalies.getRejetees()).isEqualTo(7);
 		assertThat(chargement.journal().getFirst().getLignesRejetees()).hasSize(7);
