@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 import { CarteCompte } from '../comptes/carte-compte';
 import { Compte, ComptesService, formaterDate, libelleStatut, soldeAffichable } from '../comptes/comptes';
 import { SuiviSession, formaterRestant } from '../session/suivi-session';
+import { LIBELLES_STATUT, ProfilService } from '../profil/profil';
 import { CREDITS, EPARGNE, Produit } from './produits';
 
 type EtatComptes = { lu: false } | { lu: true; erreur: boolean; comptes: Compte[] };
@@ -24,6 +25,7 @@ const DUREE_ANNONCE_MS = 3200;
 export class Espace {
   private readonly document = inject(DOCUMENT);
   private readonly comptes = inject(ComptesService);
+  private readonly profils = inject(ProfilService);
   private readonly suivi = inject(SuiviSession);
   private readonly etat = signal<EtatComptes>({ lu: false });
   private minuteurAnnonce: ReturnType<typeof setTimeout> | null = null;
@@ -32,6 +34,8 @@ export class Espace {
   protected readonly credits: Produit[] = CREDITS;
   protected readonly identifiant = signal('');
   protected readonly annonce = signal('');
+  /** CU-10 : statut du profil client (« À compléter »...), vide tant qu'il n'est pas lu. */
+  protected readonly statutProfil = signal('');
   protected readonly lu = computed(() => this.etat().lu);
   protected readonly compte = computed(() => {
     const etat = this.etat();
@@ -66,6 +70,7 @@ export class Espace {
       next: (session) => {
         this.identifiant.set(session.identifiant);
         this.lireComptes();
+        this.profils.lire().subscribe({ next: (etat) => this.statutProfil.set(LIBELLES_STATUT[etat.statut]), error: () => undefined });
       },
       error: () => undefined,
     });

@@ -295,6 +295,7 @@
           <div class="cards">
             <div class="card"><div class="body"><span class="tag t-violet">Identité</span><h3>Identifiant {{ identifiant() }}</h3><p>Identité vérifiée à l'ouverture de votre compte.</p></div></div>
             <div class="card"><div class="body"><span class="tag t-blue">Contact</span><h3>E-mail et mobile</h3><p>Ils servent à vous envoyer vos identifiants et vos codes.</p><div class="foot"><button class="go" type="button" (click)="annoncer('Contact du conseiller : bientôt disponible.')">Contacter mon conseiller →</button></div></div></div>
+            <div class="card"><div class="body"><span class="tag t-mint">Placements</span><h3>Mon profil investisseur</h3><p>Requis avant un PER ou une assurance vie.@if (statutProfil()) { Statut : <b class="statut-profil">{{ statutProfil() }}</b>.}</p><div class="foot"><a class="go" routerLink="/profil">Voir mon profil →</a></div></div></div>
             <div class="card"><div class="body"><span class="tag t-amber">Sécurité</span><h3>Mot de passe et session</h3><p>Session fermée automatiquement après 10 minutes sans activité.</p><div class="foot"><button class="go" type="button" (click)="annoncer('Changement de mot de passe : bientôt disponible.')">Changer mon mot de passe →</button></div></div></div>
           </div>
         </div>
