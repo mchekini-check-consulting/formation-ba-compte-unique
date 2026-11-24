@@ -33,6 +33,8 @@ export const PAGES_PUBLIQUES: Routes = [
   { path: 'test/verification-beneficiaire', component: VerificationTest },
   // CU-380 : date métier ; modifiable en test seulement (le backend refuse en preprod et prod).
   { path: 'test/date-metier', component: DateMetierTest },
+  // CU-381 : dépôt du fichier catalogue et lancement du batch ; absent en preprod et prod (le backend répond 404).
+  { path: 'test/catalogue', loadComponent: () => import('./catalogue-test/catalogue-test').then((m) => m.CatalogueTest) },
   // CU-27 : présentation du Livret A, ouverte à toutes ; son bouton d'ouverture mène à /livret-a (protégée).
   { path: 'epargne/livret-a', loadComponent: () => import('./livret-a/presentation-livret-a').then((m) => m.PresentationLivretA) },
   { path: 'mentions-legales', component: PageInfo, data: { titre: 'Mentions légales' } },

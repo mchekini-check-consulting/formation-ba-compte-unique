@@ -1,0 +1,7 @@
+code_isin;nom;type;categorie;produits_ouverts;niveau_risque;cote;frais_support_pct;statut;valeur_liquidative;date_vl;devise;periodicite_vl;label;societe_gestion
+;TEST Ligne sans ISIN;Monétaire;Monétaire euro;PER|AV;1;oui;0.10;actif;9082.68;2026-11-20;EUR;quotidienne;aucun;Aurévia AM
+QZ9000000018;TEST Ligne sans niveau de risque;Monétaire;Monétaire euro;PER|AV;;oui;0.10;actif;9082.68;2026-11-20;EUR;quotidienne;aucun;Aurévia AM
+QZ9000000026;TEST Ligne sans produit ouvert;Monétaire;Monétaire euro;;1;oui;0.10;actif;9082.68;2026-11-20;EUR;quotidienne;aucun;Aurévia AM
+QZ9000000034;TEST Niveau de risque hors échelle;Monétaire;Monétaire euro;PER|AV;8;oui;0.10;actif;9082.68;2026-11-20;EUR;quotidienne;aucun;Aurévia AM
+QZ9000000040;TEST ISIN avec clé de contrôle fausse;Monétaire;Monétaire euro;PER|AV;1;oui;0.10;actif;9082.68;2026-11-20;EUR;quotidienne;aucun;Aurévia AM
+QZ0000000017;TEST ISIN en double (déjà présent dans le catalogue);Monétaire;Monétaire euro;PER|AV;1;oui;0.10;actif;9082.68;2026-11-20;EUR;quotidienne;aucun;Aurévia AM
