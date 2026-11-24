@@ -1,0 +1,103 @@
+code_isin;nom;type;categorie;produits_ouverts;niveau_risque;cote;frais_support_pct;statut;valeur_liquidative;date_vl;devise;periodicite_vl;label;societe_gestion
+QZ0000000017;Monétaire Euro Court Terme;Monétaire;Monétaire euro;PER|AV;1;oui;0.10;actif;9082.68;2026-11-20;EUR;quotidienne;aucun;Aurévia AM
+QZ0000000025;Monétaire Euro Standard;Monétaire;Monétaire euro;PER|AV;1;oui;0.15;actif;10780.03;2026-11-20;EUR;quotidienne;aucun;Nordrive Gestion
+QZ0000000033;Trésorerie Euro Plus;Monétaire;Monétaire euro;PER|AV;1;oui;0.20;actif;7894.29;2026-11-20;EUR;quotidienne;aucun;Calistène Investissements
+QZ0000000041;Monétaire Euro ISR;Monétaire;Monétaire euro;PER|AV;1;oui;0.18;actif;2002.96;2026-11-20;EUR;quotidienne;ISR;Sillon Capital
+QZ0000000058;Liquidités Euro Institutionnel;Monétaire;Monétaire euro;PER|AV;1;oui;0.08;actif;9772.69;2026-11-20;EUR;quotidienne;aucun;Orméa Asset Management
+QZ0000000066;Obligations Euro Souveraines 1-3 ans;Obligations;Obligations souveraines;PER|AV;2;oui;0.35;actif;95.10;2026-11-20;EUR;quotidienne;aucun;HTB Gestion
+QZ0000000074;Obligations Euro Souveraines 7-10 ans;Obligations;Obligations souveraines;PER|AV;3;oui;0.40;actif;225.03;2026-11-20;EUR;quotidienne;aucun;Aurévia AM
+QZ0000000082;Obligations Indexées Inflation Euro;Obligations;Obligations indexées inflation;PER|AV;3;oui;0.45;actif;146.07;2026-11-20;EUR;quotidienne;aucun;Nordrive Gestion
+QZ0000000090;Crédit Euro Investment Grade;Obligations;Obligations entreprises;PER|AV;2;oui;0.55;actif;111.60;2026-11-20;EUR;quotidienne;aucun;Calistène Investissements
+QZ0000000108;Crédit Euro Court Terme;Obligations;Obligations entreprises;PER|AV;2;oui;0.40;actif;191.26;2026-11-20;EUR;quotidienne;aucun;Sillon Capital
+QZ0000000116;Obligations Vertes Euro;Obligations;Obligations vertes;PER|AV;3;oui;0.60;actif;92.55;2026-11-20;EUR;quotidienne;Greenfin;Orméa Asset Management
+QZ0000000124;Haut Rendement Euro;Obligations;Obligations haut rendement;PER|AV;3;oui;1.10;actif;152.17;2026-11-20;EUR;quotidienne;aucun;HTB Gestion
+QZ0000000132;Haut Rendement Monde Couvert;Obligations;Obligations haut rendement;PER|AV;4;oui;1.20;actif;126.18;2026-11-20;EUR;quotidienne;aucun;Aurévia AM
+QZ0000000140;Obligations Émergentes Devises Fortes;Obligations;Obligations émergentes;PER|AV;4;oui;1.30;actif;98.83;2026-11-20;EUR;quotidienne;aucun;Nordrive Gestion
+QZ0000000157;Obligations Émergentes Devises Locales;Obligations;Obligations émergentes;PER|AV;4;oui;1.40;actif;216.65;2026-11-20;EUR;quotidienne;aucun;Calistène Investissements
+QZ0000000165;Obligations Convertibles Europe;Obligations;Obligations convertibles;PER|AV;4;oui;1.25;actif;127.93;2026-11-20;EUR;quotidienne;aucun;Sillon Capital
+QZ0000000173;Obligations Datées 2029;Obligations;Obligations datées;AV;2;oui;0.80;actif;159.33;2026-11-20;EUR;quotidienne;aucun;Orméa Asset Management
+QZ0000000181;Obligations Datées 2031;Obligations;Obligations datées;AV;3;oui;0.85;actif;135.54;2026-11-20;EUR;quotidienne;aucun;HTB Gestion
+QZ0000000199;Obligations Monde Agrégées Couvertes;Obligations;Obligations internationales;PER|AV;3;oui;0.70;actif;241.31;2026-11-20;EUR;quotidienne;aucun;Aurévia AM
+QZ0000000207;Obligations Subordonnées Financières;Obligations;Obligations subordonnées;PER|AV;4;oui;1.15;actif;208.86;2026-11-20;EUR;quotidienne;aucun;Nordrive Gestion
+QZ0000000215;Crédit Euro ISR;Obligations;Obligations entreprises;PER|AV;2;oui;0.65;actif;88.57;2026-11-20;EUR;quotidienne;ISR;Calistène Investissements
+QZ0000000223;Obligations Solidaires Euro;Obligations;Obligations solidaires;PER|AV;2;oui;0.70;actif;219.80;2026-11-20;EUR;quotidienne;Finansol;Sillon Capital
+QZ0000000231;Dette Courte Euro Flexible;Obligations;Obligations flexibles;PER|AV;2;oui;0.50;actif;208.69;2026-11-20;EUR;quotidienne;aucun;Orméa Asset Management
+QZ0000000249;Patrimoine Prudent;Diversifié;Diversifié prudent;PER|AV;3;oui;1.20;actif;345.00;2026-11-20;EUR;quotidienne;aucun;HTB Gestion
+QZ0000000256;Allocation Prudente ISR;Diversifié;Diversifié prudent;PER|AV;3;oui;1.15;actif;140.94;2026-11-20;EUR;quotidienne;ISR;Aurévia AM
+QZ0000000264;Revenus Mixtes Euro;Diversifié;Diversifié prudent;PER|AV;3;oui;1.10;actif;322.00;2026-11-20;EUR;quotidienne;aucun;Nordrive Gestion
+QZ0000000272;Patrimoine Équilibré;Diversifié;Diversifié équilibré;PER|AV;4;oui;1.40;actif;214.07;2026-11-20;EUR;quotidienne;aucun;Calistène Investissements
+QZ0000000280;Multi-actifs Équilibré Monde;Diversifié;Diversifié équilibré;PER|AV;4;oui;1.35;actif;119.66;2026-11-20;EUR;quotidienne;aucun;Sillon Capital
+QZ0000000298;Allocation Équilibrée Climat;Diversifié;Diversifié équilibré;PER|AV;4;oui;1.45;actif;255.61;2026-11-20;EUR;quotidienne;Greenfin;Orméa Asset Management
+QZ0000000306;Patrimoine Dynamique;Diversifié;Diversifié dynamique;PER|AV;5;oui;1.60;actif;297.90;2026-11-20;EUR;quotidienne;aucun;HTB Gestion
+QZ0000000314;Multi-actifs Croissance;Diversifié;Diversifié dynamique;PER|AV;5;oui;1.55;actif;195.14;2026-11-20;EUR;quotidienne;aucun;Aurévia AM
+QZ0000000322;Allocation Flexible Monde;Diversifié;Diversifié flexible;PER|AV;4;oui;1.50;actif;186.16;2026-11-20;EUR;quotidienne;aucun;Nordrive Gestion
+QZ0000000330;Rendement Absolu Multi-stratégies;Diversifié;Performance absolue;PER|AV;3;oui;1.30;actif;320.22;2026-11-20;EUR;quotidienne;aucun;Calistène Investissements
+QZ0000000348;Horizon Retraite 2035;Diversifié;Fonds à horizon;PER;4;oui;1.20;actif;259.49;2026-11-20;EUR;quotidienne;aucun;Sillon Capital
+QZ0000000355;Horizon Retraite 2045;Diversifié;Fonds à horizon;PER;5;oui;1.25;actif;198.97;2026-11-20;EUR;quotidienne;aucun;Orméa Asset Management
+QZ0000000363;Actions France Grandes Capitalisations;Actions;Actions France;PER|AV;6;oui;1.60;actif;448.06;2026-11-20;EUR;quotidienne;aucun;HTB Gestion
+QZ0000000371;Actions France PME-ETI;Actions;Actions France petites et moyennes capitalisations;PER|AV;6;oui;1.90;actif;345.57;2026-11-20;EUR;quotidienne;aucun;Aurévia AM
+QZ0000000389;Actions Zone Euro;Actions;Actions zone euro;PER|AV;6;oui;1.55;actif;505.91;2026-11-20;EUR;quotidienne;aucun;Nordrive Gestion
+QZ0000000397;Actions Europe Rendement;Actions;Actions Europe;PER|AV;5;oui;1.50;actif;334.99;2026-11-20;EUR;quotidienne;aucun;Calistène Investissements
+QZ0000000405;Actions Europe Petites Capitalisations;Actions;Actions Europe petites capitalisations;PER|AV;6;oui;1.85;actif;219.98;2026-11-20;EUR;quotidienne;aucun;Sillon Capital
+QZ0000000413;Actions Europe ISR;Actions;Actions Europe;PER|AV;6;oui;1.45;actif;119.72;2026-11-20;EUR;quotidienne;ISR;Orméa Asset Management
+QZ0000000421;Actions États-Unis;Actions;Actions Amérique du Nord;PER|AV;6;oui;1.50;actif;231.51;2026-11-20;EUR;quotidienne;aucun;HTB Gestion
+QZ0000000439;Actions États-Unis Croissance;Actions;Actions Amérique du Nord;PER|AV;6;oui;1.70;actif;267.21;2026-11-20;EUR;quotidienne;aucun;Aurévia AM
+QZ0000000447;Actions Monde;Actions;Actions internationales;PER|AV;6;oui;1.55;actif;419.96;2026-11-20;EUR;quotidienne;aucun;Nordrive Gestion
+QZ0000000454;Actions Monde Dividendes;Actions;Actions internationales;PER|AV;5;oui;1.50;actif;437.75;2026-11-20;EUR;quotidienne;aucun;Calistène Investissements
+QZ0000000462;Actions Japon;Actions;Actions Japon;PER|AV;6;oui;1.60;actif;197.35;2026-11-20;EUR;quotidienne;aucun;Sillon Capital
+QZ0000000470;Actions Asie hors Japon;Actions;Actions Asie;PER|AV;6;oui;1.75;actif;489.41;2026-11-20;EUR;quotidienne;aucun;Orméa Asset Management
+QZ0000000488;Actions Chine;Actions;Actions Asie;PER|AV;6;oui;1.90;actif;530.25;2026-11-20;EUR;quotidienne;aucun;HTB Gestion
+QZ0000000496;Actions Inde;Actions;Actions émergentes;PER|AV;6;oui;1.95;actif;398.38;2026-11-20;EUR;quotidienne;aucun;Aurévia AM
+QZ0000000504;Actions Marchés Émergents;Actions;Actions émergentes;PER|AV;6;oui;1.80;actif;326.12;2026-11-20;EUR;quotidienne;aucun;Nordrive Gestion
+QZ0000000512;Actions Amérique Latine;Actions;Actions émergentes;PER|AV;6;oui;2.00;actif;349.81;2026-11-20;EUR;quotidienne;aucun;Calistène Investissements
+QZ0000000520;Actions Santé Monde;Actions;Actions thématiques;PER|AV;6;oui;1.70;actif;215.17;2026-11-20;EUR;quotidienne;aucun;Sillon Capital
+QZ0000000538;Actions Technologies Monde;Actions;Actions thématiques;PER|AV;6;oui;1.80;actif;152.79;2026-11-20;EUR;quotidienne;aucun;Orméa Asset Management
+QZ0000000546;Actions Transition Énergétique;Actions;Actions thématiques;PER|AV;6;oui;1.75;actif;396.83;2026-11-20;EUR;quotidienne;Greenfin;HTB Gestion
+QZ0000000553;Actions Eau et Environnement;Actions;Actions thématiques;PER|AV;6;oui;1.70;actif;548.93;2026-11-20;EUR;quotidienne;Greenfin;Aurévia AM
+QZ0000000561;Actions Intelligence Artificielle;Actions;Actions thématiques;PER|AV;7;oui;1.95;actif;296.22;2026-11-20;EUR;quotidienne;aucun;Nordrive Gestion
+QZ0000000579;Actions Biotechnologies;Actions;Actions thématiques;PER|AV;7;oui;2.10;actif;433.46;2026-11-20;EUR;quotidienne;aucun;Calistène Investissements
+QZ0000000587;Actions Or et Mines;Actions;Actions sectorielles;PER|AV;7;oui;2.00;actif;399.31;2026-11-20;EUR;quotidienne;aucun;Sillon Capital
+QZ0000000595;Actions Emploi Solidaire;Actions;Actions solidaires;PER|AV;5;oui;1.40;actif;144.38;2026-11-20;EUR;quotidienne;Finansol;Orméa Asset Management
+QZ0000000603;ETF Actions Monde;ETF;ETF actions;PER|AV;6;oui;0.20;actif;66.99;2026-11-20;EUR;quotidienne;aucun;HTB Gestion
+QZ0000000611;ETF Actions Zone Euro;ETF;ETF actions;PER|AV;6;oui;0.15;actif;111.42;2026-11-20;EUR;quotidienne;aucun;Aurévia AM
+QZ0000000629;ETF Actions États-Unis;ETF;ETF actions;PER|AV;6;oui;0.07;actif;27.70;2026-11-20;EUR;quotidienne;aucun;Nordrive Gestion
+QZ0000000637;ETF Actions Europe;ETF;ETF actions;PER|AV;6;oui;0.12;actif;46.35;2026-11-20;EUR;quotidienne;aucun;Calistène Investissements
+QZ0000000645;ETF Actions Émergents;ETF;ETF actions;PER|AV;6;oui;0.18;actif;27.16;2026-11-20;EUR;quotidienne;aucun;Sillon Capital
+QZ0000000652;ETF Actions Monde ISR;ETF;ETF actions;PER|AV;6;oui;0.25;actif;146.59;2026-11-20;EUR;quotidienne;ISR;Orméa Asset Management
+QZ0000000660;ETF Actions Japon;ETF;ETF actions;PER|AV;6;oui;0.15;actif;83.98;2026-11-20;EUR;quotidienne;aucun;HTB Gestion
+QZ0000000678;ETF Actions France;ETF;ETF actions;PER|AV;6;oui;0.25;actif;57.53;2026-11-20;EUR;quotidienne;aucun;Aurévia AM
+QZ0000000686;ETF Obligations Euro Souveraines;ETF;ETF obligations;PER|AV;3;oui;0.15;actif;110.33;2026-11-20;EUR;quotidienne;aucun;Nordrive Gestion
+QZ0000000694;ETF Obligations Euro Entreprises;ETF;ETF obligations;PER|AV;3;oui;0.20;actif;98.99;2026-11-20;EUR;quotidienne;aucun;Calistène Investissements
+QZ0000000702;ETF Obligations Court Terme Euro;ETF;ETF obligations;PER|AV;2;oui;0.10;actif;45.20;2026-11-20;EUR;quotidienne;aucun;Sillon Capital
+QZ0000000710;ETF Monétaire Euro;ETF;ETF monétaires;PER|AV;1;oui;0.10;actif;132.45;2026-11-20;EUR;quotidienne;aucun;Orméa Asset Management
+QZ0000000728;ETF Immobilier Coté Europe;ETF;ETF immobilier coté;PER|AV;6;oui;0.40;actif;56.67;2026-11-20;EUR;quotidienne;aucun;HTB Gestion
+QZ0000000736;ETF Or Physique;ETF;ETF matières premières;PER|AV;5;oui;0.25;actif;36.00;2026-11-20;EUR;quotidienne;aucun;Aurévia AM
+QZ0000000744;ETF Matières Premières Diversifiées;ETF;ETF matières premières;PER|AV;6;oui;0.35;actif;85.61;2026-11-20;EUR;quotidienne;aucun;Nordrive Gestion
+QZ0000000751;SCPI Bureaux Europe;Immobilier;SCPI;PER|AV;3;non;1.60;actif;773.32;2026-11-01;EUR;mensuelle;aucun;Calistène Investissements
+QZ0000000769;SCPI Commerces France;Immobilier;SCPI;PER|AV;3;non;1.20;actif;533.67;2026-11-01;EUR;mensuelle;aucun;Sillon Capital
+QZ0000000777;SCPI Santé et Éducation;Immobilier;SCPI;PER|AV;3;non;1.20;actif;1003.83;2026-11-01;EUR;mensuelle;aucun;Orméa Asset Management
+QZ0000000785;SCPI Logistique Europe;Immobilier;SCPI;PER|AV;3;non;1.80;actif;217.13;2026-11-01;EUR;mensuelle;aucun;HTB Gestion
+QZ0000000793;SCPI Diversifiée Rendement;Immobilier;SCPI;AV;3;non;1.20;actif;207.16;2026-11-01;EUR;mensuelle;aucun;Aurévia AM
+QZ0000000801;SCI Patrimoine Immobilier;Immobilier;SCI;PER|AV;2;non;1.20;actif;523.34;2026-11-19;EUR;hebdomadaire;aucun;Nordrive Gestion
+QZ0000000819;SCI Immobilier Résidentiel;Immobilier;SCI;PER|AV;2;non;1.40;actif;1047.24;2026-11-19;EUR;hebdomadaire;aucun;Calistène Investissements
+QZ0000000827;SCI Immobilier Durable;Immobilier;SCI;PER|AV;3;non;1.80;actif;338.75;2026-11-19;EUR;hebdomadaire;ISR;Sillon Capital
+QZ0000000835;OPCI Grand Public Diversifié;Immobilier;OPCI;PER|AV;4;non;1.40;actif;997.53;2026-11-13;EUR;bimensuelle;aucun;Orméa Asset Management
+QZ0000000843;OPCI Immobilier Europe;Immobilier;OPCI;AV;4;non;1.60;actif;397.17;2026-11-13;EUR;bimensuelle;aucun;HTB Gestion
+QZ0000000850;Capital Investissement PME France;Capital investissement;FCPR;PER|AV;6;non;2.80;actif;128.48;2026-11-13;EUR;bimensuelle;aucun;Aurévia AM
+QZ0000000868;Capital Croissance Europe;Capital investissement;FCPR;PER|AV;6;non;2.90;actif;101.73;2026-11-13;EUR;bimensuelle;aucun;Nordrive Gestion
+QZ0000000876;Private Equity Monde Evergreen;Capital investissement;FPCI;AV;7;non;3.20;actif;147.21;2026-11-13;EUR;bimensuelle;aucun;Calistène Investissements
+QZ0000000884;Capital Transmission ETI;Capital investissement;ELTIF;PER|AV;6;non;2.60;actif;106.43;2026-11-13;EUR;bimensuelle;aucun;Sillon Capital
+QZ0000000892;Capital Innovation Santé;Capital investissement;FCPR;PER|AV;7;non;3.30;actif;108.35;2026-11-13;EUR;bimensuelle;aucun;Orméa Asset Management
+QZ0000000900;Dette Privée Senior Europe;Dette privée;Fonds de dette privée;PER|AV;4;non;1.90;actif;143.87;2026-11-13;EUR;bimensuelle;aucun;HTB Gestion
+QZ0000000918;Dette Privée PME France;Dette privée;ELTIF;PER|AV;5;non;2.10;actif;116.51;2026-11-13;EUR;bimensuelle;aucun;Aurévia AM
+QZ0000000926;Prêts Immobiliers Europe;Dette privée;Fonds de dette privée;AV;4;non;1.80;actif;127.68;2026-11-13;EUR;bimensuelle;aucun;Nordrive Gestion
+QZ0000000934;Infrastructures Transition Énergétique;Infrastructures;ELTIF;PER|AV;5;non;2.40;actif;124.23;2026-11-13;EUR;bimensuelle;Greenfin;Calistène Investissements
+QZ0000000942;Infrastructures Numériques Europe;Infrastructures;ELTIF;PER|AV;5;non;2.30;actif;110.60;2026-11-13;EUR;bimensuelle;aucun;Sillon Capital
+QZ0000000959;Infrastructures Mobilité Durable;Infrastructures;Fonds d'infrastructures;PER|AV;5;non;2.20;actif;126.65;2026-11-13;EUR;bimensuelle;Greenfin;Orméa Asset Management
+QZ0000000967;Autocall Euro Stoxx 2032;Produit structuré;Fonds à formule;AV;6;oui;1.20;actif;90.87;2026-11-19;EUR;hebdomadaire;aucun;HTB Gestion
+QZ0000000975;Capital Protégé 90 % Monde 2031;Produit structuré;Fonds à formule;AV;3;oui;1.20;actif;98.17;2026-11-19;EUR;hebdomadaire;aucun;Aurévia AM
+QZ0000000983;Phoenix Actions Europe 2030;Produit structuré;Fonds à formule;AV;6;oui;1.20;actif;103.78;2026-11-19;EUR;hebdomadaire;aucun;Nordrive Gestion
+QZ0000000991;Taux Fixe Conditionnel 2033;Produit structuré;Fonds à formule;AV;5;oui;1.00;actif;92.56;2026-11-19;EUR;hebdomadaire;aucun;Calistène Investissements
+QZ0000001007;Actions Monde Thématique (ancienne gamme);Actions;Actions thématiques;PER|AV;6;oui;1.50;retire;267.51;2026-11-20;EUR;quotidienne;aucun;Sillon Capital
+QZ0000001015;Obligations Euro Long Terme (fermé);Obligations;Obligations souveraines;PER|AV;3;oui;1.50;retire;88.86;2026-11-20;EUR;quotidienne;aucun;Orméa Asset Management
+QZ0000001023;SCPI Bureaux Paris (fermée);Immobilier;SCPI;PER|AV;3;non;1.50;retire;171.77;2026-11-01;EUR;mensuelle;aucun;HTB Gestion

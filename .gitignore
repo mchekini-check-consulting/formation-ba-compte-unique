@@ -4,3 +4,6 @@ Thumbs.db
 
 # Réglages personnels de l'IDE
 .idea/
+
+# Carte du code générée par graphify (locale, non partagée)
+graphify-out/
