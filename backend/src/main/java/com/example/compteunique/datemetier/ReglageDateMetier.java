@@ -12,7 +12,7 @@ import jakarta.persistence.Table;
 @Table(schema = "date_metier", name = "reglage")
 class ReglageDateMetier {
 
-	static final short ID = 1;
+	static final short ID_UNIQUE = 1;
 
 	@Id
 	private Short id;
@@ -27,7 +27,7 @@ class ReglageDateMetier {
 	}
 
 	ReglageDateMetier(long decalageSecondes, OffsetDateTime modifieLe) {
-		this.id = ID;
+		this.id = ID_UNIQUE;
 		this.decalageSecondes = decalageSecondes;
 		this.modifieLe = modifieLe;
 	}
