@@ -43,6 +43,12 @@ type Etat = 'chargement' | 'affiche' | 'indisponible';
             @if (erreur()) {
               <p class="erreur" role="alert">{{ erreur() }}</p>
             }
+            <h2>Tâche de revalidation des profils</h2>
+            <p class="vide">Chaque nuit (date métier), les profils dont la date de revalidation est dépassée passent « à revalider » et l’événement est publié. Pour ne pas attendre :</p>
+            <button type="button" data-test="revalidation" (click)="lancerRevalidation()">Lancer la tâche maintenant</button>
+            @if (resultatRevalidation()) {
+              <p class="succes" role="status" data-test="resultat-revalidation">{{ resultatRevalidation() }}</p>
+            }
             <h2>Journal des changements</h2>
             @if (journal().length === 0) {
               <p class="vide">Aucun changement.</p>
@@ -84,6 +90,7 @@ type Etat = 'chargement' | 'affiche' | 'indisponible';
     .badge { font-size: 13px; padding: 4px 10px; border-radius: 999px; background: #f4f6fa; color: #5d6887; }
     .vide { color: #5d6887; line-height: 1.6; }
     .erreur { color: #b42318; font-weight: 700; }
+    .succes { color: #067647; font-weight: 700; }
     form { display: grid; gap: 8px; max-width: 420px; margin: 16px 0; }
     label { font-weight: 700; }
     input { padding: 9px 12px; border: 1px solid #d9dee6; border-radius: 10px; min-width: 0; }
@@ -102,6 +109,7 @@ export class DateMetierTest {
   protected readonly dateMetier = signal<EtatDateMetier | null>(null);
   protected readonly journal = signal<ChangementDateMetier[]>([]);
   protected readonly erreur = signal<string | null>(null);
+  protected readonly resultatRevalidation = signal<string | null>(null);
   protected readonly afficher = afficherDate;
 
   constructor() {
@@ -119,6 +127,17 @@ export class DateMetierTest {
 
   protected revenir(auteur: string): void {
     this.service.revenirALaDateReelle(auteur).subscribe(this.apresChangement());
+  }
+
+  /** CU-415 : lance la tâche quotidienne de revalidation des profils, sans attendre la nuit. */
+  protected lancerRevalidation(): void {
+    this.erreur.set(null);
+    this.resultatRevalidation.set(null);
+    this.service.lancerRevalidation().subscribe({
+      next: ({ profilsARevalider }) =>
+        this.resultatRevalidation.set(`Tâche lancée : ${profilsARevalider} profil(s) passé(s) « à revalider ».`),
+      error: () => this.erreur.set('La tâche n’a pas pu être lancée. Réessayez.'),
+    });
   }
 
   private apresChangement() {

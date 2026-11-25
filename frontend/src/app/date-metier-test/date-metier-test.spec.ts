@@ -137,3 +137,30 @@ describe('afficherDate (CU-380)', () => {
     expect(afficherDate('2026-12-31T10:00:00Z')).toContain('11:00');
   });
 });
+
+describe('DateMetierTest (CU-415 : tâche de revalidation des profils)', () => {
+  afterEach(() => TestBed.inject(HttpTestingController).verify());
+
+  it('lance la tâche à la main et affiche le nombre de profils passés « à revalider », ou l’échec', async () => {
+    const fixture = creer();
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne(URL).flush(SIMULEE);
+    http.expectOne(`${URL}/journal`).flush([]);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+
+    page.querySelector<HTMLButtonElement>('[data-test="revalidation"]')!.click();
+    const lancement = http.expectOne('/api/backend/test/profils/revalidation');
+    expect(lancement.request.method).toBe('POST');
+    lancement.flush({ profilsARevalider: 1 });
+    await fixture.whenStable();
+    expect(page.querySelector('[data-test="resultat-revalidation"]')!.textContent).toContain(
+      'Tâche lancée : 1 profil(s) passé(s) « à revalider ».',
+    );
+
+    page.querySelector<HTMLButtonElement>('[data-test="revalidation"]')!.click();
+    http.expectOne('/api/backend/test/profils/revalidation').error(new ProgressEvent('error'));
+    await fixture.whenStable();
+    expect(page.querySelector('[role="alert"]')!.textContent).toContain('La tâche n’a pas pu être lancée');
+  });
+});

@@ -41,7 +41,7 @@ class PublicationStatutProfilTest {
 	@BeforeEach
 	void baseEnMemoire() {
 		when(dateMetier.maintenant()).thenReturn(MAINTENANT);
-		when(publies.findById(any())).thenAnswer(appel -> Optional.ofNullable(base.get(appel.getArgument(0))));
+		when(publies.verrouiller(any())).thenAnswer(appel -> Optional.ofNullable(base.get(appel.getArgument(0))));
 		when(publies.save(any())).thenAnswer(appel -> {
 			StatutPublie statut = appel.getArgument(0);
 			base.put(statut.getCustomerId(), statut);
@@ -78,8 +78,8 @@ class PublicationStatutProfilTest {
 		base.put(CLIENTE, new StatutPublie(CLIENTE, Statut.VALIDE, MAINTENANT.toOffsetDateTime()));
 		when(publies.aRevaliderNonPublies(MAINTENANT.toOffsetDateTime())).thenReturn(List.of(CLIENTE), List.of());
 
-		publication.signalerRevalidations();
-		publication.signalerRevalidations();
+		publication.revaliderLesProfilsEchus();
+		publication.revaliderLesProfilsEchus();
 
 		verify(evenements).enregistrer(eq(Topic.PROFIL_CLIENT), eq("StatutProfilModifie"), eq(CLIENTE.toString()),
 				eq(Map.of("statut", "A_REVALIDER", "ancienStatut", "VALIDE")));

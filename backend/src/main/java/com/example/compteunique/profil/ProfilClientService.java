@@ -74,17 +74,17 @@ public class ProfilClientService {
 	}
 
 	/** Pour PER-01 et AV-01 : souscription possible seulement avec un profil validé de moins de 12 mois. */
-	@Transactional(readOnly = true)
+	@Transactional // CU-415 : la lecture peut enregistrer « à revalider »
 	public boolean souscriptionAutorisee(UUID customerId) {
 		return statut(customerId) == Statut.VALIDE;
 	}
 
-	@Transactional(readOnly = true)
+	@Transactional // CU-415 : la lecture peut enregistrer « à revalider »
 	public Statut statut(UUID customerId) {
 		return etat(customerId).statut();
 	}
 
-	@Transactional(readOnly = true)
+	@Transactional // CU-415 : la lecture peut enregistrer « à revalider »
 	public Etat etat(String jetonSession) {
 		return etat(customerId(jetonSession));
 	}
@@ -126,6 +126,11 @@ public class ProfilClientService {
 		OffsetDateTime maintenant = dateMetier.maintenant().toOffsetDateTime();
 		Statut statut = dernier.map(p -> maintenant.isBefore(p.getRevaliderLe()) ? Statut.VALIDE : Statut.A_REVALIDER)
 				.orElse(Statut.A_COMPLETER);
+		if (statut == Statut.A_REVALIDER) {
+			// CU-415 : si la tâche de la nuit n'est pas encore passée, le statut et l'événement sont enregistrés ici,
+			// une seule fois (rien n'est publié si « à revalider » l'est déjà).
+			publication.changer(customerId, Statut.VALIDE, Statut.A_REVALIDER);
+		}
 		return new Etat(statut, dernier);
 	}
 
