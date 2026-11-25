@@ -47,11 +47,12 @@ class LivretAServiceTest {
 	private final DemandeLivretARepository demandes = mock(DemandeLivretARepository.class);
 	private final IdentiteLivretAService identites = mock(IdentiteLivretAService.class);
 	private final ControleIdentiteLivretA controleValide = controleValide();
+	private final ClotureLivretAService clotures = mock(ClotureLivretAService.class);
 	private final Dossier dossier = mock(Dossier.class);
 	private final Compte compte = new Compte(7L, CLIENTE, Iban.de("99000000001"), 3L, MAINTENANT.minusDays(30));
 
 	private LivretAService service(OffsetDateTime maintenant) {
-		return new LivretAService(comptes, dossiers, demandes, identites,
+		return new LivretAService(comptes, dossiers, demandes, identites, clotures,
 				Clock.fixed(maintenant.toInstant(), ZoneOffset.UTC));
 	}
 
@@ -215,6 +216,43 @@ class LivretAServiceTest {
 		assertEquals(StatutDemandeLivretA.LIVRET_A_EXISTANT, demande.getStatut());
 	}
 
+	// CU-296 : partage accepté, le détail du livret existant transmis par l'écran est enregistré.
+	@Test
+	void livretAExistantAvecDetailCommunique() {
+		DemandeLivretA demande = demande(true);
+		avecDemande(demande);
+		DetailLivretA detail = new DetailLivretA("Banque Exemple", "Agence Paris Centre", LocalDate.of(2015, 3, 2));
+		service.enregistrerReponse(JETON, demande.getReference(), "i", ReponseFiscale.LIVRET_A_EXISTANT, detail);
+		assertEquals(detail, demande.getDetail());
+	}
+
+	// CU-296 : une demande annulée ou renoncée ne bloque plus une nouvelle demande.
+	@Test
+	void demandeAnnuleeOuRenonceeNeBloquePlus() {
+		DemandeLivretA renoncee = demande(true);
+		renoncee.recevoirReponse("i", ReponseFiscale.LIVRET_A_EXISTANT, MAINTENANT);
+		renoncee.renoncer(MAINTENANT);
+		DemandeLivretA annulee = demande(true);
+		annulee.recevoirReponse("i", ReponseFiscale.LIVRET_A_EXISTANT, MAINTENANT);
+		annulee.choisirCloture(MAINTENANT);
+		annulee.annuler(MAINTENANT);
+		when(demandes.findByDossierIdIn(List.of(7L, 12L))).thenReturn(List.of(renoncee, annulee));
+		Suivi suivi = service.demander(JETON, true, true);
+		assertEquals(StatutDemandeLivretA.EN_COURS_DE_VERIFICATION, suivi.demande().getStatut());
+		verify(clotures).appliquerEcheance(renoncee);
+		verify(clotures).appliquerEcheance(annulee);
+	}
+
+	// CU-296 : une demande en attente du certificat de clôture bloque toujours une nouvelle demande.
+	@Test
+	void demandeEnAttenteDuCertificatBloque() {
+		DemandeLivretA enAttente = demande(true);
+		enAttente.recevoirReponse("i", ReponseFiscale.LIVRET_A_EXISTANT, MAINTENANT);
+		enAttente.choisirCloture(MAINTENANT);
+		when(demandes.findByDossierIdIn(List.of(7L, 12L))).thenReturn(List.of(enAttente));
+		assertRefus(HttpStatus.CONFLICT, LivretAService.DEMANDE_EN_COURS, () -> service.demander(JETON, true, true));
+	}
+
 	// Réponse « indisponible » ou pas de réponse : reste en cours ; le délai part de la première transmission.
 	@Test
 	void indisponiblePuisSansReponseResteEnCours() {
@@ -252,6 +290,8 @@ class LivretAServiceTest {
 		DemandeLivretA demande = demande(true);
 		when(demandes.findFirstByCustomerIdOrderByCreeeLeDesc(CLIENTE)).thenReturn(Optional.of(demande));
 		assertEquals(demande, service.etat(JETON).orElseThrow().demande());
+		// CU-296 : relance ou annulation dues appliquées avant l'affichage.
+		verify(clotures).appliquerEcheance(demande);
 	}
 
 	@Test

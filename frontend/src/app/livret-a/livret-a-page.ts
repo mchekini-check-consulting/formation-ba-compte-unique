@@ -4,10 +4,19 @@ import { RouterLink } from '@angular/router';
 import { refusDe } from '../beneficiaires/beneficiaires';
 import { CadreEspace } from '../espace/cadre-espace';
 import { BouchonsIdentiteService, CasDeTest, CasFiscal, ReponseFiscale } from '../identification/bouchons-identite';
+import { refusFichier } from '../identification/regles';
 import { SuiviSession } from '../session/suivi-session';
 import { EtapeIdentiteLivretA } from './etape-identite-livret-a';
 import { EtapePieceLivretA, pieceAFournir } from './etape-piece-livret-a';
-import { ControleIdentite, DemandeLivretA, EtapePiece, IdentiteLivretA, LivretAService } from './livret-a';
+import {
+  ControleIdentite,
+  DemandeLivretA,
+  EtapePiece,
+  IdentiteLivretA,
+  LivretAService,
+  SuiteLivretAExistant,
+  demandeTerminee,
+} from './livret-a';
 
 type Message = { texte: string; erreur: boolean };
 type Chargement = { lu: false } | { lu: true; erreur: boolean };
@@ -42,7 +51,18 @@ const STATUTS: Record<DemandeLivretA['statut'], string> = {
   EN_COURS_DE_VERIFICATION: 'En cours de vérification',
   OUVERTURE_VALIDEE: 'Ouverture validée',
   LIVRET_A_EXISTANT: 'Livret A existant dans un autre établissement',
+  EN_ATTENTE_CERTIFICAT: 'En attente du certificat de clôture',
+  CERTIFICAT_A_VERIFIER: 'Certificat à vérifier',
+  ANNULEE: 'Demande annulée',
+  RENONCEE: 'Demande annulée (renonciation)',
 };
+
+/** CU-296 : choix à confirmer avant l'envoi. */
+export const SUITE_OBLIGATOIRE = 'Choisissez de clôturer vous-même votre ancien livret ou de renoncer à l’ouverture.';
+/** CU-296 : aucun fichier choisi. */
+export const CERTIFICAT_OBLIGATOIRE = 'Sélectionnez votre certificat de clôture.';
+/** CU-296 : motif proposé par défaut pour un refus simulé (environnement de test). */
+export const MOTIF_REFUS_TEST = 'Certificat illisible';
 
 // CU-31 (US-22) : étape « Éligibilité » de l'ouverture d'un Livret A par une cliente connectée. Information sur
 // l'interdiction de détenir plusieurs Livrets A et ses risques, attestation sur l'honneur obligatoire, choix de
@@ -73,17 +93,77 @@ const STATUTS: Record<DemandeLivretA['statut'], string> = {
               } @else if (demande(); as d) {
                 <div class="suivi">
                   <h2>Ma demande</h2>
-                  <p class="statut" [class.ok]="d.statut === 'OUVERTURE_VALIDEE'" [class.attente]="d.statut === 'EN_COURS_DE_VERIFICATION'">
+                  <p
+                    class="statut"
+                    [class.ok]="d.statut === 'OUVERTURE_VALIDEE'"
+                    [class.attente]="enAttente(d)"
+                    [class.ko]="terminee(d)"
+                  >
                     {{ statut(d) }}
                   </p>
                   <p class="texte">{{ d.message }}</p>
                   @if (d.statut === 'EN_COURS_DE_VERIFICATION') {
                     <p class="muted">Délai de réponse de l’administration fiscale : {{ d.delai }}.</p>
                   }
-                  @if (detail(); as dt) {
+                  @if (d.detail ?? detail(); as dt) {
                     <p class="muted detail">
                       Livret A détenu chez {{ dt.etablissement }}, {{ dt.agence }}, ouvert le {{ date(dt.dateOuverture) }}.
                     </p>
+                  } @else if (d.reponseFiscale === 'LIVRET_A_EXISTANT') {
+                    <!-- CU-296 : partage du détail refusé. -->
+                    <p class="muted detail">Livret A détenu dans un autre établissement (établissement non communiqué).</p>
+                  }
+
+                  @if (d.statut === 'LIVRET_A_EXISTANT') {
+                    <!-- CU-296 : deux choix, que le partage du détail ait été accepté ou refusé. -->
+                    <form class="choix-suite" (submit)="choisir($event, d)">
+                      <fieldset>
+                        <legend>Que souhaitez-vous faire de votre ancien Livret A ?</legend>
+                        <label class="case">
+                          <input type="radio" name="suite" value="CLOTURE_PAR_CLIENTE" (change)="suite.set('CLOTURE_PAR_CLIENTE')" />
+                          Je clôture moi-même mon ancien livret
+                        </label>
+                        <label class="case">
+                          <input type="radio" name="suite" value="RENONCIATION" (change)="suite.set('RENONCIATION')" />
+                          Je renonce à l’ouverture
+                        </label>
+                      </fieldset>
+                      <button type="submit" [disabled]="envoi()">Confirmer mon choix</button>
+                    </form>
+                  }
+
+                  @if (d.statut === 'EN_ATTENTE_CERTIFICAT') {
+                    <!-- CU-296 : dépôt du certificat de clôture, mêmes règles que la pièce d'identité (CU-29). -->
+                    <form class="certificat" (submit)="deposer($event, d)">
+                      @if (d.dateLimiteCertificat) {
+                        <p class="limite">Date limite de dépôt : {{ date(d.dateLimiteCertificat) }}</p>
+                      }
+                      <label for="certificat-fichier">Mon certificat de clôture</label>
+                      <input
+                        id="certificat-fichier"
+                        type="file"
+                        accept=".png,.jpg,.jpeg,.bmp,.gif,.pdf"
+                        aria-describedby="aide-certificat"
+                        (change)="fichierChoisi($event)"
+                      />
+                      <p class="muted" id="aide-certificat">PNG, JPEG, BMP, GIF ou PDF · 2 Mo maximum</p>
+                      @if (erreurFichier(); as e) {
+                        <p class="ko" id="err-certificat" role="alert">{{ e }}</p>
+                      }
+                      <button type="submit" [disabled]="envoi()">Envoyer mon certificat</button>
+                    </form>
+                  }
+
+                  @if (d.statut === 'CERTIFICAT_A_VERIFIER' && d.certificat; as c) {
+                    <p class="muted certificat-depose">
+                      Certificat « {{ c.nomFichier }} » déposé le {{ dateHeure(c.deposeLe) }} · vérification sous
+                      {{ d.delaiVerification }}.
+                    </p>
+                  }
+
+                  @if (terminee(d)) {
+                    <!-- CU-296 : une demande annulée ou renoncée ne bloque plus une nouvelle demande. -->
+                    <button type="button" class="nouvelle" (click)="recommencer()">Faire une nouvelle demande</button>
                   }
                   <p class="muted">
                     Attestation sur l’honneur le {{ dateHeure(d.attestationLe) }} · partage du détail
@@ -186,6 +266,25 @@ const STATUTS: Record<DemandeLivretA['statut'], string> = {
                   Simuler l’expiration du délai
                 </button>
               }
+              @if (d.statut === 'EN_ATTENTE_CERTIFICAT' || d.statut === 'CERTIFICAT_A_VERIFIER') {
+                <h2 id="titre-test-certificat">Certificat de clôture (CU-296)</h2>
+                @if (d.statut === 'CERTIFICAT_A_VERIFIER') {
+                  <button type="button" class="secondaire" [disabled]="envoi()" (click)="validerCertificat(d)">
+                    Simuler la validation du certificat par un conseiller
+                  </button>
+                  <div class="refus-test">
+                    <label for="motif-refus">Motif du refus</label>
+                    <input #motif id="motif-refus" type="text" [value]="motifRefusTest" />
+                    <button type="button" class="secondaire" [disabled]="envoi()" (click)="refuserCertificat(d, motif.value)">
+                      Simuler le refus du certificat par un conseiller
+                    </button>
+                  </div>
+                }
+                <p class="muted">
+                  Date limite et relance à J-15 : avancez la date du jour sur
+                  <a routerLink="/test/date-metier">la page Date métier</a>, puis revenez ici.
+                </p>
+              }
             }
           </section>
         </div>
@@ -219,6 +318,11 @@ const STATUTS: Record<DemandeLivretA['statut'], string> = {
     .btn { justify-self: start; }
     .etape { font-size: 13px; font-weight: 400; color: #5d6887; }
     .retour-site { display: inline-block; margin-bottom: 12px; color: #0b2545; font-weight: 700; }
+    .choix-suite, .certificat { display: grid; gap: 10px; background: #f4f7fc; border-radius: 12px; padding: 14px; }
+    .certificat label { color: #0f1b33; font-size: 14px; font-weight: 600; }
+    .limite { color: #8a4b00; font-weight: 700; }
+    .refus-test { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .refus-test input { padding: 6px 8px; border: 1px solid #c9d3e6; border-radius: 6px; font: inherit; }
   `,
 })
 export class LivretAPage {
@@ -248,6 +352,11 @@ export class LivretAPage {
   protected readonly totalEtapes = computed(() => (pieceAFournir(this.etapePiece()) ? 3 : 2));
   protected readonly casSanctionsTest = CAS_SANCTIONS;
   protected readonly message = signal<Message | null>(null);
+  /** CU-296 : choix de la suite, certificat choisi et son éventuel refus avant envoi. */
+  protected readonly suite = signal<SuiteLivretAExistant | null>(null);
+  protected readonly fichier = signal<File | null>(null);
+  protected readonly erreurFichier = signal<string | null>(null);
+  protected readonly motifRefusTest = MOTIF_REFUS_TEST;
 
   constructor() {
     // CU-17 : ouvrir la page est une action de la cliente ; le suivi s'arrête quand elle la quitte.
@@ -263,6 +372,17 @@ export class LivretAPage {
 
   protected statut(demande: DemandeLivretA): string {
     return STATUTS[demande.statut];
+  }
+
+  protected terminee(demande: DemandeLivretA): boolean {
+    return demandeTerminee(demande);
+  }
+
+  /** Statuts où la cliente ou la banque doit encore agir. */
+  protected enAttente(demande: DemandeLivretA): boolean {
+    return ['EN_COURS_DE_VERIFICATION', 'LIVRET_A_EXISTANT', 'EN_ATTENTE_CERTIFICAT', 'CERTIFICAT_A_VERIFIER'].includes(
+      demande.statut,
+    );
   }
 
   /** « 12/11/2026 à 10:00 », heure de Paris. */
@@ -294,23 +414,115 @@ export class LivretAPage {
           this.chargement.set({ lu: true, erreur: false });
           return;
         }
-        this.service.identite().subscribe({
-          next: (etape) => {
-            this.etapeIdentite.set(etape);
-            this.controleIdentite.set(etape.controle);
-            this.identiteValidee.set(etape.controle?.statut === 'VALIDE' && etape.controle.utilisable);
-            this.service.piece().subscribe({
-              next: (piece) => {
-                this.etapePiece.set(piece);
-                this.chargement.set({ lu: true, erreur: false });
-              },
-              error: echec,
-            });
+        this.chargerEtapes(echec);
+      },
+      error: echec,
+    });
+  }
+
+  // CU-28 et CU-29 : identité pré-remplie, dernier contrôle d'identité et pièce du dossier.
+  private chargerEtapes(echec: (erreur: HttpErrorResponse) => void): void {
+    this.service.identite().subscribe({
+      next: (etape) => {
+        this.etapeIdentite.set(etape);
+        this.controleIdentite.set(etape.controle);
+        this.identiteValidee.set(etape.controle?.statut === 'VALIDE' && etape.controle.utilisable);
+        this.service.piece().subscribe({
+          next: (piece) => {
+            this.etapePiece.set(piece);
+            this.chargement.set({ lu: true, erreur: false });
           },
           error: echec,
         });
       },
       error: echec,
+    });
+  }
+
+  // CU-296 : après une annulation ou une renonciation, nouvelle demande depuis l'étape « Mon identité ».
+  protected recommencer(): void {
+    this.demande.set(null);
+    this.detail.set(null);
+    this.message.set(null);
+    this.chargement.set({ lu: false });
+    this.chargerEtapes((erreur) => {
+      if (erreur.status !== 401) {
+        this.chargement.set({ lu: true, erreur: true });
+      }
+    });
+  }
+
+  // CU-296 : « Je clôture moi-même mon ancien livret » ou « Je renonce à l'ouverture ».
+  protected choisir(evenement: Event, demande: DemandeLivretA): void {
+    evenement.preventDefault();
+    const choix = this.suite();
+    if (!choix) {
+      this.message.set({ texte: SUITE_OBLIGATOIRE, erreur: true });
+      return;
+    }
+    this.envoi.set(true);
+    this.message.set(null);
+    this.service.choisirSuite(demande.reference, choix).subscribe({
+      next: (suite) => {
+        this.envoi.set(false);
+        this.suite.set(null);
+        this.demande.set(suite);
+      },
+      error: (erreur: HttpErrorResponse) => this.refus(erreur),
+    });
+  }
+
+  // CU-296 : fichier refusé avant envoi s'il dépasse 2 Mo ou n'est pas au bon format (règles de CU-29).
+  protected fichierChoisi(evenement: Event): void {
+    const champ = evenement.target as HTMLInputElement;
+    const fichier = champ.files?.[0] ?? null;
+    const erreur = fichier ? refusFichier(fichier) : null;
+    this.erreurFichier.set(erreur);
+    this.fichier.set(erreur ? null : fichier);
+    if (erreur) {
+      champ.value = '';
+    }
+  }
+
+  protected deposer(evenement: Event, demande: DemandeLivretA): void {
+    evenement.preventDefault();
+    const fichier = this.fichier();
+    if (!fichier) {
+      this.erreurFichier.set(this.erreurFichier() ?? CERTIFICAT_OBLIGATOIRE);
+      return;
+    }
+    this.envoi.set(true);
+    this.message.set(null);
+    this.service.deposerCertificat(demande.reference, fichier).subscribe({
+      next: (suite) => {
+        this.envoi.set(false);
+        this.fichier.set(null);
+        this.erreurFichier.set(null);
+        this.demande.set(suite);
+      },
+      error: (erreur: HttpErrorResponse) => this.refus(erreur),
+    });
+  }
+
+  /** CU-296 (test) : un conseiller valide le certificat ; l'ouverture reprend. */
+  protected validerCertificat(demande: DemandeLivretA): void {
+    this.verifierCertificat(this.service.simulerValidationCertificat(demande.reference));
+  }
+
+  /** CU-296 (test) : un conseiller refuse le certificat avec un motif ; la cliente peut en déposer un autre. */
+  protected refuserCertificat(demande: DemandeLivretA, motif: string): void {
+    this.verifierCertificat(this.service.simulerRefusCertificat(demande.reference, motif));
+  }
+
+  private verifierCertificat(appel: ReturnType<LivretAService['simulerValidationCertificat']>): void {
+    this.envoi.set(true);
+    this.message.set(null);
+    appel.subscribe({
+      next: (suite) => {
+        this.envoi.set(false);
+        this.demande.set(suite);
+      },
+      error: (erreur: HttpErrorResponse) => this.refus(erreur),
     });
   }
 
@@ -356,14 +568,20 @@ export class LivretAPage {
       .subscribe({
         next: (reponse) => {
           this.detail.set(reponse.detail);
-          this.transmettre(demande.reference, reponse.interrogationId, reponse.resultat);
+          this.transmettre(demande.reference, reponse.interrogationId, reponse.resultat, reponse.detail);
         },
         error: () => this.transmettre(demande.reference, null, 'INDISPONIBLE'),
       });
   }
 
-  private transmettre(reference: string, interrogationId: string | null, resultat: ReponseFiscale['resultat']): void {
-    this.service.transmettreReponse(reference, interrogationId, resultat).subscribe({
+  // CU-296 : le détail du livret existant est transmis au backend, qui ne le garde que si le partage est autorisé.
+  private transmettre(
+    reference: string,
+    interrogationId: string | null,
+    resultat: ReponseFiscale['resultat'],
+    detail: ReponseFiscale['detail'] = null,
+  ): void {
+    this.service.transmettreReponse(reference, interrogationId, resultat, detail).subscribe({
       next: (demande) => {
         this.envoi.set(false);
         this.demande.set(demande);

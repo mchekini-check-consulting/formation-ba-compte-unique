@@ -1,6 +1,8 @@
 package com.example.compteunique.livreta;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -19,6 +21,14 @@ public class DemandeLivretA {
 
 	/** Délai de réponse de l'administration fiscale. */
 	static final int DELAI_JOURS_OUVRES = 2;
+
+	/** CU-296 : délai de dépôt du certificat de clôture, à partir de la réponse de l'administration fiscale. */
+	static final int DELAI_CERTIFICAT_MOIS = 3;
+
+	/** CU-296 : relance par e-mail 15 jours avant la date limite. */
+	static final int JOURS_AVANT_RELANCE = 15;
+
+	private static final ZoneId PARIS = ZoneId.of("Europe/Paris");
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -64,6 +74,32 @@ public class DemandeLivretA {
 
 	@Column(name = "creee_le", nullable = false)
 	private OffsetDateTime creeeLe;
+
+	// CU-296 (V28) : suite d'un Livret A détenu ailleurs.
+	@Column(name = "detail_etablissement", length = 100)
+	private String detailEtablissement;
+
+	@Column(name = "detail_agence", length = 100)
+	private String detailAgence;
+
+	@Column(name = "detail_date_ouverture")
+	private LocalDate detailDateOuverture;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "suite_choisie", length = 30)
+	private SuiteLivretAExistant suiteChoisie;
+
+	@Column(name = "suite_choisie_le")
+	private OffsetDateTime suiteChoisieLe;
+
+	@Column(name = "date_limite_certificat")
+	private LocalDate dateLimiteCertificat;
+
+	@Column(name = "relance_le")
+	private OffsetDateTime relanceLe;
+
+	@Column(name = "annulee_le")
+	private OffsetDateTime annuleeLe;
 
 	protected DemandeLivretA() {
 	}
@@ -111,6 +147,99 @@ public class DemandeLivretA {
 
 	void alerterConseiller(OffsetDateTime maintenant) {
 		conseillerAlerteLe = maintenant;
+	}
+
+	/** CU-296 : détail du livret existant, enregistré seulement si la cliente a autorisé son partage. */
+	void recevoirDetail(DetailLivretA detail) {
+		if (detail == null || !partageDetailAutorise || statut != StatutDemandeLivretA.LIVRET_A_EXISTANT) {
+			return;
+		}
+		detailEtablissement = detail.etablissement();
+		detailAgence = detail.agence();
+		detailDateOuverture = detail.dateOuverture();
+	}
+
+	/** CU-296 : « Je clôture moi-même » ; date limite = date de la réponse fiscale (Paris) + 3 mois. */
+	void choisirCloture(OffsetDateTime maintenant) {
+		suiteChoisie = SuiteLivretAExistant.CLOTURE_PAR_CLIENTE;
+		suiteChoisieLe = maintenant;
+		statut = StatutDemandeLivretA.EN_ATTENTE_CERTIFICAT;
+		OffsetDateTime depart = reponseLe == null ? maintenant : reponseLe;
+		dateLimiteCertificat = depart.atZoneSameInstant(PARIS).toLocalDate().plusMonths(DELAI_CERTIFICAT_MOIS);
+	}
+
+	/** CU-296 : « Je renonce à l'ouverture » : demande annulée. */
+	void renoncer(OffsetDateTime maintenant) {
+		suiteChoisie = SuiteLivretAExistant.RENONCIATION;
+		suiteChoisieLe = maintenant;
+		statut = StatutDemandeLivretA.RENONCEE;
+		annuleeLe = maintenant;
+	}
+
+	void certificatDepose() {
+		statut = StatutDemandeLivretA.CERTIFICAT_A_VERIFIER;
+	}
+
+	/** CU-296 : certificat validé par un conseiller, l'ouverture reprend. */
+	void certificatValide() {
+		statut = StatutDemandeLivretA.OUVERTURE_VALIDEE;
+	}
+
+	/** CU-296 : certificat refusé, un nouveau dépôt est possible jusqu'à la date limite. */
+	void certificatRefuse() {
+		statut = StatutDemandeLivretA.EN_ATTENTE_CERTIFICAT;
+	}
+
+	/** CU-296 : certificat attendu ou à vérifier, et date limite dépassée. */
+	boolean dateLimiteDepassee(LocalDate aujourdhui) {
+		return (statut == StatutDemandeLivretA.EN_ATTENTE_CERTIFICAT
+				|| statut == StatutDemandeLivretA.CERTIFICAT_A_VERIFIER)
+				&& dateLimiteCertificat != null && aujourdhui.isAfter(dateLimiteCertificat);
+	}
+
+	void annuler(OffsetDateTime maintenant) {
+		statut = StatutDemandeLivretA.ANNULEE;
+		annuleeLe = maintenant;
+	}
+
+	/** CU-296 : certificat toujours attendu, 15 jours ou moins avant la date limite, pas encore relancée. */
+	boolean aRelancer(LocalDate aujourdhui) {
+		return statut == StatutDemandeLivretA.EN_ATTENTE_CERTIFICAT && relanceLe == null
+				&& dateLimiteCertificat != null
+				&& !aujourdhui.isBefore(dateLimiteCertificat.minusDays(JOURS_AVANT_RELANCE))
+				&& !aujourdhui.isAfter(dateLimiteCertificat);
+	}
+
+	void relancer(OffsetDateTime maintenant) {
+		relanceLe = maintenant;
+	}
+
+	/** Détail du livret existant, null s'il n'a pas été communiqué. */
+	public DetailLivretA getDetail() {
+		if (detailEtablissement == null && detailAgence == null && detailDateOuverture == null) {
+			return null;
+		}
+		return new DetailLivretA(detailEtablissement, detailAgence, detailDateOuverture);
+	}
+
+	public SuiteLivretAExistant getSuiteChoisie() {
+		return suiteChoisie;
+	}
+
+	public OffsetDateTime getSuiteChoisieLe() {
+		return suiteChoisieLe;
+	}
+
+	public LocalDate getDateLimiteCertificat() {
+		return dateLimiteCertificat;
+	}
+
+	public OffsetDateTime getRelanceLe() {
+		return relanceLe;
+	}
+
+	public OffsetDateTime getAnnuleeLe() {
+		return annuleeLe;
 	}
 
 	public Long getId() {
