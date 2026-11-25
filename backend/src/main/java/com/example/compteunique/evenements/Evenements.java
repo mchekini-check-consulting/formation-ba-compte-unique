@@ -24,8 +24,8 @@ import com.example.compteunique.logging.Loggable;
 @Loggable
 public class Evenements {
 
-	/** Version du format des événements (règle 2). */
-	static final int VERSION = 1;
+	/** Version du format des événements (règle 2). 2 : ajout de l'heure métier de Paris (CU-413). */
+	static final int VERSION = 2;
 
 	private final EvenementADistribuerRepository aDistribuer;
 	private final EvenementTraiteRepository traites;

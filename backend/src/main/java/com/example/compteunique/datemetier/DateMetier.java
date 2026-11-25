@@ -4,8 +4,10 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,10 +56,18 @@ public class DateMetier {
 	public record Etat(ZonedDateTime dateMetier, boolean simulee, boolean modifiable) {
 	}
 
-	/** Date et heure métier, à l'heure de Paris. */
+	/** Date et heure métier, à l'heure de Paris, à la seconde (CU-413 : 12:00 réglé se lit 12:00:00). */
 	@Transactional(readOnly = true)
 	public ZonedDateTime maintenant() {
 		return reel().plusSeconds(decalageSecondes());
+	}
+
+	/**
+	 * CU-413 : seul endroit où une heure stockée (relue de la base en UTC, par exemple) est ramenée à l'heure de
+	 * Paris, heure d'été comprise.
+	 */
+	public static OffsetDateTime heureDeParis(OffsetDateTime heure) {
+		return heure.atZoneSameInstant(PARIS).toOffsetDateTime();
 	}
 
 	/** Jour métier, à Paris. */
@@ -80,7 +90,7 @@ public class DateMetier {
 			throw new ChangementInvalide("La nouvelle date est obligatoire.");
 		}
 		ZonedDateTime reel = reel();
-		return appliquer(reel, nouvelleDate.atZone(PARIS), auteur);
+		return appliquer(reel, nouvelleDate.truncatedTo(ChronoUnit.SECONDS).atZone(PARIS), auteur);
 	}
 
 	/** Revient à l'heure réelle de Paris ; refusé en production (où l'on y est toujours). */
@@ -136,8 +146,10 @@ public class DateMetier {
 		return reglages.findById(ReglageDateMetier.ID).map(ReglageDateMetier::getDecalageSecondes).orElse(0L);
 	}
 
+	// CU-413 : heure réelle à la seconde. Avec les fractions, l'écart calculé en secondes entières était arrondi
+	// vers le bas : 23:30 saisi se relisait 23:29:59.
 	private ZonedDateTime reel() {
-		return ZonedDateTime.now(horlogeReelle).withZoneSameInstant(PARIS);
+		return ZonedDateTime.now(horlogeReelle).withZoneSameInstant(PARIS).truncatedTo(ChronoUnit.SECONDS);
 	}
 
 	/** Changement demandé dans un environnement où la date métier est fixe (preprod, prod). */

@@ -10,9 +10,12 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * CU-382 : format stable d'un événement dans Kafka (règle 2 de l'ADR-001) : identifiant unique, type, clé (numéro
  * de contrat, ISIN, identifiant client ou date métier), date métier, version du format, contenu. Les modules lecteurs
- * utilisent la date métier de ce message, jamais l'heure d'envoi de Kafka.
+ * utilisent la date métier de ce message, jamais l'heure d'envoi de Kafka (horodatage technique, en UTC).
+ * <p>
+ * Version 2 (CU-413) : {@code dateHeure} ajoute l'heure métier, en heure de Paris avec son décalage
+ * (2026-12-31T10:00:00+01:00). {@code date} (le jour métier) ne change pas ; absente dans les messages version 1.
  */
-public record MessageEvenement(UUID id, String type, String cle, LocalDate date, int version,
+public record MessageEvenement(UUID id, String type, String cle, LocalDate date, String dateHeure, int version,
 		Map<String, Object> contenu) {
 
 	private static final JsonMapper JSON = JsonMapper.builder().build();

@@ -108,7 +108,8 @@ class KafkaIT {
 	}
 
 	private static String message(UUID id, String cle) {
-		return new MessageEvenement(id, "Test", cle, LocalDate.of(2026, 11, 25), 1, Map.of("rang", 1)).json();
+		return new MessageEvenement(id, "Test", cle, LocalDate.of(2026, 11, 25), "2026-11-25T10:00:00+01:00", 2,
+				Map.of("rang", 1)).json();
 	}
 
 	@Test
