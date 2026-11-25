@@ -1,10 +1,10 @@
 package com.example.compteunique.profil;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,8 +18,9 @@ import com.example.compteunique.profil.ProfilClientService.Statut;
 /**
  * CU-382 (TECH-14) : événement « statut du profil modifié », publié dans le topic profil-client avec l'identifiant
  * client comme clé, à chaque changement de statut : « validé » à la validation du questionnaire, « à revalider » quand
- * la date métier atteint la date de revalidation (vérifié chaque minute). Le message contient le statut et l'ancien
- * statut, jamais les réponses du questionnaire. Le statut PPE viendra avec le contrôle PPE.
+ * la date métier atteint la date de revalidation (tâche quotidienne ou lecture du profil, CU-415). Le message
+ * contient le statut et l'ancien statut, jamais les réponses du questionnaire. Le statut PPE viendra avec le
+ * contrôle PPE.
  */
 @Service
 @Loggable
@@ -44,7 +45,8 @@ public class PublicationStatutProfil {
 	@Transactional(propagation = Propagation.MANDATORY)
 	public void changer(UUID customerId, Statut avant, Statut nouveau) {
 		OffsetDateTime maintenant = dateMetier.maintenant().toOffsetDateTime();
-		StatutPublie publie = publies.findById(customerId).orElse(null);
+		// CU-415 : verrou sur la ligne, pour que la tâche et la lecture du profil ne publient pas deux fois.
+		StatutPublie publie = publies.verrouiller(customerId).orElse(null);
 		Statut ancien = publie == null ? avant : publie.getStatut();
 		if (ancien == nouveau) {
 			return;
@@ -58,15 +60,20 @@ public class PublicationStatutProfil {
 				Map.of("statut", nouveau.name(), "ancienStatut", ancien.name()));
 	}
 
-	/** Profils arrivés à leur date de revalidation (date métier) : « à revalider » publié une seule fois. */
-	@Scheduled(fixedDelayString = "${app.profil.verification-ms:60000}",
-			initialDelayString = "${app.profil.verification-ms:60000}")
+	/**
+	 * CU-415 : tâche quotidienne (TacheRevalidationProfils) et bouton de test. Les profils arrivés à leur date de
+	 * revalidation (date métier) passent à « à revalider » : statut et événement enregistrés dans la même transaction,
+	 * une seule fois (relancer la tâche le même jour ne publie rien de plus). Renvoie le nombre de profils passés.
+	 */
 	@Transactional
-	public void signalerRevalidations() {
+	public int revaliderLesProfilsEchus() {
+		publies.verrouillerLaTache();
 		OffsetDateTime maintenant = dateMetier.maintenant().toOffsetDateTime();
-		for (UUID customerId : publies.aRevaliderNonPublies(maintenant)) {
+		List<UUID> echus = publies.aRevaliderNonPublies(maintenant);
+		for (UUID customerId : echus) {
 			changer(customerId, Statut.VALIDE, Statut.A_REVALIDER);
 		}
+		return echus.size();
 	}
 
 }
