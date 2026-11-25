@@ -1,5 +1,5 @@
 # Pull request vers main, sur les dossiers avec Dockerfile modifiés par la PR (commandes : Makefile du dossier) :
-#   lint + gitleaks  ->  tests unitaires  ->  quality gate SonarQube  ->  tests d'intégration
+#   lint + gitleaks  ->  tests unitaires  ->  quality gate SonarQube  ->  tests d'intégration  ->  tests e2e
 # Les étapes viennent de formation-ba-gitops/ci-template.
 name: pr
 
@@ -82,6 +82,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: mchekini-check-consulting/formation-ba-gitops/ci-template/integration-test@main
+        with:
+          component: ${{ matrix.component }}
+
+  # Ignoré (sans erreur) pour un composant sans cible e2e-tests dans son Makefile.
+  e2e-test:
+    needs: [components, integration-test]   # après les tests d'intégration
+    if: needs.components.outputs.components != '[]'   # matrice vide = erreur
+    strategy:
+      matrix:
+        component: ${{ fromJSON(needs.components.outputs.components) }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mchekini-check-consulting/formation-ba-gitops/ci-template/e2e-test@main
         with:
           component: ${{ matrix.component }}
 

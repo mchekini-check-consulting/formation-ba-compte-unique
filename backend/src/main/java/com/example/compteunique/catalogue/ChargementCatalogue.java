@@ -24,6 +24,8 @@ import com.example.compteunique.catalogue.LecteurCatalogue.FichierIllisible;
 import com.example.compteunique.catalogue.LecteurCatalogue.Lecture;
 import com.example.compteunique.catalogue.LecteurCatalogue.LigneCatalogue;
 import com.example.compteunique.datemetier.DateMetier;
+import com.example.compteunique.evenements.ConfigurationKafka.Topic;
+import com.example.compteunique.evenements.Evenements;
 import com.example.compteunique.logging.Loggable;
 
 /**
@@ -51,16 +53,18 @@ public class ChargementCatalogue {
 	private final JournalBatchRepository journaux;
 	private final EvenementCatalogueRepository evenements;
 	private final DateMetier dateMetier;
+	private final Evenements kafka;
 
 	public ChargementCatalogue(SupportRepository supports, HistoriqueVlRepository historique,
 			FichierDeposeRepository fichiers, JournalBatchRepository journaux, EvenementCatalogueRepository evenements,
-			DateMetier dateMetier) {
+			DateMetier dateMetier, Evenements kafka) {
 		this.supports = supports;
 		this.historique = historique;
 		this.fichiers = fichiers;
 		this.journaux = journaux;
 		this.evenements = evenements;
 		this.dateMetier = dateMetier;
+		this.kafka = kafka;
 	}
 
 	/** Jours ouvrés : du lundi au vendredi (pas de calendrier des jours fériés dans le prototype). */
@@ -138,6 +142,10 @@ public class ChargementCatalogue {
 		journal.terminer(ajoutes, modifies, retires, rejets, dateMetier.maintenant().toOffsetDateTime());
 		JournalBatch enregistre = journaux.save(journal);
 		evenements.save(new EvenementCatalogue(enregistre));
+		// CU-382 : publié dans le topic catalogue, clé = date métier (événement de fin de traitement).
+		kafka.enregistrer(Topic.CATALOGUE, "CatalogueMisAJour", enregistre.getDateMetier().toString(),
+				Map.of("ajoutes", enregistre.getAjoutes(), "modifies", enregistre.getModifies(), "retires",
+						enregistre.getRetires(), "rejetees", enregistre.getRejetees()));
 		return enregistre;
 	}
 

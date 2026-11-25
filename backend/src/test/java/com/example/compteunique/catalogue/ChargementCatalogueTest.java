@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -36,6 +37,8 @@ import com.example.compteunique.catalogue.ChargementCatalogue.JourNonOuvre;
 import com.example.compteunique.catalogue.JournalBatch.Declenchement;
 import com.example.compteunique.catalogue.JournalBatch.Statut;
 import com.example.compteunique.datemetier.DateMetier;
+import com.example.compteunique.evenements.ConfigurationKafka.Topic;
+import com.example.compteunique.evenements.Evenements;
 
 // CU-381 (TECH-13) : critères d'acceptation du chargement nocturne du catalogue, base simulée en mémoire.
 // Critère 9 (TECH-09 utilise les VL chargées) : vérifié par CatalogueService.valeurLiquidative, que l'exécution des
@@ -51,6 +54,7 @@ class ChargementCatalogueTest {
 	private final JournalBatchRepository journaux = mock(JournalBatchRepository.class);
 	private final EvenementCatalogueRepository evenements = mock(EvenementCatalogueRepository.class);
 	private final DateMetier dateMetier = mock(DateMetier.class);
+	private final Evenements kafka = mock(Evenements.class);
 
 	private final List<Support> baseSupports = new ArrayList<>();
 	private final List<HistoriqueVl> baseHistorique = new ArrayList<>();
@@ -59,7 +63,7 @@ class ChargementCatalogueTest {
 	private final List<EvenementCatalogue> baseEvenements = new ArrayList<>();
 
 	private final ChargementCatalogue chargement = new ChargementCatalogue(supports, historique, fichiers, journaux,
-			evenements, dateMetier);
+			evenements, dateMetier, kafka);
 	private final CatalogueService catalogue = new CatalogueService(supports, historique, evenements);
 
 	@BeforeEach
@@ -146,6 +150,9 @@ class ChargementCatalogueTest {
 			assertThat(evenement.getRejetees()).isZero();
 		});
 		verify(journaux).verrouiller();
+		// CU-382 : « catalogue mis à jour » publié dans Kafka, clé = date métier
+		verify(kafka).enregistrer(Topic.CATALOGUE, "CatalogueMisAJour", "2026-11-23",
+				Map.of("ajoutes", 102, "modifies", 0, "retires", 0, "rejetees", 0));
 	}
 
 	@Test
@@ -257,6 +264,8 @@ class ChargementCatalogueTest {
 		assertThat(catalogue.catalogueMisAJour(LocalDate.of(2026, 11, 24))).isFalse();
 		assertThat(catalogue.valeurLiquidative("QZ0000000017", LocalDate.of(2026, 11, 24))).isEmpty();
 		assertThat(chargement.dejaLance(LocalDate.of(2026, 11, 24))).isTrue();
+		verify(kafka, never()).enregistrer(Topic.CATALOGUE, "CatalogueMisAJour", "2026-11-24", Map.of("ajoutes", 0,
+				"modifies", 0, "retires", 0, "rejetees", 0));
 	}
 
 	@Test

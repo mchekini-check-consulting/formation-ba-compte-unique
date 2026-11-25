@@ -4,5 +4,9 @@ dist
 coverage
 .vscode
 *.log
+e2e
+playwright.config.ts
+playwright-report
+test-results
 Dockerfile
 .dockerignore

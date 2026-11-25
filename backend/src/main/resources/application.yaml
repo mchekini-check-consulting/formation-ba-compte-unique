@@ -11,6 +11,25 @@ spring:
     open-in-view: false
     hibernate:
       ddl-auto: validate   # le schéma vient uniquement des migrations Flyway
+  # CU-382 (TECH-14) : Kafka (ADR-001, section 3 bis). Adresse et topics déclarés dans helm.yaml (envList) ;
+  # l'application refuse de démarrer si une variable KAFKA_* manque (ConfigurationKafka).
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:}
+    producer:
+      # message « envoyé » seulement quand Kafka l'a enregistré, sans doublon en cas de nouvel essai
+      acks: all
+      properties:
+        enable.idempotence: true
+        # Kafka indisponible : le relais abandonne vite et réessaie au passage suivant (rien n'est perdu)
+        max.block.ms: 5000
+        request.timeout.ms: 5000
+        delivery.timeout.ms: 10000
+    consumer:
+      auto-offset-reset: earliest
+      # message marqué « lu » seulement après la fin du traitement en base
+      enable-auto-commit: false
+    listener:
+      ack-mode: record
 
 server:
   # CU-48 : derrière le gateway, l'adresse IP de la cliente est lue dans X-Forwarded-For
@@ -53,6 +72,9 @@ app:
     # CU-381 (TECH-13) : page /test/catalogue (déposer le fichier du jour, lancer le batch, lire le journal) en test
     # (local, dev, qualif) ; false en preprod et prod (helm.yaml) : les routes n'existent alors pas.
     catalogue-simule: ${CATALOGUE_SIMULE:true}
+    # CU-382 (TECH-14) : page /test/evenements (boîte d'envoi, événements reçus, messages en erreur, envoi d'un
+    # message invalide) en test (local, dev, qualif) ; false en preprod et prod (helm.yaml).
+    evenements-simules: ${EVENEMENTS_SIMULES:true}
   catalogue:
     # CU-381 : heure du batch nocturne, selon la date métier (TECH-12), du lundi au vendredi. « 2 h, à confirmer ».
     heure: ${CATALOGUE_HEURE:2}
