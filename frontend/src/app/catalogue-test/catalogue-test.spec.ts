@@ -199,3 +199,86 @@ describe('CatalogueTest (CU-381)', () => {
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Page de test indisponible');
   });
 });
+
+describe('CatalogueTest (CU-383 : historique des VL et vidage du catalogue)', () => {
+  afterEach(() => TestBed.inject(HttpTestingController).verify());
+
+  async function pagePrete() {
+    const fixture = creer();
+    const http = TestBed.inject(HttpTestingController);
+    repondreChargement(http, [DEPOT], [TERMINE]);
+    await fixture.whenStable();
+    return { fixture, http, page: fixture.nativeElement as HTMLElement };
+  }
+
+  function chercherHistorique(page: HTMLElement, isin: string) {
+    const champ = page.querySelector<HTMLInputElement>('#isin')!;
+    champ.value = isin;
+    page.querySelector<HTMLFormElement>('[data-test="historique"]')!.dispatchEvent(new Event('submit'));
+  }
+
+  it('affiche l’historique des valeurs liquidatives d’un support, de la plus récente à la plus ancienne', async () => {
+    const { fixture, http, page } = await pagePrete();
+
+    chercherHistorique(page, ' qz0000000017 ');
+    http.expectOne(`${URL}/supports/QZ0000000017/valeurs-liquidatives`).flush([
+      { dateVl: '2026-11-23', valeur: 25.4, source: 'catalogue_uc_2026-11-24.csv' },
+      { dateVl: '2026-11-20', valeur: 25, source: 'catalogue_uc_2026-11-23.csv' },
+    ]);
+    await fixture.whenStable();
+
+    const lignes = page.querySelectorAll('[data-test="vl"] tbody tr');
+    expect(lignes.length).toBe(2);
+    expect(lignes[0].textContent).toContain('23/11/2026');
+    expect(lignes[0].textContent).toContain('25,40');
+    expect(lignes[0].textContent).toContain('catalogue_uc_2026-11-24.csv');
+    expect(lignes[1].textContent).toContain('20/11/2026');
+  });
+
+  it('indique un support inconnu (404) et ne cherche rien sans code ISIN', async () => {
+    const { fixture, http, page } = await pagePrete();
+
+    chercherHistorique(page, '   ');
+    http.expectNone(() => true);
+    chercherHistorique(page, 'QZ9999999999');
+    http.expectOne(`${URL}/supports/QZ9999999999/valeurs-liquidatives`).flush(null, { status: 404, statusText: 'Not Found' });
+    await fixture.whenStable();
+
+    expect(page.querySelector('[data-test="vl-message"]')!.textContent).toContain('Aucun support QZ9999999999 au catalogue.');
+  });
+
+  it('vide le catalogue après confirmation, puis recharge la page', async () => {
+    const { fixture, http, page } = await pagePrete();
+
+    page.querySelector<HTMLButtonElement>('[data-test="vider"]')!.click();
+    await fixture.whenStable();
+    http.expectNone(`${URL}/supports`);
+    expect(page.textContent).toContain('Tous les supports et leurs valeurs liquidatives seront effacés');
+
+    page.querySelector<HTMLButtonElement>('[data-test="confirmer-vider"]')!.click();
+    const vidage = http.expectOne(`${URL}/supports`);
+    expect(vidage.request.method).toBe('DELETE');
+    vidage.flush(null, { status: 204, statusText: 'No Content' });
+    repondreChargement(http, [DEPOT], [TERMINE]);
+    await fixture.whenStable();
+    expect(page.querySelector('[role="status"]')!.textContent).toContain('Catalogue vidé');
+  });
+
+  it('annule le vidage sans rien effacer, et signale un échec du backend', async () => {
+    const { fixture, http, page } = await pagePrete();
+
+    page.querySelector<HTMLButtonElement>('[data-test="vider"]')!.click();
+    await fixture.whenStable();
+    page.querySelector<HTMLButtonElement>('[data-test="annuler-vider"]')!.click();
+    await fixture.whenStable();
+    http.expectNone(`${URL}/supports`);
+    expect(page.querySelector('[data-test="confirmer-vider"]')).toBeNull();
+
+    page.querySelector<HTMLButtonElement>('[data-test="vider"]')!.click();
+    await fixture.whenStable();
+    page.querySelector<HTMLButtonElement>('[data-test="confirmer-vider"]')!.click();
+    http.expectOne(`${URL}/supports`).error(new ProgressEvent('error'));
+    await fixture.whenStable();
+    expect(page.querySelector('[role="alert"]')!.textContent).toContain('Le catalogue n’a pas pu être vidé');
+  });
+});

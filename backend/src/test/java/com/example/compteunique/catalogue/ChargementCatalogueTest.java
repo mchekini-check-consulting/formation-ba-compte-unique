@@ -88,6 +88,22 @@ class ChargementCatalogueTest {
 				.filter(h -> h.getSupport().getCodeIsin().equals(appel.getArgument(0))
 						&& h.getDateVl().equals(appel.getArgument(1)))
 				.findFirst());
+		when(historique.findBySupportCodeIsinOrderByDateVlDesc(anyString())).thenAnswer(appel -> baseHistorique
+				.stream()
+				.filter(h -> h.getSupport().getCodeIsin().equals(appel.getArgument(0)))
+				.sorted(Comparator.comparing(HistoriqueVl::getDateVl).reversed())
+				.toList());
+		org.mockito.Mockito.doAnswer(appel -> {
+			baseHistorique.clear();
+			return null;
+		}).when(historique).deleteAllInBatch();
+		org.mockito.Mockito.doAnswer(appel -> {
+			if (!baseHistorique.isEmpty()) {
+				throw new IllegalStateException("historique_vl référence encore des supports");
+			}
+			baseSupports.clear();
+			return null;
+		}).when(supports).deleteAllInBatch();
 		when(fichiers.save(any())).thenAnswer(appel -> ajouter(baseFichiers, appel.getArgument(0)));
 		when(fichiers.findFirstByDateFichierOrderByIdDesc(any())).thenAnswer(appel -> baseFichiers.reversed().stream()
 				.filter(f -> f.getDateFichier().equals(appel.getArgument(0))).findFirst());
@@ -208,6 +224,81 @@ class ChargementCatalogueTest {
 		assertThat(catalogue.supportsProposes(Produit.AV)).extracting(SupportUc::codeIsin)
 				.containsExactly("US0378331005");
 		assertThat(catalogue.support("QZ0000000017")).hasValueSatisfying(s -> assertThat(s.retire()).isTrue());
+		// CU-383 : en plus de « catalogue mis à jour », « support retiré » est publié, clé = code ISIN.
+		verify(kafka).enregistrer(Topic.CATALOGUE, "SupportRetire", "QZ0000000017",
+				Map.of("codeIsin", "QZ0000000017", "nom", support("QZ0000000017").getNom()));
+		verify(kafka).enregistrer(Topic.CATALOGUE, "CatalogueMisAJour", "2026-11-24",
+				Map.of("ajoutes", 0, "modifies", 0, "retires", 1, "rejetees", 0));
+	}
+
+	@Test
+	@DisplayName("CU-383 : étant donné QZ8000000010 actif, quand un nouveau fichier du même jour le passe au statut "
+			+ "« retire », alors le batch compte 1 retiré et publie « support retiré » avec son ISIN comme clé")
+	void cu383RetraitLeMemeJour() {
+		deposer(fichier(ligne("code_isin=QZ8000000010")));
+		chargement.lancer(Declenchement.MANUEL);
+
+		deposer(fichier(ligne("code_isin=QZ8000000010", "statut=retire")));
+		JournalBatch journal = chargement.lancer(Declenchement.MANUEL);
+
+		assertThat(journal.getRetires()).isEqualTo(1);
+		assertThat(journal.getModifies()).isZero();
+		verify(kafka).enregistrer(Topic.CATALOGUE, "SupportRetire", "QZ8000000010",
+				Map.of("codeIsin", "QZ8000000010", "nom", support("QZ8000000010").getNom()));
+	}
+
+	@Test
+	@DisplayName("CU-383 : au premier chargement, un support déjà au statut « retire » est enregistré comme retiré, "
+			+ "compté comme ajouté (CU-381, critère 1), sans événement « support retiré »")
+	void cu383DejaRetireAuPremierChargement() {
+		deposer(FichiersCatalogue.principal());
+
+		JournalBatch journal = chargement.lancer(Declenchement.AUTOMATIQUE);
+
+		assertThat(journal.getAjoutes()).isEqualTo(102);
+		assertThat(journal.getRetires()).isZero();
+		assertThat(catalogue.support("QZ0000001023")).hasValueSatisfying(s -> {
+			assertThat(s.nom()).isEqualTo("SCPI Bureaux Paris (fermée)");
+			assertThat(s.retire()).isTrue();
+		});
+		verify(kafka, never()).enregistrer(any(), org.mockito.ArgumentMatchers.eq("SupportRetire"), anyString(),
+				any());
+	}
+
+	@Test
+	@DisplayName("CU-383 / TECH-13 en test : l'historique des valeurs liquidatives d'un support est consultable, "
+			+ "de la plus récente à la plus ancienne, avec sa source")
+	void historiqueDesValeursLiquidatives() {
+		deposer(fichier(ligne("valeur_liquidative=25.00", "date_vl=2026-11-20")));
+		chargement.lancer(Declenchement.AUTOMATIQUE);
+		dateMetier(LUNDI_2H.plusDays(1));
+		chargement.deposer("catalogue_uc_2026-11-24.csv",
+				fichier(ligne("valeur_liquidative=25.40", "date_vl=2026-11-23")));
+		chargement.lancer(Declenchement.AUTOMATIQUE);
+
+		assertThat(catalogue.historiqueVl("QZ0000000017"))
+				.extracting(CatalogueService.ValeurLiquidative::dateVl, v -> v.valeur().toPlainString(),
+						CatalogueService.ValeurLiquidative::source)
+				.containsExactly(tuple(LocalDate.of(2026, 11, 23), "25.40", "catalogue_uc_2026-11-24.csv"),
+						tuple(LocalDate.of(2026, 11, 20), "25.00", "catalogue_uc_2026-11-23.csv"));
+		assertThat(catalogue.historiqueVl("INCONNU")).isEmpty();
+	}
+
+	@Test
+	@DisplayName("CU-383 / TECH-13 en test : « Vider le catalogue » efface les supports et les valeurs liquidatives, "
+			+ "garde le journal et les fichiers déposés ; le fichier peut ensuite être rechargé")
+	void viderLeCatalogue() {
+		deposer(FichiersCatalogue.principal());
+		chargement.lancer(Declenchement.MANUEL);
+
+		chargement.vider();
+
+		assertThat(baseSupports).isEmpty();
+		assertThat(baseHistorique).isEmpty();
+		assertThat(baseJournaux).hasSize(1);
+		assertThat(baseFichiers).hasSize(1);
+		JournalBatch rechargement = chargement.lancer(Declenchement.MANUEL);
+		assertThat(rechargement.getAjoutes()).isEqualTo(102);
 	}
 
 	@Test
@@ -355,7 +446,7 @@ class ChargementCatalogueTest {
 	@Test
 	@DisplayName("Page de test : dépôt, lancement, journal, et refus clairs (400 dépôt invalide, 409 week-end)")
 	void routesDeTest() {
-		CatalogueTestController routes = new CatalogueTestController(chargement);
+		CatalogueTestController routes = new CatalogueTestController(chargement, catalogue);
 
 		assertThat(routes.deposer(new Depot(" catalogue_uc_2026-11-23.csv ", FichiersCatalogue.avecAnomalies())))
 				.satisfies(f -> assertThat(f.dateFichier()).isEqualTo(LocalDate.of(2026, 11, 23)));
@@ -373,6 +464,27 @@ class ChargementCatalogueTest {
 		assertThat(routes.jourNonOuvre(new JourNonOuvre()).getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
 		assertThat(routes.jourNonOuvre(new JourNonOuvre()).getBody().message())
 				.isEqualTo("La date métier n'est pas un jour ouvré : le batch ne s'exécute pas.");
+	}
+
+	@Test
+	@DisplayName("Page de test : historique des valeurs liquidatives (404 si le support est inconnu) et action "
+			+ "« Vider le catalogue »")
+	void routesHistoriqueEtVider() {
+		CatalogueTestController routes = new CatalogueTestController(chargement, catalogue);
+		routes.deposer(new Depot("catalogue_uc_2026-11-23.csv", FichiersCatalogue.principal()));
+		routes.lancer();
+
+		assertThat(routes.historique("QZ0000001023").getStatusCode()).isEqualTo(HttpStatus.OK);
+		assertThat(routes.historique("QZ0000001023").getBody()).singleElement().satisfies(v -> {
+			assertThat(v.dateVl()).isEqualTo(LocalDate.of(2026, 11, 1));
+			assertThat(v.valeur()).isEqualByComparingTo("171.77");
+		});
+		assertThat(routes.historique("INCONNU").getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+
+		routes.vider();
+
+		assertThat(baseSupports).isEmpty();
+		assertThat(routes.historique("QZ0000001023").getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
 	}
 
 	@Test

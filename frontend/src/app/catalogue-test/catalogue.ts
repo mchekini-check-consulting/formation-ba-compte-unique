@@ -32,6 +32,13 @@ export interface JournalBatch {
   lignesRejetees: LigneRejetee[];
 }
 
+/** Une valeur liquidative de l'historique d'un support (CU-383). */
+export interface ValeurLiquidative {
+  dateVl: string;
+  valeur: number;
+  source: string;
+}
+
 // CU-381 (TECH-13) : routes /test/catalogue du backend (absentes en preprod et prod : 404).
 @Injectable({ providedIn: 'root' })
 export class CatalogueTestService {
@@ -52,5 +59,15 @@ export class CatalogueTestService {
 
   journal(): Observable<JournalBatch[]> {
     return this.http.get<JournalBatch[]>(`${this.url}/journal`);
+  }
+
+  historique(codeIsin: string): Observable<ValeurLiquidative[]> {
+    return this.http.get<ValeurLiquidative[]>(
+      `${this.url}/supports/${encodeURIComponent(codeIsin)}/valeurs-liquidatives`,
+    );
+  }
+
+  vider(): Observable<void> {
+    return this.http.delete<void>(`${this.url}/supports`);
   }
 }

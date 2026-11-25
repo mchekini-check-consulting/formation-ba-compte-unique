@@ -7,14 +7,17 @@ import java.util.List;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.compteunique.catalogue.CatalogueService.ValeurLiquidative;
 import com.example.compteunique.catalogue.ChargementCatalogue.DepotInvalide;
 import com.example.compteunique.catalogue.ChargementCatalogue.JourNonOuvre;
 import com.example.compteunique.catalogue.JournalBatch.Declenchement;
@@ -25,6 +28,8 @@ import com.example.compteunique.catalogue.JournalBatch.Declenchement;
 // GET  /test/catalogue/fichiers  : les 20 derniers fichiers déposés (sans leur contenu).
 // POST /test/catalogue/batch     : lancer le batch maintenant pour la date métier (refusé un samedi ou un dimanche).
 // GET  /test/catalogue/journal   : les 20 dernières exécutions, avec les lignes rejetées.
+// GET  /test/catalogue/supports/{isin}/valeurs-liquidatives : historique des VL d'un support (CU-383).
+// DELETE /test/catalogue/supports  : vider le catalogue (supports et VL), avant de recharger un fichier (CU-383).
 // Absent en preprod et prod (CATALOGUE_SIMULE=false, helm.yaml : 404) ; le batch automatique y tourne toujours.
 @RestController
 @RequestMapping("/test/catalogue")
@@ -32,9 +37,11 @@ import com.example.compteunique.catalogue.JournalBatch.Declenchement;
 public class CatalogueTestController {
 
 	private final ChargementCatalogue chargement;
+	private final CatalogueService catalogue;
 
-	public CatalogueTestController(ChargementCatalogue chargement) {
+	public CatalogueTestController(ChargementCatalogue chargement, CatalogueService catalogue) {
 		this.chargement = chargement;
+		this.catalogue = catalogue;
 	}
 
 	public record Depot(String nomFichier, String contenu) {
@@ -87,6 +94,22 @@ public class CatalogueTestController {
 	@GetMapping("/journal")
 	public List<JournalVue> journal() {
 		return chargement.journal().stream().map(JournalVue::de).toList();
+	}
+
+	/** CU-383 : historique des valeurs liquidatives d'un support ; 404 si le support n'est pas au catalogue. */
+	@GetMapping("/supports/{codeIsin}/valeurs-liquidatives")
+	public ResponseEntity<List<ValeurLiquidative>> historique(@PathVariable String codeIsin) {
+		if (catalogue.support(codeIsin).isEmpty()) {
+			return ResponseEntity.notFound().build();
+		}
+		return ResponseEntity.ok(catalogue.historiqueVl(codeIsin));
+	}
+
+	/** CU-383 / CU-412 : vider le catalogue (supports et valeurs liquidatives) avant de recharger un fichier. */
+	@DeleteMapping("/supports")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public void vider() {
+		chargement.vider();
 	}
 
 	@ExceptionHandler(DepotInvalide.class)

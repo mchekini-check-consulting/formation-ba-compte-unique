@@ -72,6 +72,18 @@ public class CatalogueService {
 		return historique.findBySupportCodeIsinAndDateVl(codeIsin, date).map(HistoriqueVl::getValeurLiquidative);
 	}
 
+	/** Une valeur liquidative de l'historique : valeur, date et source (nom du fichier chargé). */
+	public record ValeurLiquidative(LocalDate dateVl, BigDecimal valeur, String source) {
+	}
+
+	/** Historique des valeurs liquidatives d'un support, de la plus récente à la plus ancienne (vide si inconnu). */
+	@Transactional(readOnly = true)
+	public List<ValeurLiquidative> historiqueVl(String codeIsin) {
+		return historique.findBySupportCodeIsinOrderByDateVlDesc(codeIsin).stream()
+				.map(h -> new ValeurLiquidative(h.getDateVl(), h.getValeurLiquidative(), h.getSource()))
+				.toList();
+	}
+
 	/** Vrai si l'événement « catalogue mis à jour » existe pour ce jour métier : l'étape suivante peut démarrer. */
 	@Transactional(readOnly = true)
 	public boolean catalogueMisAJour(LocalDate dateMetier) {

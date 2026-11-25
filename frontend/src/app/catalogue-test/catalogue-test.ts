@@ -3,7 +3,7 @@ import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { DateMetierService, afficherDate } from '../date-metier-test/date-metier';
-import { CatalogueTestService, FichierDepose, JournalBatch } from './catalogue';
+import { CatalogueTestService, FichierDepose, JournalBatch, ValeurLiquidative } from './catalogue';
 
 type Etat = 'chargement' | 'affiche' | 'indisponible';
 
@@ -50,6 +50,52 @@ type Etat = 'chargement' | 'affiche' | 'indisponible';
           }
           @if (erreur()) {
             <p class="erreur" role="alert">{{ erreur() }}</p>
+          }
+
+          <h2>Historique des valeurs liquidatives</h2>
+          <form data-test="historique" (submit)="chercher($event, isin.value)">
+            <label for="isin">Code ISIN du support</label>
+            <div class="ligne">
+              <input #isin id="isin" name="isin" maxlength="12" autocomplete="off" />
+              <button type="submit">Voir l’historique</button>
+            </div>
+          </form>
+          @if (messageVl()) {
+            <p class="vide" data-test="vl-message">{{ messageVl() }}</p>
+          }
+          @if (historique().length > 0) {
+            <div class="tableau" data-test="vl">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Date de la VL</th>
+                    <th scope="col">Valeur liquidative</th>
+                    <th scope="col">Source</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (v of historique(); track v.dateVl) {
+                    <tr>
+                      <td>{{ jour(v.dateVl) }}</td>
+                      <td>{{ euros(v.valeur) }}</td>
+                      <td>{{ v.source }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+
+          <h2>Vider le catalogue</h2>
+          <p class="vide">Avant une recette : efface les supports et leurs valeurs liquidatives, puis redéposez le fichier de référence et relancez le batch. Le journal est conservé.</p>
+          @if (confirmerVidage()) {
+            <p class="erreur">Tous les supports et leurs valeurs liquidatives seront effacés. Confirmez-vous ?</p>
+            <div class="ligne">
+              <button type="button" class="danger" data-test="confirmer-vider" (click)="vider()">Oui, vider le catalogue</button>
+              <button type="button" class="secondaire" data-test="annuler-vider" (click)="confirmerVidage.set(false)">Annuler</button>
+            </div>
+          } @else {
+            <button type="button" class="secondaire" data-test="vider" (click)="confirmerVidage.set(true)">Vider le catalogue</button>
           }
 
           <h2>Journal du batch</h2>
@@ -114,6 +160,10 @@ type Etat = 'chargement' | 'affiche' | 'indisponible';
     .succes { color: #067647; font-weight: 700; }
     button { padding: 10px 18px; border-radius: 10px; border: 1px solid #0b2545; background: #0b2545; color: #fff; font-weight: 700; cursor: pointer; }
     button:disabled { opacity: 0.6; cursor: wait; }
+    button.secondaire { background: #fff; color: #0b2545; }
+    button.danger { background: #b42318; border-color: #b42318; }
+    .ligne { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .ligne input { padding: 9px 12px; border: 1px solid #d9dee6; border-radius: 10px; font: inherit; }
     .execution { border: 1px solid #d9dee6; border-radius: 12px; padding: 12px 16px; margin-bottom: 12px; background: #fff; }
     .execution.echec { border-color: #fda29b; }
     .tableau { overflow-x: auto; border: 1px solid #eef1f5; border-radius: 8px; }
@@ -133,9 +183,61 @@ export class CatalogueTest {
   protected readonly erreur = signal<string | null>(null);
   protected readonly enCours = signal(false);
   protected readonly afficher = afficherDate;
+  protected readonly historique = signal<ValeurLiquidative[]>([]);
+  protected readonly messageVl = signal<string | null>(null);
+  protected readonly confirmerVidage = signal(false);
 
   constructor() {
     this.charger();
+  }
+
+  protected jour(date: string): string {
+    return new Date(`${date}T00:00:00`).toLocaleDateString('fr-FR');
+  }
+
+  protected euros(valeur: number): string {
+    return valeur.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 6 });
+  }
+
+  protected chercher(event: Event, saisie: string): void {
+    event.preventDefault();
+    const codeIsin = saisie.trim().toUpperCase();
+    this.historique.set([]);
+    this.messageVl.set(null);
+    if (!codeIsin) {
+      return;
+    }
+    this.service.historique(codeIsin).subscribe({
+      next: (valeurs) => {
+        this.historique.set(valeurs);
+        if (valeurs.length === 0) {
+          this.messageVl.set(`Aucune valeur liquidative pour ${codeIsin}.`);
+        }
+      },
+      error: (refus: HttpErrorResponse) =>
+        this.messageVl.set(
+          refus.status === 404
+            ? `Aucun support ${codeIsin} au catalogue.`
+            : 'L’historique est momentanément indisponible. Réessayez.',
+        ),
+    });
+  }
+
+  protected vider(): void {
+    this.message.set(null);
+    this.erreur.set(null);
+    this.service.vider().subscribe({
+      next: () => {
+        this.confirmerVidage.set(false);
+        this.historique.set([]);
+        this.message.set('Catalogue vidé : redéposez le fichier de référence puis lancez le batch.');
+        this.charger();
+      },
+      error: () => {
+        this.confirmerVidage.set(false);
+        this.erreur.set('Le catalogue n’a pas pu être vidé. Réessayez.');
+      },
+    });
   }
 
   protected deposer(champ: HTMLInputElement): void {
