@@ -296,7 +296,12 @@ describe('CatalogueTest (CU-383 : historique des VL et vidage du catalogue)', ()
 });
 
 describe('CatalogueTest (CU-417 : simuler la liste des supports indisponible)', () => {
-  afterEach(() => TestBed.inject(HttpTestingController).verify());
+  // CU-382 : le journal des alertes de la page a son propre test (journal-alertes.spec.ts).
+  afterEach(() => {
+    const http = TestBed.inject(HttpTestingController);
+    http.match('/api/backend/test/alertes');
+    http.verify();
+  });
 
   it('active puis désactive la simulation, et affiche l’état en cours', async () => {
     const fixture = creer();
