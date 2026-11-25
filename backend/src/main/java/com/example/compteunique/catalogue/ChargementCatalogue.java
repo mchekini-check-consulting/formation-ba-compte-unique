@@ -19,6 +19,7 @@ import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.compteunique.alertes.AlertesEquipe;
 import com.example.compteunique.catalogue.JournalBatch.Declenchement;
 import com.example.compteunique.catalogue.LecteurCatalogue.FichierIllisible;
 import com.example.compteunique.catalogue.LecteurCatalogue.Lecture;
@@ -54,10 +55,11 @@ public class ChargementCatalogue {
 	private final EvenementCatalogueRepository evenements;
 	private final DateMetier dateMetier;
 	private final Evenements kafka;
+	private final AlertesEquipe alertes;
 
 	public ChargementCatalogue(SupportRepository supports, HistoriqueVlRepository historique,
 			FichierDeposeRepository fichiers, JournalBatchRepository journaux, EvenementCatalogueRepository evenements,
-			DateMetier dateMetier, Evenements kafka) {
+			DateMetier dateMetier, Evenements kafka, AlertesEquipe alertes) {
 		this.supports = supports;
 		this.historique = historique;
 		this.fichiers = fichiers;
@@ -65,6 +67,7 @@ public class ChargementCatalogue {
 		this.evenements = evenements;
 		this.dateMetier = dateMetier;
 		this.kafka = kafka;
+		this.alertes = alertes;
 	}
 
 	/** Jours ouvrés : du lundi au vendredi (pas de calendrier des jours fériés dans le prototype). */
@@ -97,13 +100,13 @@ public class ChargementCatalogue {
 		JournalBatch journal = new JournalBatch(jour, declenchement, nomAttendu, debut);
 		var fichier = fichiers.findFirstByDateFichierOrderByIdDesc(jour);
 		if (fichier.isEmpty()) {
-			return echec(journal, "Fichier absent : " + nomAttendu);
+			return echec(journal, "Fichier absent : " + nomAttendu, "fichier absent");
 		}
 		Lecture lecture;
 		try {
 			lecture = LecteurCatalogue.lire(fichier.get().getContenu(), jour);
 		} catch (FichierIllisible illisible) {
-			return echec(journal, "Fichier illisible : " + illisible.getMessage());
+			return echec(journal, "Fichier illisible : " + illisible.getMessage(), "fichier illisible");
 		}
 		return charger(journal, lecture, debut);
 	}
@@ -153,7 +156,7 @@ public class ChargementCatalogue {
 		return enregistre;
 	}
 
-	private JournalBatch echec(JournalBatch journal, String message) {
+	private JournalBatch echec(JournalBatch journal, String message, String cause) {
 		journal.echouer(message, dateMetier.maintenant().toOffsetDateTime());
 		MDC.put("layer", "service");
 		try {
@@ -162,6 +165,8 @@ public class ChargementCatalogue {
 		} finally {
 			MDC.remove("layer");
 		}
+		// CU-382 : alerte de l'équipe par le mécanisme commun (e-mail à ALERTE_EQUIPE_EMAIL et journal des alertes).
+		alertes.signaler("Batch catalogue", "Batch catalogue en échec : " + cause);
 		return journaux.save(journal);
 	}
 

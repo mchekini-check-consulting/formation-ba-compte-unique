@@ -62,7 +62,12 @@ function choisirFichier(page: HTMLElement, nom: string, contenu: string): HTMLIn
 }
 
 describe('CatalogueTest (CU-381)', () => {
-  afterEach(() => TestBed.inject(HttpTestingController).verify());
+  // CU-382 : le journal des alertes de la page a son propre test (journal-alertes.spec.ts).
+  afterEach(() => {
+    const http = TestBed.inject(HttpTestingController);
+    http.match('/api/backend/test/alertes');
+    http.verify();
+  });
 
   it('affiche la date métier, les dépôts et le journal avec les lignes rejetées et les échecs', async () => {
     const fixture = creer();
@@ -203,7 +208,12 @@ describe('CatalogueTest (CU-381)', () => {
 });
 
 describe('CatalogueTest (CU-383 : historique des VL et vidage du catalogue)', () => {
-  afterEach(() => TestBed.inject(HttpTestingController).verify());
+  // CU-382 : le journal des alertes de la page a son propre test (journal-alertes.spec.ts).
+  afterEach(() => {
+    const http = TestBed.inject(HttpTestingController);
+    http.match('/api/backend/test/alertes');
+    http.verify();
+  });
 
   async function pagePrete() {
     const fixture = creer();
@@ -241,7 +251,7 @@ describe('CatalogueTest (CU-383 : historique des VL et vidage du catalogue)', ()
     const { fixture, http, page } = await pagePrete();
 
     chercherHistorique(page, '   ');
-    http.expectNone(() => true);
+    http.expectNone((r) => r.url.includes('/valeurs-liquidatives'));
     chercherHistorique(page, 'QZ9999999999');
     http.expectOne(`${URL}/supports/QZ9999999999/valeurs-liquidatives`).flush(null, { status: 404, statusText: 'Not Found' });
     await fixture.whenStable();
@@ -286,7 +296,12 @@ describe('CatalogueTest (CU-383 : historique des VL et vidage du catalogue)', ()
 });
 
 describe('CatalogueTest (CU-417 : simuler la liste des supports indisponible)', () => {
-  afterEach(() => TestBed.inject(HttpTestingController).verify());
+  // CU-382 : le journal des alertes de la page a son propre test (journal-alertes.spec.ts).
+  afterEach(() => {
+    const http = TestBed.inject(HttpTestingController);
+    http.match('/api/backend/test/alertes');
+    http.verify();
+  });
 
   it('active puis désactive la simulation, et affiche l’état en cours', async () => {
     const fixture = creer();

@@ -62,26 +62,30 @@ applications:
       # CU-381 (TECH-13) : page de test du catalogue (/test/catalogue : dépôt du fichier, lancement du batch) en dev et qualif seulement.
       - key: CATALOGUE_SIMULE
         value: {dev: "true", qualif: "true", preprod: "false", prod: "false"}
-      # CU-382 (TECH-14) : Kafka de la plateforme (ADR-001, section 3 bis). Noms des topics uniquement ici, jamais dans le code ;
-      # un nom par environnement (le cluster peut être partagé entre environnements, point à confirmer avec l'équipe Kafka).
+      # CU-382 (TECH-14) : Kafka de la plateforme (ADR-001, section 3 bis). Noms des topics uniquement ici, jamais dans le code :
+      # cu-epargne.<environnement>.<topic> partout, dev compris (décision PO du 25/11/2026) ; groupes cu-epargne-<environnement>-<module>.
       - key: KAFKA_BOOTSTRAP_SERVERS
         value: kafka-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092
       - key: KAFKA_TOPIC_ORDRES
-        value: {dev: cu-epargne.ordres, qualif: cu-epargne.qualif.ordres, preprod: cu-epargne.preprod.ordres, prod: cu-epargne.prod.ordres}
+        value: {dev: cu-epargne.dev.ordres, qualif: cu-epargne.qualif.ordres, preprod: cu-epargne.preprod.ordres, prod: cu-epargne.prod.ordres}
       - key: KAFKA_TOPIC_ORDRES_EXECUTES
-        value: {dev: cu-epargne.ordres-executes, qualif: cu-epargne.qualif.ordres-executes, preprod: cu-epargne.preprod.ordres-executes, prod: cu-epargne.prod.ordres-executes}
+        value: {dev: cu-epargne.dev.ordres-executes, qualif: cu-epargne.qualif.ordres-executes, preprod: cu-epargne.preprod.ordres-executes, prod: cu-epargne.prod.ordres-executes}
       - key: KAFKA_TOPIC_MOUVEMENTS
-        value: {dev: cu-epargne.mouvements, qualif: cu-epargne.qualif.mouvements, preprod: cu-epargne.preprod.mouvements, prod: cu-epargne.prod.mouvements}
+        value: {dev: cu-epargne.dev.mouvements, qualif: cu-epargne.qualif.mouvements, preprod: cu-epargne.preprod.mouvements, prod: cu-epargne.prod.mouvements}
       - key: KAFKA_TOPIC_CATALOGUE
-        value: {dev: cu-epargne.catalogue, qualif: cu-epargne.qualif.catalogue, preprod: cu-epargne.preprod.catalogue, prod: cu-epargne.prod.catalogue}
+        value: {dev: cu-epargne.dev.catalogue, qualif: cu-epargne.qualif.catalogue, preprod: cu-epargne.preprod.catalogue, prod: cu-epargne.prod.catalogue}
       - key: KAFKA_TOPIC_PROFIL_CLIENT
-        value: {dev: cu-epargne.profil-client, qualif: cu-epargne.qualif.profil-client, preprod: cu-epargne.preprod.profil-client, prod: cu-epargne.prod.profil-client}
+        value: {dev: cu-epargne.dev.profil-client, qualif: cu-epargne.qualif.profil-client, preprod: cu-epargne.preprod.profil-client, prod: cu-epargne.prod.profil-client}
       - key: KAFKA_TOPIC_RAPPROCHEMENT
-        value: {dev: cu-epargne.rapprochement, qualif: cu-epargne.qualif.rapprochement, preprod: cu-epargne.preprod.rapprochement, prod: cu-epargne.prod.rapprochement}
+        value: {dev: cu-epargne.dev.rapprochement, qualif: cu-epargne.qualif.rapprochement, preprod: cu-epargne.preprod.rapprochement, prod: cu-epargne.prod.rapprochement}
       - key: KAFKA_TOPIC_SUFFIXE_ERREURS
         value: .dlt
       - key: KAFKA_GROUP_ID_PREFIXE
-        value: {dev: cu-epargne, qualif: cu-epargne-qualif, preprod: cu-epargne-preprod, prod: cu-epargne-prod}
+        value: {dev: cu-epargne-dev, qualif: cu-epargne-qualif, preprod: cu-epargne-preprod, prod: cu-epargne-prod}
+      # CU-382 : adresse de l'équipe pour les alertes (traitements en échec). dev et qualif : boîte de test (/test/emails) ;
+      # preprod et prod : à confirmer avec l'équipe (vide : alerte journalisée sans e-mail).
+      - key: ALERTE_EQUIPE_EMAIL
+        value: {dev: alertes-equipe@hitechbank.test, qualif: alertes-equipe@hitechbank.test, preprod: "", prod: ""}
       # CU-382 : page de test des événements Kafka (/test/evenements) en dev et qualif seulement.
       - key: EVENEMENTS_SIMULES
         value: {dev: "true", qualif: "true", preprod: "false", prod: "false"}

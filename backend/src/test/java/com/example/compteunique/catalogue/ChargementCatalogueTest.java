@@ -28,6 +28,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 
+import com.example.compteunique.alertes.AlertesEquipe;
 import com.example.compteunique.catalogue.CatalogueService.Produit;
 import com.example.compteunique.catalogue.CatalogueService.SupportUc;
 import com.example.compteunique.catalogue.CatalogueTestController.Depot;
@@ -62,8 +63,9 @@ class ChargementCatalogueTest {
 	private final List<JournalBatch> baseJournaux = new ArrayList<>();
 	private final List<EvenementCatalogue> baseEvenements = new ArrayList<>();
 
+	private final AlertesEquipe alertes = mock(AlertesEquipe.class);
 	private final ChargementCatalogue chargement = new ChargementCatalogue(supports, historique, fichiers, journaux,
-			evenements, dateMetier, kafka);
+			evenements, dateMetier, kafka, alertes);
 	private final CatalogueService catalogue = new CatalogueService(supports, historique, evenements);
 
 	@BeforeEach
@@ -355,6 +357,8 @@ class ChargementCatalogueTest {
 		assertThat(catalogue.catalogueMisAJour(LocalDate.of(2026, 11, 24))).isFalse();
 		assertThat(catalogue.valeurLiquidative("QZ0000000017", LocalDate.of(2026, 11, 24))).isEmpty();
 		assertThat(chargement.dejaLance(LocalDate.of(2026, 11, 24))).isTrue();
+		// CU-382 critère 11 : l'équipe est alertée par le mécanisme commun (e-mail et journal des alertes).
+		verify(alertes).signaler("Batch catalogue", "Batch catalogue en échec : fichier absent");
 		verify(kafka, never()).enregistrer(Topic.CATALOGUE, "CatalogueMisAJour", "2026-11-24", Map.of("ajoutes", 0,
 				"modifies", 0, "retires", 0, "rejetees", 0));
 	}
@@ -370,6 +374,7 @@ class ChargementCatalogueTest {
 		assertThat(journal.getMessage()).startsWith("Fichier illisible : colonnes absentes de l'en-tête");
 		assertThat(baseSupports).isEmpty();
 		assertThat(baseEvenements).isEmpty();
+		verify(alertes).signaler("Batch catalogue", "Batch catalogue en échec : fichier illisible");
 	}
 
 	@Test

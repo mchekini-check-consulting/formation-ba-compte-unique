@@ -63,7 +63,12 @@ function creer() {
 }
 
 describe('EvenementsTest (CU-382)', () => {
-  afterEach(() => TestBed.inject(HttpTestingController).verify());
+  // CU-382 : le journal des alertes de la page a son propre test (journal-alertes.spec.ts).
+  afterEach(() => {
+    const http = TestBed.inject(HttpTestingController);
+    http.match('/api/backend/test/alertes');
+    http.verify();
+  });
 
   it('affiche la boîte d’envoi (publié ou en attente), les événements reçus et les messages en erreur', async () => {
     const fixture = creer();

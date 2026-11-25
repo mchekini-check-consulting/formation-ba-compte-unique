@@ -87,6 +87,9 @@ app:
   ordres:
     # CU-376 : heure limite de prise en compte des ordres, selon la date métier (« 12 h, à confirmer », ADR-001 §7).
     heure-limite: ${ORDRES_HEURE_LIMITE:12:00}
+  alertes:
+    # CU-382 : adresse de l'équipe pour les alertes (traitements en échec). Vide : alerte journalisée, pas d'e-mail.
+    email: ${ALERTE_EQUIPE_EMAIL:alertes-equipe@hitechbank.test}
   profil:
     # CU-415 : heure de la tâche quotidienne qui passe les profils échus « à revalider », selon la date métier.
     heure-revalidation: ${PROFIL_HEURE_REVALIDATION:1}

@@ -1,5 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { JournalAlertes } from '../alertes-test/journal-alertes';
 import { afficherDate } from '../date-metier-test/date-metier';
 import { EtatEvenements, EvenementsTestService } from './evenements';
 
@@ -10,7 +11,7 @@ type Etat = 'chargement' | 'affiche' | 'indisponible';
 // pour vérifier qu'il part dans le topic d'erreurs après 3 essais. Absente en preprod et prod.
 @Component({
   selector: 'app-evenements-test',
-  imports: [RouterLink],
+  imports: [RouterLink, JournalAlertes],
   template: `
     <main class="evenements-test">
       <a routerLink="/">← Retour au site</a>
@@ -99,6 +100,8 @@ type Etat = 'chargement' | 'affiche' | 'indisponible';
               </table>
             </div>
           }
+
+          <app-journal-alertes />
 
           <h2>Messages en erreur</h2>
           @if (donnees()!.enErreur.length === 0) {
