@@ -50,6 +50,7 @@ function repondreChargement(http: HttpTestingController, fichiers: FichierDepose
   http.expectOne(DATE).flush(ETAT_DATE);
   http.expectOne(`${URL}/fichiers`).flush(fichiers);
   http.expectOne(`${URL}/journal`).flush(journal);
+  http.expectOne(`${URL}/simulation-supports`).flush({ indisponible: false });
 }
 
 function choisirFichier(page: HTMLElement, nom: string, contenu: string): HTMLInputElement {
@@ -195,6 +196,7 @@ describe('CatalogueTest (CU-381)', () => {
     http.expectOne(DATE).flush(ETAT_DATE);
     http.expectOne(`${URL}/fichiers`).flush(null, { status: 404, statusText: 'Not Found' });
     http.expectOne(`${URL}/journal`);
+    http.expectOne(`${URL}/simulation-supports`);
     await fixture.whenStable();
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Page de test indisponible');
   });
@@ -280,5 +282,32 @@ describe('CatalogueTest (CU-383 : historique des VL et vidage du catalogue)', ()
     http.expectOne(`${URL}/supports`).error(new ProgressEvent('error'));
     await fixture.whenStable();
     expect(page.querySelector('[role="alert"]')!.textContent).toContain('Le catalogue n’a pas pu être vidé');
+  });
+});
+
+describe('CatalogueTest (CU-417 : simuler la liste des supports indisponible)', () => {
+  afterEach(() => TestBed.inject(HttpTestingController).verify());
+
+  it('active puis désactive la simulation, et affiche l’état en cours', async () => {
+    const fixture = creer();
+    const http = TestBed.inject(HttpTestingController);
+    repondreChargement(http, [], []);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    const etat = () => page.querySelector('[data-test="simulation-supports"]')!.textContent!;
+    expect(etat()).toContain('disponible');
+
+    page.querySelector<HTMLButtonElement>('[data-test="basculer-simulation"]')!.click();
+    const activation = http.expectOne(`${URL}/simulation-supports`);
+    expect(activation.request.method).toBe('PUT');
+    expect(activation.request.body).toEqual({ indisponible: true });
+    activation.flush({ indisponible: true });
+    await fixture.whenStable();
+    expect(etat()).toContain('indisponible (simulée)');
+
+    page.querySelector<HTMLButtonElement>('[data-test="basculer-simulation"]')!.click();
+    http.expectOne(`${URL}/simulation-supports`).error(new ProgressEvent('error'));
+    await fixture.whenStable();
+    expect(page.querySelector('[role="alert"]')!.textContent).toContain('La simulation n’a pas pu être changée');
   });
 });
