@@ -32,7 +32,7 @@ class SupportsControllerTest {
 
 	private final SupportsEligibles eligibles = mock(SupportsEligibles.class);
 	private final ProfilClientService profils = mock(ProfilClientService.class);
-	private final SupportsController routes = new SupportsController(eligibles, profils);
+	private final SupportsController routes = new SupportsController(eligibles, profils, new SimulationSupports());
 
 	private void profil(Statut statut, String profilInvestisseur) {
 		ProfilKyc profil = mock(ProfilKyc.class);
@@ -73,6 +73,38 @@ class SupportsControllerTest {
 		when(profils.etat("jeton")).thenReturn(new Etat(Statut.A_COMPLETER, Optional.empty()));
 		assertThat(routes.supports("jeton", "AV").profilInvestisseur()).isNull();
 		verify(eligibles, never()).lister(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+	}
+
+	@Test
+	@DisplayName("CU-417 critère 11 : en test, la liste des supports simulée indisponible répond 503 sans liste ; "
+			+ "revenue disponible, elle répond normalement")
+	void serviceIndisponibleSimule() {
+		SimulationSupports simulation = new SimulationSupports();
+		SupportsController avecSimulation = new SupportsController(eligibles, profils, simulation);
+		profil(Statut.VALIDE, "PRUDENT");
+		when(eligibles.lister(Produit.PER, "PRUDENT")).thenReturn(List.of(SCPI));
+
+		simulation.indisponible(true);
+		assertThatThrownBy(() -> avecSimulation.supports("jeton", "PER"))
+				.isInstanceOf(SupportsController.ListeIndisponible.class);
+		assertThat(avecSimulation.indisponible().getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+		assertThat(avecSimulation.indisponible().getBody().message())
+				.isEqualTo("La liste des supports est momentanément indisponible");
+
+		simulation.indisponible(false);
+		assertThat(avecSimulation.supports("jeton", "PER").supports()).containsExactly(SCPI);
+	}
+
+	@Test
+	@DisplayName("CU-417 : page de test, l'interrupteur « liste des supports indisponible » se lit et se change")
+	void interrupteurDeTest() {
+		SimulationSupports simulation = new SimulationSupports();
+		CatalogueTestController routes = new CatalogueTestController(mock(ChargementCatalogue.class),
+				mock(CatalogueService.class), simulation);
+
+		assertThat(routes.simulationSupports().indisponible()).isFalse();
+		assertThat(routes.simulerSupports(new CatalogueTestController.Simulation(true)).indisponible()).isTrue();
+		assertThat(simulation.estIndisponible()).isTrue();
 	}
 
 	@Test

@@ -122,9 +122,36 @@ class SupportsEligiblesTest {
 		List<SupportEligible> liste = service.lister(Produit.AV, "DYNAMIQUE");
 
 		assertThat(liste).isSortedAccordingTo(
-				Comparator.comparingInt(SupportEligible::niveauRisque).thenComparing(SupportEligible::nom));
+				Comparator.comparingInt(SupportEligible::niveauRisque).thenComparing(SupportEligible::nom, francais()));
 		assertThat(liste).extracting(SupportEligible::label).doesNotContain("aucun")
 				.contains("ISR", "Greenfin", "Finansol", null);
+	}
+
+	private static Comparator<String> francais() {
+		java.text.Collator collator = java.text.Collator.getInstance(java.util.Locale.FRENCH);
+		collator.setStrength(java.text.Collator.PRIMARY);
+		return collator::compare;
+	}
+
+	private static Support support(String nom, int niveauRisque) {
+		return new Support(new LecteurCatalogue.LigneCatalogue(1, "QZ" + Math.abs(nom.hashCode()), nom, "Actions",
+				"Actions", "PER|AV", niveauRisque, true, BigDecimal.ONE, Support.ACTIF, BigDecimal.TEN,
+				LocalDate.of(2026, 11, 20), "EUR", "quotidienne", "aucun", "SG"),
+				OffsetDateTime.of(2026, 11, 23, 2, 0, 0, 0, ZoneOffset.ofHours(1)));
+	}
+
+	@Test
+	@DisplayName("CU-417 : étant donné « Crédit Euro ISR » et « Crédit Euro Investment Grade » de même niveau de "
+			+ "risque, alors « Crédit Euro Investment Grade » apparaît avant « Crédit Euro ISR » ; « Énergie » avant "
+			+ "« Europe » (ordre alphabétique français, sans majuscules ni accents)")
+	void triAlphabetiqueFrancais() {
+		when(supports.findByStatutOrderByNom(anyString())).thenReturn(List.of(support("Crédit Euro ISR", 3),
+				support("Europe", 3), support("Crédit Euro Investment Grade", 3), support("Énergie", 3),
+				support("actions Asie", 3), support("Zinc", 2)));
+
+		assertThat(service.lister(Produit.AV, "DYNAMIQUE")).extracting(SupportEligible::nom)
+				.containsExactly("Zinc", "actions Asie", "Crédit Euro Investment Grade", "Crédit Euro ISR", "Énergie",
+						"Europe");
 	}
 
 	@Test

@@ -39,6 +39,11 @@ export interface ValeurLiquidative {
   source: string;
 }
 
+/** CU-417 : simulation de la liste des supports indisponible (test seulement). */
+export interface SimulationSupports {
+  indisponible: boolean;
+}
+
 // CU-381 (TECH-13) : routes /test/catalogue du backend (absentes en preprod et prod : 404).
 @Injectable({ providedIn: 'root' })
 export class CatalogueTestService {
@@ -65,6 +70,15 @@ export class CatalogueTestService {
     return this.http.get<ValeurLiquidative[]>(
       `${this.url}/supports/${encodeURIComponent(codeIsin)}/valeurs-liquidatives`,
     );
+  }
+
+  /** CU-417 : la liste des supports (/supports) est-elle simulée indisponible ? */
+  simulationSupports(): Observable<SimulationSupports> {
+    return this.http.get<SimulationSupports>(`${this.url}/simulation-supports`);
+  }
+
+  simulerSupports(indisponible: boolean): Observable<SimulationSupports> {
+    return this.http.put<SimulationSupports>(`${this.url}/simulation-supports`, { indisponible });
   }
 
   vider(): Observable<void> {
