@@ -48,6 +48,9 @@ class IdentiteLivretAIT {
 	@Autowired
 	private ControleIdentiteLivretARepository controles;
 
+	@Autowired
+	private QuestionsLivretAController questions;
+
 	private String jeton(String identifiant) {
 		return connexion.connecter(identifiant, MOT_DE_PASSE, null).jetonSession();
 	}
@@ -77,7 +80,13 @@ class IdentiteLivretAIT {
 				() -> livretA.demander(clienteA, new Eligibilite(true, true)));
 		assertEquals(IdentiteLivretAService.SANS_IDENTITE_CONFIRMEE, bloquee.getMessage());
 
+		// CU-32 : les questions viennent après l'identité confirmée.
+		DemandeRefusee questionsAvantIdentite = assertThrows(DemandeRefusee.class,
+				() -> QuestionnaireDeTest.rempli(questions, clienteA));
+		assertEquals(IdentiteLivretAService.SANS_IDENTITE_CONFIRMEE, questionsAvantIdentite.getMessage());
+
 		assertEquals(StatutControleIdentite.VALIDE, test.validerParResponsable(controle.reference()).statut());
+		QuestionnaireDeTest.rempli(questions, clienteA);
 		DemandeLivretAVue demande = livretA.demander(clienteA, new Eligibilite(true, true)).getBody();
 		assertThat(controles.findByReference(controle.reference())).hasValueSatisfying(c -> {
 			assertEquals(demande.reference(), c.getDemandeReference());

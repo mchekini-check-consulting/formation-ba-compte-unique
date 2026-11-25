@@ -46,16 +46,23 @@ class LivretAIT {
 	@Autowired
 	private DemandeLivretARepository demandes;
 
+	@Autowired
+	private QuestionsLivretAController questions;
+
 	private String jeton(String identifiant) {
 		return connexion.connecter(identifiant, MOT_DE_PASSE, null).jetonSession();
 	}
 
-	/** CU-28 : identité confirmée sans modification, aucune correspondance sanctions/PPE. */
+	/**
+	 * CU-28 : identité confirmée sans modification, aucune correspondance sanctions/PPE ; CU-32 : questionnaire
+	 * rempli et texte d'information accepté.
+	 */
 	private void identiteConfirmee(String jeton) {
 		Coordonnees coordonnees = livretA.identite(jeton).identite().coordonnees();
 		ControleIdentiteVue controle = livretA.confirmerIdentite(jeton, new Confirmation(coordonnees, true)).getBody();
 		livretA.resultatControle(jeton, controle.reference(),
 				new ResultatControle(ResultatSanctions.AUCUNE_CORRESPONDANCE, 1));
+		QuestionnaireDeTest.rempli(questions, jeton);
 	}
 
 	@Test
