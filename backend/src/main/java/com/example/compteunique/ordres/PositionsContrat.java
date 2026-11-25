@@ -26,21 +26,21 @@ public class PositionsContrat {
 	private final PositionTestRepository positionsTest;
 	private final CatalogueService catalogue;
 	private final DateMetier dateMetier;
-	private final boolean positionsDeTest;
+	private final boolean positionsDeTestActives;
 
 	@Autowired
 	public PositionsContrat(PositionTestRepository positionsTest, CatalogueService catalogue, DateMetier dateMetier,
-			@Value("${app.test.ordres-simules:false}") boolean positionsDeTest) {
+			@Value("${app.test.ordres-simules:false}") boolean positionsDeTestActives) {
 		this.positionsTest = positionsTest;
 		this.catalogue = catalogue;
 		this.dateMetier = dateMetier;
-		this.positionsDeTest = positionsDeTest;
+		this.positionsDeTestActives = positionsDeTestActives;
 	}
 
 	/** Encours du contrat sur un support, en euros : montants, plus les parts valorisées à la dernière VL. */
 	@Transactional(readOnly = true)
 	public BigDecimal encours(String numeroContrat, String codeIsin) {
-		if (!positionsDeTest) {
+		if (!positionsDeTestActives) {
 			return BigDecimal.ZERO;
 		}
 		BigDecimal total = BigDecimal.ZERO;
@@ -80,7 +80,7 @@ public class PositionsContrat {
 	}
 
 	private void verifierAutorise() {
-		if (!positionsDeTest) {
+		if (!positionsDeTestActives) {
 			throw new PositionsDeTestRefusees();
 		}
 	}
