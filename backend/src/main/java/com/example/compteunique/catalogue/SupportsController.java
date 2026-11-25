@@ -59,11 +59,12 @@ public class SupportsController {
 	}
 
 	private static Produit produit(String produit) {
-		try {
-			return Produit.valueOf(produit);
-		} catch (IllegalArgumentException | NullPointerException inconnu) {
-			throw new ProduitInconnu();
+		for (Produit connu : Produit.values()) {
+			if (connu.name().equals(produit)) {
+				return connu;
+			}
 		}
+		throw new ProduitInconnu();
 	}
 
 	@ExceptionHandler(ProduitInconnu.class)

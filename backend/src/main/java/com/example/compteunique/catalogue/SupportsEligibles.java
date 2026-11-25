@@ -45,7 +45,7 @@ public class SupportsEligibles {
 
 	private final SupportRepository supports;
 	private final Map<String, Integer> niveauMax;
-	private final Map<Produit, BigDecimal> fraisContrat;
+	private final Map<Produit, BigDecimal> fraisContratParProduit;
 
 	@Autowired
 	public SupportsEligibles(SupportRepository supports,
@@ -56,7 +56,7 @@ public class SupportsEligibles {
 			@Value("${app.catalogue.frais-contrat.av:0.65}") BigDecimal fraisAv) {
 		this.supports = supports;
 		this.niveauMax = Map.of("PRUDENT", prudent, "EQUILIBRE", equilibre, "DYNAMIQUE", dynamique);
-		this.fraisContrat = Map.of(Produit.PER, fraisPer, Produit.AV, fraisAv);
+		this.fraisContratParProduit = Map.of(Produit.PER, fraisPer, Produit.AV, fraisAv);
 	}
 
 	/**
@@ -77,7 +77,7 @@ public class SupportsEligibles {
 
 	/** Frais de gestion annuels du contrat pour les unités de compte, en % (0,50 PER, 0,65 assurance vie). */
 	public BigDecimal fraisContrat(Produit produit) {
-		return fraisContrat.get(produit);
+		return fraisContratParProduit.get(produit);
 	}
 
 }
