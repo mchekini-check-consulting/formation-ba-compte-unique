@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { JournalAlertes } from '../alertes-test/journal-alertes';
 import { forkJoin } from 'rxjs';
 import { DateMetierService, afficherDate } from '../date-metier-test/date-metier';
 import { CatalogueTestService, FichierDepose, JournalBatch, ValeurLiquidative } from './catalogue';
@@ -12,7 +13,7 @@ type Etat = 'chargement' | 'affiche' | 'indisponible';
 // le journal : supports ajoutés, modifiés, retirés et lignes rejetées avec leur motif. Absente en preprod et prod.
 @Component({
   selector: 'app-catalogue-test',
-  imports: [RouterLink],
+  imports: [RouterLink, JournalAlertes],
   template: `
     <main class="catalogue-test">
       <a routerLink="/">← Retour au site</a>
@@ -97,6 +98,8 @@ type Etat = 'chargement' | 'affiche' | 'indisponible';
           } @else {
             <button type="button" class="secondaire" data-test="vider" (click)="confirmerVidage.set(true)">Vider le catalogue</button>
           }
+
+          <app-journal-alertes />
 
           <h2>Journal du batch</h2>
           @if (journal().length === 0) {

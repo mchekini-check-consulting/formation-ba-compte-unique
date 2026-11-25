@@ -31,6 +31,7 @@ import org.springframework.kafka.listener.ListenerExecutionFailedException;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import com.example.compteunique.alertes.AlertesEquipe;
 import com.example.compteunique.datemetier.DateMetier;
 import com.example.compteunique.evenements.ConfigurationKafka.Topic;
 import com.example.compteunique.evenements.MessageEvenement.MessageIllisible;
@@ -46,6 +47,7 @@ class EvenementsTest {
 	private final EvenementTraiteRepository traites = mock(EvenementTraiteRepository.class);
 	private final MessageEnErreurRepository enErreur = mock(MessageEnErreurRepository.class);
 	private final DateMetier dateMetier = mock(DateMetier.class);
+	private final AlertesEquipe alertes = mock(AlertesEquipe.class);
 	@SuppressWarnings("unchecked")
 	private final KafkaOperations<String, String> kafka = mock(KafkaOperations.class);
 	private final ConfigurationKafka configuration = new ConfigurationKafka(ConfigurationKafkaTest.complet());
@@ -251,8 +253,12 @@ class EvenementsTest {
 		Exception erreur = new ListenerExecutionFailedException("echec", "cu-epargne-journal",
 				new MessageIllisible("message illisible (JSON attendu)"));
 
-		ErreursLecture.mettreDeCote(message, erreur, enErreur, dateMetier, transactions);
+		ErreursLecture.mettreDeCote(message, erreur, "cu-epargne.profil-client.dlt", enErreur, dateMetier, transactions,
+				alertes);
 
+		// CU-382 critère 10 : l'équipe est alertée, sans le contenu du message (aucune donnée personnelle).
+		verify(alertes).signaler("Topic d'erreurs", "Message en erreur après 3 essais, déposé dans le topic "
+				+ "cu-epargne.profil-client.dlt (groupe cu-epargne-journal)");
 		assertThat(erreurs).singleElement().satisfies(e -> {
 			assertThat(e.getTopic()).isEqualTo("cu-epargne.profil-client");
 			assertThat(e.getCle()).isEqualTo("cle-1");
@@ -262,12 +268,12 @@ class EvenementsTest {
 			assertThat(e.getEnErreurLe()).isEqualTo(FIN_ANNEE.toOffsetDateTime());
 		});
 
-		ErreursLecture.mettreDeCote(new ConsumerRecord<>("t", 0, 0L, null, "x"), new IllegalStateException(),
-				enErreur, dateMetier, transactions);
+		ErreursLecture.mettreDeCote(new ConsumerRecord<>("t", 0, 0L, null, "x"), new IllegalStateException(), "t.dlt",
+				enErreur, dateMetier, transactions, alertes);
 		assertThat(erreurs.getLast().getGroupe()).isEqualTo("inconnu");
 		assertThat(erreurs.getLast().getCle()).isNull();
 		assertThat(erreurs.getLast().getMotif()).isEqualTo("IllegalStateException");
-		assertThat(new ErreursLecture().gestionErreursKafka(kafka, configuration, enErreur, dateMetier,
+		assertThat(new ErreursLecture().gestionErreursKafka(kafka, configuration, enErreur, dateMetier, alertes,
 				transactions)).isNotNull();
 	}
 
