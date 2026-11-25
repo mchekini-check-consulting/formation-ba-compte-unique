@@ -42,7 +42,9 @@ class ProfilClientTest {
 	private final DateMetier dateMetier = mock(DateMetier.class);
 	private final ProfilKycRepository profils = mock(ProfilKycRepository.class);
 	private final ConsentementRepository consentements = mock(ConsentementRepository.class);
-	private final ProfilClientService service = new ProfilClientService(comptes, dateMetier, profils, consentements);
+	private final PublicationStatutProfil publication = mock(PublicationStatutProfil.class);
+	private final ProfilClientService service = new ProfilClientService(comptes, dateMetier, profils, consentements,
+			publication);
 	private final ProfilClientController controller = new ProfilClientController(service);
 	private final List<ProfilKyc> base = new ArrayList<>();
 	private ZonedDateTime maintenant = AUJOURDHUI;
@@ -102,6 +104,8 @@ class ProfilClientTest {
 		assertThat(controller.etat("jeton").statut()).isEqualTo(Statut.VALIDE);
 		assertThat(service.souscriptionAutorisee(CLIENTE)).isTrue();
 		verify(consentements).save(any(Consentement.class));
+		// CU-382 : « à compléter » devient « validé », publié dans Kafka par la boîte d'envoi
+		verify(publication).changer(CLIENTE, Statut.A_COMPLETER, Statut.VALIDE);
 	}
 
 	@Test

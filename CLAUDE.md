@@ -43,6 +43,11 @@ l'intégrer dans la branche avant d'envoyer (skill `deploy`).
 - Base PostgreSQL : variables injectées par la plateforme (`DATABASE_URL`,
   `SPRING_DATASOURCE_*`, `PG*`) ; valeurs locales par défaut = `compose.yaml`
   du composant.
+- Événements Kafka (CU-382, ADR-001) : jamais d'écriture directe dans Kafka pendant une opération ; appeler
+  `Evenements.enregistrer(...)` (paquet `evenements`) dans la transaction de l'opération, le relais publie.
+  Un module lecteur : `@KafkaListener` sous son groupe `ConfigurationKafka.groupe("<module>")`, traitement
+  `@Transactional` précédé de `Evenements.premiereFois(...)` (modèle : `backoffice/JournalBackOffice`).
+  Noms de topics uniquement dans `helm.yaml` (variables `KAFKA_*`), un nom par environnement.
 - Schéma : uniquement par migrations — `backend/src/main/resources/db/migration/V<n>__<nom>.sql` (n = dernier + 1) ; `ddl-auto: validate` : l'entité doit correspondre exactement. Ne jamais modifier une
   migration déjà sur `main`.
 

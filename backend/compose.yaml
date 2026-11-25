@@ -9,3 +9,8 @@ services:
       POSTGRES_PASSWORD: app
     ports:
       - "5432:5432"
+  # CU-382 (TECH-14) : Kafka local (un seul nœud, création automatique des topics), adresse localhost:9092.
+  kafka:
+    image: apache/kafka:4.1.0
+    ports:
+      - "9092:9092"

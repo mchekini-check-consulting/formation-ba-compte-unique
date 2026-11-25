@@ -42,6 +42,11 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-flyway</artifactId>
 		</dependency>
+		<!-- CU-382 (TECH-14) : publication et lecture des événements dans Kafka (ADR-001, section 3 bis) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-kafka</artifactId>
+		</dependency>
 		<dependency>
 			<groupId>org.flywaydb</groupId>
 			<artifactId>flyway-database-postgresql</artifactId>
@@ -101,6 +106,12 @@
 			<artifactId>testcontainers-junit-jupiter</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!-- CU-382 : Kafka jetable dans Docker pour les tests d'intégration (jamais le cluster partagé) -->
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>testcontainers-kafka</artifactId>
+			<scope>test</scope>
+		</dependency>
 		<!-- Tests d'intégration : attendre un traitement en arrière-plan (version gérée par Spring Boot) -->
 		<dependency>
 			<groupId>org.awaitility</groupId>
@@ -118,6 +129,16 @@
 					<!-- En local (spring-boot:run) uniquement : comptes de test en plus des migrations -->
 					<environmentVariables>
 						<SPRING_FLYWAY_LOCATIONS>classpath:db/migration,classpath:db/demo</SPRING_FLYWAY_LOCATIONS>
+						<!-- CU-382 : Kafka local (compose.yaml) et topics du poste, séparés de ceux des environnements -->
+						<KAFKA_BOOTSTRAP_SERVERS>localhost:9092</KAFKA_BOOTSTRAP_SERVERS>
+						<KAFKA_TOPIC_ORDRES>cu-epargne.local.ordres</KAFKA_TOPIC_ORDRES>
+						<KAFKA_TOPIC_ORDRES_EXECUTES>cu-epargne.local.ordres-executes</KAFKA_TOPIC_ORDRES_EXECUTES>
+						<KAFKA_TOPIC_MOUVEMENTS>cu-epargne.local.mouvements</KAFKA_TOPIC_MOUVEMENTS>
+						<KAFKA_TOPIC_CATALOGUE>cu-epargne.local.catalogue</KAFKA_TOPIC_CATALOGUE>
+						<KAFKA_TOPIC_PROFIL_CLIENT>cu-epargne.local.profil-client</KAFKA_TOPIC_PROFIL_CLIENT>
+						<KAFKA_TOPIC_RAPPROCHEMENT>cu-epargne.local.rapprochement</KAFKA_TOPIC_RAPPROCHEMENT>
+						<KAFKA_TOPIC_SUFFIXE_ERREURS>.dlt</KAFKA_TOPIC_SUFFIXE_ERREURS>
+						<KAFKA_GROUP_ID_PREFIXE>cu-epargne-local</KAFKA_GROUP_ID_PREFIXE>
 					</environmentVariables>
 				</configuration>
 			</plugin>

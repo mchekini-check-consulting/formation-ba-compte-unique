@@ -78,7 +78,10 @@ class ConnexionIT {
 				"select derniere_activite_le > now() - interval '1 minute' from session_client where jeton_hache = ?",
 				Boolean.class, empreinteExpiree)).isTrue();
 
-		base.update("update session_client set derniere_activite_le = now() - interval '10 minutes' where jeton_hache = ?",
+		// 10 min 5 s : l'heure vient de la base (conteneur Docker) et l'expiration est jugée avec l'horloge de
+		// l'application ; 5 s de marge absorbent un léger écart entre les deux (fréquent sous Windows).
+		base.update(
+				"update session_client set derniere_activite_le = now() - interval '10 minutes 5 seconds' where jeton_hache = ?",
 				empreinteExpiree);
 		assertThat(connexion.idDeLaSession(expiree)).isEmpty();
 		assertThat(base.queryForObject("select revoquee_le is not null from session_client where jeton_hache = ?",

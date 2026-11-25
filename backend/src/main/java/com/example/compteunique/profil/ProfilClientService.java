@@ -62,13 +62,15 @@ public class ProfilClientService {
 	private final DateMetier dateMetier;
 	private final ProfilKycRepository profils;
 	private final ConsentementRepository consentements;
+	private final PublicationStatutProfil publication;
 
 	public ProfilClientService(CompteService comptes, DateMetier dateMetier, ProfilKycRepository profils,
-			ConsentementRepository consentements) {
+			ConsentementRepository consentements, PublicationStatutProfil publication) {
 		this.comptes = comptes;
 		this.dateMetier = dateMetier;
 		this.profils = profils;
 		this.consentements = consentements;
+		this.publication = publication;
 	}
 
 	/** Pour PER-01 et AV-01 : souscription possible seulement avec un profil validé de moins de 12 mois. */
@@ -110,9 +112,13 @@ public class ProfilClientService {
 			default -> 3;
 		};
 		String profil = List.of("PRUDENT", "EQUILIBRE", "DYNAMIQUE").get(score - 1);
+		Statut avant = etat(customerId).statut();
 		consentements.save(new Consentement(customerId, CONSENTEMENT, true, VERSION_TEXTE_CONSENTEMENT, maintenant));
-		return profils.save(new ProfilKyc(customerId, version, VERSION_QUESTIONNAIRE, maintenant, reponses, profil,
-				score, VERSION_REGLES));
+		ProfilKyc enregistre = profils.save(new ProfilKyc(customerId, version, VERSION_QUESTIONNAIRE, maintenant,
+				reponses, profil, score, VERSION_REGLES));
+		// CU-382 : « statut du profil modifié » enregistré dans la boîte d'envoi, dans la même transaction.
+		publication.changer(customerId, avant, Statut.VALIDE);
+		return enregistre;
 	}
 
 	private Etat etat(UUID customerId) {

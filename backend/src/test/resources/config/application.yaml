@@ -1,0 +1,23 @@
+# Tests automatiques (CU-382) : valeurs Kafka de test, ajoutées à application.yaml (jamais dans l'image).
+# Par défaut, ni lecture Kafka ni relais : seuls les tests Kafka (*Kafka*IT) les activent, avec un Kafka jetable
+# (Testcontainers), jamais le cluster partagé.
+KAFKA_BOOTSTRAP_SERVERS: localhost:9092
+KAFKA_TOPIC_ORDRES: test.ordres
+KAFKA_TOPIC_ORDRES_EXECUTES: test.ordres-executes
+KAFKA_TOPIC_MOUVEMENTS: test.mouvements
+KAFKA_TOPIC_CATALOGUE: test.catalogue
+KAFKA_TOPIC_PROFIL_CLIENT: test.profil-client
+KAFKA_TOPIC_RAPPROCHEMENT: test.rapprochement
+KAFKA_TOPIC_SUFFIXE_ERREURS: .dlt
+KAFKA_GROUP_ID_PREFIXE: test
+
+spring:
+  kafka:
+    listener:
+      auto-startup: false
+
+app:
+  kafka:
+    relais-ms: 1000000000
+  profil:
+    verification-ms: 1000000000
