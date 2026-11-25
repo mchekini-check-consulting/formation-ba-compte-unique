@@ -48,11 +48,15 @@ class LivretAServiceTest {
 	private final IdentiteLivretAService identites = mock(IdentiteLivretAService.class);
 	private final ControleIdentiteLivretA controleValide = controleValide();
 	private final ClotureLivretAService clotures = mock(ClotureLivretAService.class);
+	private final QuestionsLivretAService questions = mock(QuestionsLivretAService.class);
+	private final QuestionnaireLivretA questionnaire = new QuestionnaireLivretA(7L, CLIENTE,
+			ReponsesQuestionnaire.ObjetEpargne.PRECAUTION, ReponsesQuestionnaire.OrigineFonds.SALAIRE_REVENUS, null,
+			QuestionsLivretAService.VERSION_TEXTE, MAINTENANT);
 	private final Dossier dossier = mock(Dossier.class);
 	private final Compte compte = new Compte(7L, CLIENTE, Iban.de("99000000001"), 3L, MAINTENANT.minusDays(30));
 
 	private LivretAService service(OffsetDateTime maintenant) {
-		return new LivretAService(comptes, dossiers, demandes, identites, clotures,
+		return new LivretAService(comptes, dossiers, demandes, identites, clotures, questions,
 				Clock.fixed(maintenant.toInstant(), ZoneOffset.UTC));
 	}
 
@@ -73,6 +77,7 @@ class LivretAServiceTest {
 				.thenReturn(List.of(7L, 12L));
 		when(demandes.save(any(DemandeLivretA.class))).thenAnswer(invocation -> invocation.getArgument(0));
 		when(identites.controleValide(compte)).thenReturn(controleValide);
+		when(questions.questionnaireValide(compte)).thenReturn(questionnaire);
 	}
 
 	private static DemandeLivretA demande(boolean partage) {
@@ -104,12 +109,24 @@ class LivretAServiceTest {
 		verify(demandes, never()).save(any());
 	}
 
-	// CU-28 : un contrôle par ouverture, rattaché à la demande créée.
+	// CU-32 : aucune donnée transmise à l'administration fiscale sans questionnaire ni texte accepté.
 	@Test
-	void laDemandeUtiliseLeControleDIdentite() {
+	void eligibiliteRefuseeSansQuestionnaire() {
+		when(questions.questionnaireValide(compte)).thenThrow(
+				new DemandeRefusee(HttpStatus.CONFLICT, QuestionsLivretAService.SANS_QUESTIONNAIRE));
+		assertRefus(HttpStatus.CONFLICT, QuestionsLivretAService.SANS_QUESTIONNAIRE,
+				() -> service.demander(JETON, true, true));
+		verify(demandes, never()).save(any());
+	}
+
+	// CU-28 et CU-32 : un contrôle et un questionnaire par ouverture, rattachés à la demande créée.
+	@Test
+	void laDemandeUtiliseLeControleDIdentiteEtLeQuestionnaire() {
 		DemandeLivretA demande = service.demander(JETON, true, true).demande();
 		assertEquals(demande.getReference(), controleValide.getDemandeReference());
 		assertFalse(controleValide.permetUneDemande());
+		assertEquals(demande.getReference(), questionnaire.getDemandeReference());
+		assertFalse(questionnaire.permetUneDemande());
 	}
 
 	private void avecDemande(DemandeLivretA demande) {

@@ -61,21 +61,24 @@ public class LivretAService {
 	private final DemandeLivretARepository demandes;
 	private final IdentiteLivretAService identites;
 	private final ClotureLivretAService clotures;
+	private final QuestionsLivretAService questions;
 	private final Clock horloge;
 
 	@Autowired
 	public LivretAService(CompteService comptes, DossierRepository dossiers, DemandeLivretARepository demandes,
-			IdentiteLivretAService identites, ClotureLivretAService clotures) {
-		this(comptes, dossiers, demandes, identites, clotures, Clock.systemDefaultZone());
+			IdentiteLivretAService identites, ClotureLivretAService clotures, QuestionsLivretAService questions) {
+		this(comptes, dossiers, demandes, identites, clotures, questions, Clock.systemDefaultZone());
 	}
 
 	LivretAService(CompteService comptes, DossierRepository dossiers, DemandeLivretARepository demandes,
-			IdentiteLivretAService identites, ClotureLivretAService clotures, Clock horloge) {
+			IdentiteLivretAService identites, ClotureLivretAService clotures, QuestionsLivretAService questions,
+			Clock horloge) {
 		this.comptes = comptes;
 		this.dossiers = dossiers;
 		this.demandes = demandes;
 		this.identites = identites;
 		this.clotures = clotures;
+		this.questions = questions;
 		this.horloge = horloge;
 	}
 
@@ -104,6 +107,8 @@ public class LivretAService {
 		if (dossier.pieceExpireeLe(LocalDate.now(horloge))) {
 			throw new DemandeRefusee(HttpStatus.CONFLICT, PIECE_EXPIREE);
 		}
+		// CU-32 : questionnaire rempli et texte d'information accepté avant tout envoi à l'administration fiscale.
+		QuestionnaireLivretA questionnaire = questions.questionnaireValide(compte);
 		if (!Boolean.TRUE.equals(attestation)) {
 			throw new DemandeRefusee(HttpStatus.BAD_REQUEST, ATTESTATION_OBLIGATOIRE);
 		}
@@ -113,6 +118,7 @@ public class LivretAService {
 		DemandeLivretA demande = demandes.save(new DemandeLivretA(dossier.getId(), compte.getCustomerId(),
 				partageDetailAutorise, OffsetDateTime.now(horloge)));
 		controleIdentite.utiliserPour(demande.getReference());
+		questionnaire.utiliserPour(demande.getReference());
 		return new Suivi(demande, transmission(dossier));
 	}
 

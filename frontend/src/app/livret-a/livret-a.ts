@@ -130,6 +130,36 @@ export interface EtapePiece {
   verification: VerificationPiece | null;
 }
 
+/** CU-32 : objet de l'épargne. */
+export type ObjetEpargne = 'PRECAUTION' | 'PROJET' | 'AUTRE';
+/** CU-32 : origine des fonds ; « AUTRE » demande une précision. */
+export type OrigineFonds = 'SALAIRE_REVENUS' | 'EPARGNE_EXISTANTE' | 'HERITAGE_DONATION' | 'VENTE_BIEN' | 'AUTRE';
+
+/** CU-32 : réponses au questionnaire de cette ouverture. */
+export interface Questionnaire {
+  reference: string;
+  objetEpargne: ObjetEpargne;
+  origineFonds: OrigineFonds;
+  precisionOrigine: string | null;
+  reponduLe: string;
+}
+
+/** CU-32 : texte d'information (à accepter s'il ne l'a pas été dans sa version en vigueur) et questionnaire rempli. */
+export interface EtapeQuestions {
+  versionTexte: string;
+  texte: string;
+  texteAAccepter: boolean;
+  questionnaire: Questionnaire | null;
+}
+
+/** CU-32 : réponses envoyées ; texteAccepte est ignoré si le texte est déjà accepté. */
+export interface ReponsesQuestions {
+  objetEpargne: ObjetEpargne;
+  origineFonds: OrigineFonds;
+  precisionOrigine: string | null;
+  texteAccepte: boolean;
+}
+
 // CU-31 : routes /livret-a du backend (GET /livret-a/demande, POST /livret-a/demandes,
 // POST /livret-a/demandes/{reference}/reponse-fiscale), avec le cookie de session. CU-295 critère 5 :
 // POST /test/livret-a/demandes/{reference}/expiration-delai (environnement de test seulement).
@@ -214,6 +244,16 @@ export class LivretAService {
       {},
       { withCredentials: true },
     );
+  }
+
+  /** CU-32 : étape « Questions et données » (GET /livret-a/questions). */
+  questions(): Observable<EtapeQuestions> {
+    return this.http.get<EtapeQuestions>(`${this.base}/livret-a/questions`, { withCredentials: true });
+  }
+
+  /** CU-32 : réponses au questionnaire et acceptation du texte d'information (POST /livret-a/questions). */
+  repondreQuestions(reponses: ReponsesQuestions): Observable<Questionnaire> {
+    return this.http.post<Questionnaire>(`${this.base}/livret-a/questions`, reponses, { withCredentials: true });
   }
 
   /** CU-29 : pièce du dossier expirée ou non, et dernière vérification de nouvelle pièce. */

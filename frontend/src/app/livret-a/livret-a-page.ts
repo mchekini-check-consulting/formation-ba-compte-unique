@@ -8,10 +8,12 @@ import { refusFichier } from '../identification/regles';
 import { SuiviSession } from '../session/suivi-session';
 import { EtapeIdentiteLivretA } from './etape-identite-livret-a';
 import { EtapePieceLivretA, pieceAFournir } from './etape-piece-livret-a';
+import { EtapeQuestionsLivretA } from './etape-questions-livret-a';
 import {
   ControleIdentite,
   DemandeLivretA,
   EtapePiece,
+  EtapeQuestions,
   IdentiteLivretA,
   LivretAService,
   SuiteLivretAExistant,
@@ -30,6 +32,8 @@ const INDISPONIBLE = 'Le service est momentanément indisponible. Veuillez rées
 export const SANS_IDENTITE_CONFIRMEE = "Confirmez d'abord votre identité.";
 /** Message du backend quand l'éligibilité est demandée avec une pièce du dossier expirée (CU-29). */
 export const PIECE_EXPIREE = "Votre pièce d'identité a expiré : transmettez-en une nouvelle avant de continuer.";
+/** Message du backend quand l'éligibilité est demandée sans questionnaire rempli (CU-32). */
+export const SANS_QUESTIONNAIRE = "Répondez d'abord aux questions et acceptez le texte d'information sur vos données.";
 
 /** CU-28 : cas de test du bouchon sanctions/PPE (API Gels des avoirs). */
 export const CAS_SANCTIONS: { code: CasDeTest; libelle: string }[] = [
@@ -70,7 +74,7 @@ export const MOTIF_REFUS_TEST = 'Certificat illisible';
 // réponse au backend, qui applique les règles. Suivi de la demande ensuite (en cours, validée, existant).
 @Component({
   selector: 'app-livret-a-page',
-  imports: [CadreEspace, RouterLink, EtapeIdentiteLivretA, EtapePieceLivretA],
+  imports: [CadreEspace, RouterLink, EtapeIdentiteLivretA, EtapePieceLivretA, EtapeQuestionsLivretA],
   template: `
     <app-cadre-espace page="livret-a" [identifiant]="identifiant()">
       <section class="block">
@@ -188,6 +192,14 @@ export const MOTIF_REFUS_TEST = 'Certificat illisible';
               } @else if (pieceRequise() && etapePiece(); as piece) {
                 <!-- CU-29 : nouvelle pièce et vérification de présence, si la pièce du dossier a expiré. -->
                 <app-etape-piece-livret-a [donnees]="piece" [numero]="2" [total]="totalEtapes()" (validee)="pieceValidee.set(true)" />
+              } @else if (!questionsValidees() && etapeQuestions(); as questions) {
+                <!-- CU-32 : questions obligatoires et texte d'information, avant l'envoi à l'administration fiscale. -->
+                <app-etape-questions-livret-a
+                  [donnees]="questions"
+                  [numero]="totalEtapes() - 1"
+                  [total]="totalEtapes()"
+                  (validee)="questionsValidees.set(true)"
+                />
               } @else {
                 <form class="eligibilite" (submit)="valider($event, attestation.checked)">
                   <h2>Éligibilité <span class="etape">Étape {{ totalEtapes() }} sur {{ totalEtapes() }}</span></h2>
@@ -348,8 +360,11 @@ export class LivretAPage {
   protected readonly pieceValidee = signal(false);
   /** Nouvelle pièce à fournir avant l'éligibilité. */
   protected readonly pieceRequise = computed(() => pieceAFournir(this.etapePiece()) && !this.pieceValidee());
-  /** 3 étapes si une nouvelle pièce est demandée, sinon 2. */
-  protected readonly totalEtapes = computed(() => (pieceAFournir(this.etapePiece()) ? 3 : 2));
+  /** CU-32 : texte d'information et questionnaire de cette ouverture ; rempli, l'éligibilité peut s'afficher. */
+  protected readonly etapeQuestions = signal<EtapeQuestions | null>(null);
+  protected readonly questionsValidees = signal(false);
+  /** 4 étapes si une nouvelle pièce est demandée, sinon 3 (identité, questions et données, éligibilité). */
+  protected readonly totalEtapes = computed(() => (pieceAFournir(this.etapePiece()) ? 4 : 3));
   protected readonly casSanctionsTest = CAS_SANCTIONS;
   protected readonly message = signal<Message | null>(null);
   /** CU-296 : choix de la suite, certificat choisi et son éventuel refus avant envoi. */
@@ -420,7 +435,7 @@ export class LivretAPage {
     });
   }
 
-  // CU-28 et CU-29 : identité pré-remplie, dernier contrôle d'identité et pièce du dossier.
+  // CU-28, CU-29 et CU-32 : identité pré-remplie, dernier contrôle d'identité, pièce du dossier et questions.
   private chargerEtapes(echec: (erreur: HttpErrorResponse) => void): void {
     this.service.identite().subscribe({
       next: (etape) => {
@@ -430,7 +445,14 @@ export class LivretAPage {
         this.service.piece().subscribe({
           next: (piece) => {
             this.etapePiece.set(piece);
-            this.chargement.set({ lu: true, erreur: false });
+            this.service.questions().subscribe({
+              next: (questions) => {
+                this.etapeQuestions.set(questions);
+                this.questionsValidees.set(questions.questionnaire !== null);
+                this.chargement.set({ lu: true, erreur: false });
+              },
+              error: echec,
+            });
           },
           error: echec,
         });
@@ -619,6 +641,11 @@ export class LivretAPage {
     if (refus.texte === PIECE_EXPIREE) {
       this.pieceValidee.set(false);
       this.service.piece().subscribe({ next: (piece) => this.etapePiece.set(piece), error: () => undefined });
+    }
+    // CU-32 : questions à remplir (ou nouvelle version du texte à accepter) avant l'éligibilité.
+    if (refus.texte === SANS_QUESTIONNAIRE) {
+      this.questionsValidees.set(false);
+      this.service.questions().subscribe({ next: (questions) => this.etapeQuestions.set(questions), error: () => undefined });
     }
     if (refus.termine) {
       this.charger();

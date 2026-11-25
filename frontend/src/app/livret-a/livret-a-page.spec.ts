@@ -6,7 +6,7 @@ import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { BouchonsIdentiteService, ReponseFiscale } from '../identification/bouchons-identite';
 import { SuiviSession } from '../session/suivi-session';
-import { ControleIdentite, DemandeLivretA, IdentiteLivretA, LivretAService } from './livret-a';
+import { ControleIdentite, DemandeLivretA, EtapeQuestions, IdentiteLivretA, LivretAService } from './livret-a';
 import {
   ATTESTATION_OBLIGATOIRE,
   CAS_SANCTIONS,
@@ -14,6 +14,7 @@ import {
   LivretAPage,
   PIECE_EXPIREE,
   SANS_IDENTITE_CONFIRMEE,
+  SANS_QUESTIONNAIRE,
   CERTIFICAT_OBLIGATOIRE,
   MOTIF_REFUS_TEST,
   SUITE_OBLIGATOIRE,
@@ -53,6 +54,14 @@ const IDENTITE: IdentiteLivretA = {
   residenceFiscale: 'France',
 };
 const IDENTITE_VALIDEE: ControleIdentite = { reference: 'ci-1', statut: 'VALIDE', message: 'Identité confirmée.', utilisable: true, aControler: null };
+// CU-32 : questions déjà remplies pour cette ouverture, ou encore à remplir (texte à accepter).
+const QUESTIONS_REMPLIES: EtapeQuestions = {
+  versionTexte: 'V1',
+  texte: 'Texte',
+  texteAAccepter: false,
+  questionnaire: { reference: 'q-1', objetEpargne: 'PRECAUTION', origineFonds: 'SALAIRE_REVENUS', precisionOrigine: null, reponduLe: '2026-11-25T09:00:00Z' },
+};
+const QUESTIONS_A_REMPLIR: EtapeQuestions = { versionTexte: 'V1', texte: 'Texte', texteAAccepter: true, questionnaire: null };
 
 const refus = (status: number, error: unknown) => throwError(() => new HttpErrorResponse({ status, error }));
 
@@ -67,6 +76,8 @@ describe('LivretAPage (CU-31)', () => {
     transmettreControle: vi.fn(),
     simulerValidationResponsable: vi.fn(),
     piece: vi.fn(),
+    questions: vi.fn(),
+    repondreQuestions: vi.fn(),
     choisirSuite: vi.fn(),
     deposerCertificat: vi.fn(),
     simulerValidationCertificat: vi.fn(),
@@ -89,6 +100,7 @@ describe('LivretAPage (CU-31)', () => {
     service.etat.mockReturnValue(of({ demande: null }));
     service.identite.mockReturnValue(of({ identite: IDENTITE, controle: IDENTITE_VALIDEE }));
     service.piece.mockReturnValue(of(PIECE_VALIDE));
+    service.questions.mockReturnValue(of(QUESTIONS_REMPLIES));
     service.demander.mockReturnValue(of(EN_COURS));
     service.transmettreReponse.mockReturnValue(of(VALIDEE));
     bouchons.interrogerAdministrationFiscale.mockReturnValue(of(REPONSE));
@@ -293,28 +305,28 @@ describe('LivretAPage (CU-31)', () => {
   });
 
   // CU-29 : nouvelle pièce et selfie, seulement si la pièce du dossier a expiré.
-  it('pièce du dossier encore valide : 2 étapes, directement l’éligibilité', async () => {
+  it('pièce du dossier encore valide et questions remplies : directement l’éligibilité, étape 3 sur 3', async () => {
     const { page } = await afficher();
-    expect(page.querySelector('app-etape-piece-livret-a')).toBeNull();
-    expect(page.querySelector('form.eligibilite h2')?.textContent).toContain('Étape 2 sur 2');
-  });
-
-  it('pièce du dossier expirée : étape « Ma pièce d’identité » avant l’éligibilité, en 3 étapes', async () => {
-    service.piece.mockReturnValue(of(PIECE_EXPIREE_ETAPE));
-    const { fixture, page } = await afficher();
-    expect(page.querySelector('app-etape-piece-livret-a h2')?.textContent).toContain('Étape 2 sur 3');
-    expect(page.querySelector('form.eligibilite')).toBeNull();
-    fixture.debugElement.query((e) => e.name === 'app-etape-piece-livret-a').componentInstance.validee.emit();
-    fixture.detectChanges();
     expect(page.querySelector('app-etape-piece-livret-a')).toBeNull();
     expect(page.querySelector('form.eligibilite h2')?.textContent).toContain('Étape 3 sur 3');
   });
 
-  it('pièce expirée et identité à confirmer : l’étape identité annonce 3 étapes', async () => {
+  it('pièce du dossier expirée : étape « Ma pièce d’identité » avant l’éligibilité, en 4 étapes', async () => {
+    service.piece.mockReturnValue(of(PIECE_EXPIREE_ETAPE));
+    const { fixture, page } = await afficher();
+    expect(page.querySelector('app-etape-piece-livret-a h2')?.textContent).toContain('Étape 2 sur 4');
+    expect(page.querySelector('form.eligibilite')).toBeNull();
+    fixture.debugElement.query((e) => e.name === 'app-etape-piece-livret-a').componentInstance.validee.emit();
+    fixture.detectChanges();
+    expect(page.querySelector('app-etape-piece-livret-a')).toBeNull();
+    expect(page.querySelector('form.eligibilite h2')?.textContent).toContain('Étape 4 sur 4');
+  });
+
+  it('pièce expirée et identité à confirmer : l’étape identité annonce 4 étapes', async () => {
     service.identite.mockReturnValue(of({ identite: IDENTITE, controle: null }));
     service.piece.mockReturnValue(of(PIECE_EXPIREE_ETAPE));
     const { page } = await afficher();
-    expect(page.querySelector('app-etape-identite-livret-a h2')?.textContent).toContain('Étape 1 sur 3');
+    expect(page.querySelector('app-etape-identite-livret-a h2')?.textContent).toContain('Étape 1 sur 4');
   });
 
   it('éligibilité refusée car la pièce a expiré : retour à l’étape « Ma pièce d’identité »', async () => {
@@ -325,6 +337,46 @@ describe('LivretAPage (CU-31)', () => {
     page.querySelector<HTMLInputElement>('input[name=partage][value=oui]')!.click();
     await valider(fixture, page);
     expect(page.querySelector('app-etape-piece-livret-a')).not.toBeNull();
+  });
+
+  // CU-32 : questions et données, entre la pièce et l'éligibilité.
+  it('questions à remplir : étape « Questions et données » avant l’éligibilité, étape 2 sur 3', async () => {
+    service.questions.mockReturnValue(of(QUESTIONS_A_REMPLIR));
+    const { fixture, page } = await afficher();
+    expect(page.querySelector('app-etape-questions-livret-a h2')?.textContent).toContain('Étape 2 sur 3');
+    expect(page.querySelector('form.eligibilite')).toBeNull();
+    fixture.debugElement.query((e) => e.name === 'app-etape-questions-livret-a').componentInstance.validee.emit();
+    fixture.detectChanges();
+    expect(page.querySelector('app-etape-questions-livret-a')).toBeNull();
+    expect(page.querySelector('form.eligibilite h2')?.textContent).toContain('Étape 3 sur 3');
+  });
+
+  it('pièce expirée et questions à remplir : les questions sont l’étape 3 sur 4, après la pièce', async () => {
+    service.piece.mockReturnValue(of(PIECE_EXPIREE_ETAPE));
+    service.questions.mockReturnValue(of(QUESTIONS_A_REMPLIR));
+    const { fixture, page } = await afficher();
+    expect(page.querySelector('app-etape-questions-livret-a')).toBeNull();
+    fixture.debugElement.query((e) => e.name === 'app-etape-piece-livret-a').componentInstance.validee.emit();
+    fixture.detectChanges();
+    expect(page.querySelector('app-etape-questions-livret-a h2')?.textContent).toContain('Étape 3 sur 4');
+  });
+
+  it('éligibilité refusée faute de questionnaire : retour à l’étape « Questions et données »', async () => {
+    service.demander.mockReturnValue(refus(409, { message: SANS_QUESTIONNAIRE }));
+    const { fixture, page } = await afficher();
+    service.questions.mockReturnValue(of(QUESTIONS_A_REMPLIR));
+    page.querySelector<HTMLInputElement>('input[name=attestation]')!.click();
+    page.querySelector<HTMLInputElement>('input[name=partage][value=oui]')!.click();
+    await valider(fixture, page);
+    expect(page.querySelector('app-etape-questions-livret-a')).not.toBeNull();
+    expect(page.querySelector('.livret > .message')?.textContent).toBe(SANS_QUESTIONNAIRE);
+  });
+
+  it('questions illisibles au chargement : message d’erreur de chargement', async () => {
+    service.questions.mockReturnValue(refus(500, null));
+    const { page } = await afficher();
+    expect(page.querySelector('form.eligibilite')).toBeNull();
+    expect(page.querySelector('app-etape-questions-livret-a')).toBeNull();
   });
 
   it('pièce indisponible : message de chargement en erreur', async () => {
