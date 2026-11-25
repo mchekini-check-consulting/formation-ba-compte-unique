@@ -45,36 +45,51 @@ public class LivretAService {
 			String lieuNaissance) {
 	}
 
-	/** Demande et, tant qu'elle est en cours de vérification, l'identité à transmettre. */
-	public record Suivi(DemandeLivretA demande, Transmission transmission) {
+	/**
+	 * Demande, l'identité à transmettre tant qu'elle est en cours de vérification et, CU-296, le dernier certificat
+	 * de clôture déposé.
+	 */
+	public record Suivi(DemandeLivretA demande, Transmission transmission, CertificatClotureLivretA certificat) {
+
+		public Suivi(DemandeLivretA demande, Transmission transmission) {
+			this(demande, transmission, null);
+		}
 	}
 
 	private final CompteService comptes;
 	private final DossierRepository dossiers;
 	private final DemandeLivretARepository demandes;
 	private final IdentiteLivretAService identites;
+	private final ClotureLivretAService clotures;
 	private final Clock horloge;
 
 	@Autowired
 	public LivretAService(CompteService comptes, DossierRepository dossiers, DemandeLivretARepository demandes,
-			IdentiteLivretAService identites) {
-		this(comptes, dossiers, demandes, identites, Clock.systemDefaultZone());
+			IdentiteLivretAService identites, ClotureLivretAService clotures) {
+		this(comptes, dossiers, demandes, identites, clotures, Clock.systemDefaultZone());
 	}
 
 	LivretAService(CompteService comptes, DossierRepository dossiers, DemandeLivretARepository demandes,
-			IdentiteLivretAService identites, Clock horloge) {
+			IdentiteLivretAService identites, ClotureLivretAService clotures, Clock horloge) {
 		this.comptes = comptes;
 		this.dossiers = dossiers;
 		this.demandes = demandes;
 		this.identites = identites;
+		this.clotures = clotures;
 		this.horloge = horloge;
 	}
 
-	/** Dernière demande de la cliente connectée, vide si elle n'en a pas. */
-	@Transactional(readOnly = true)
+	/**
+	 * Dernière demande de la cliente connectée, vide si elle n'en a pas. CU-296 : relance ou annulation dues à la
+	 * date du jour appliquées avant l'affichage.
+	 */
+	@Transactional
 	public Optional<Suivi> etat(String jetonSession) {
 		Compte compte = comptes.compteCourant(jetonSession);
-		return demandes.findFirstByCustomerIdOrderByCreeeLeDesc(compte.getCustomerId()).map(this::suivi);
+		return demandes.findFirstByCustomerIdOrderByCreeeLeDesc(compte.getCustomerId()).map(demande -> {
+			clotures.appliquerEcheance(demande);
+			return suivi(demande);
+		});
 	}
 
 	/** Étape d'éligibilité validée : contrôles internes, attestation et choix de partage enregistrés. */
@@ -105,6 +120,16 @@ public class LivretAService {
 	@Transactional
 	public Suivi enregistrerReponse(String jetonSession, String reference, String interrogationId,
 			ReponseFiscale reponse) {
+		return enregistrerReponse(jetonSession, reference, interrogationId, reponse, null);
+	}
+
+	/**
+	 * CU-296 : avec le détail du livret existant, enregistré seulement pour « Livret A existant » et si la cliente a
+	 * autorisé son partage.
+	 */
+	@Transactional
+	public Suivi enregistrerReponse(String jetonSession, String reference, String interrogationId,
+			ReponseFiscale reponse, DetailLivretA detail) {
 		Compte compte = comptes.compteCourant(jetonSession);
 		if (reponse == null) {
 			throw new DemandeRefusee(HttpStatus.BAD_REQUEST, REPONSE_OBLIGATOIRE);
@@ -115,6 +140,7 @@ public class LivretAService {
 			throw new DemandeRefusee(HttpStatus.CONFLICT, DEMANDE_TERMINEE);
 		}
 		demande.recevoirReponse(interrogationId, reponse, OffsetDateTime.now(horloge));
+		demande.recevoirDetail(detail);
 		return suivi(demande);
 	}
 
@@ -151,8 +177,14 @@ public class LivretAService {
 		List<Long> memeIdentite = dossiers.idsMemeIdentite(normaliser(dossier.getNomNaissance()),
 				normaliser(dossier.getPrenoms()), dossier.getDateNaissance(),
 				normaliser(dossier.getCommuneNaissance()), dossier.getPaysNaissance().name());
+		// CU-296 : une demande annulée (date limite dépassée) ou renoncée ne bloque plus une nouvelle demande.
 		List<DemandeLivretA> existantes = demandes
-				.findByDossierIdIn(memeIdentite.isEmpty() ? List.of(dossier.getId()) : memeIdentite);
+				.findByDossierIdIn(memeIdentite.isEmpty() ? List.of(dossier.getId()) : memeIdentite).stream()
+				.filter(demande -> {
+					clotures.appliquerEcheance(demande);
+					return !demande.getStatut().estTerminee();
+				})
+				.toList();
 		if (existantes.stream().anyMatch(d -> d.getStatut() == StatutDemandeLivretA.OUVERTURE_VALIDEE)) {
 			throw new DemandeRefusee(HttpStatus.CONFLICT, LIVRET_A_DETENU, true);
 		}
@@ -161,8 +193,10 @@ public class LivretAService {
 		}
 	}
 
-	private Suivi suivi(DemandeLivretA demande) {
-		return new Suivi(demande, demande.estEnCours() ? transmission(dossier(demande.getDossierId())) : null);
+	/** Vue complète d'une demande (identité à transmettre tant qu'elle est en cours, dernier certificat). */
+	public Suivi suivi(DemandeLivretA demande) {
+		return new Suivi(demande, demande.estEnCours() ? transmission(dossier(demande.getDossierId())) : null,
+				clotures.dernierCertificat(demande).orElse(null));
 	}
 
 	private Dossier dossier(Long dossierId) {

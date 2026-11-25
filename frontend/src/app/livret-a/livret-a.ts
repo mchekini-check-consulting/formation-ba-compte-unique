@@ -4,7 +4,38 @@ import { Observable } from 'rxjs';
 import { apiBase } from '../api';
 import { ResultatFiscal } from '../identification/bouchons-identite';
 
-export type StatutDemande = 'EN_COURS_DE_VERIFICATION' | 'OUVERTURE_VALIDEE' | 'LIVRET_A_EXISTANT';
+export type StatutDemande =
+  | 'EN_COURS_DE_VERIFICATION'
+  | 'OUVERTURE_VALIDEE'
+  | 'LIVRET_A_EXISTANT'
+  // CU-296 : Livret A détenu ailleurs.
+  | 'EN_ATTENTE_CERTIFICAT'
+  | 'CERTIFICAT_A_VERIFIER'
+  | 'ANNULEE'
+  | 'RENONCEE';
+
+/** CU-296 : « Je clôture moi-même mon ancien livret » ou « Je renonce à l'ouverture ». */
+export type SuiteLivretAExistant = 'CLOTURE_PAR_CLIENTE' | 'RENONCIATION';
+
+/** CU-296 : détail du Livret A détenu ailleurs (date AAAA-MM-JJ), communiqué seulement si le partage est autorisé. */
+export interface DetailLivretA {
+  etablissement: string;
+  agence: string;
+  dateOuverture: string;
+}
+
+/** CU-296 : dernier certificat de clôture déposé. decision null = à vérifier par un conseiller. */
+export interface CertificatCloture {
+  nomFichier: string;
+  deposeLe: string;
+  decision: 'VALIDE' | 'REFUSE' | null;
+  motifRefus: string | null;
+}
+
+/** CU-296 : une demande annulée ou renoncée ne bloque plus une nouvelle demande. */
+export function demandeTerminee(demande: DemandeLivretA): boolean {
+  return demande.statut === 'ANNULEE' || demande.statut === 'RENONCEE';
+}
 
 /** Identité à transmettre à l'administration fiscale (date au format AAAA-MM-JJ). */
 export interface Transmission {
@@ -28,6 +59,12 @@ export interface DemandeLivretA {
   retard: boolean;
   delai: string;
   transmission: Transmission | null;
+  // CU-296 (absents des réponses antérieures : facultatifs).
+  detail?: DetailLivretA | null;
+  suiteChoisie?: SuiteLivretAExistant | null;
+  dateLimiteCertificat?: string | null;
+  certificat?: CertificatCloture | null;
+  delaiVerification?: string;
 }
 
 /** CU-28 : coordonnées modifiables par la cliente (complément d'adresse facultatif). */
@@ -113,10 +150,36 @@ export class LivretAService {
     );
   }
 
-  transmettreReponse(reference: string, interrogationId: string | null, resultat: ResultatFiscal): Observable<DemandeLivretA> {
+  /** CU-296 : detail du livret existant transmis tel que reçu (le backend ne le garde que si le partage est autorisé). */
+  transmettreReponse(
+    reference: string,
+    interrogationId: string | null,
+    resultat: ResultatFiscal,
+    detail: DetailLivretA | null = null,
+  ): Observable<DemandeLivretA> {
     return this.http.post<DemandeLivretA>(
       `${this.base}/livret-a/demandes/${encodeURIComponent(reference)}/reponse-fiscale`,
-      { interrogationId, resultat },
+      { interrogationId, resultat, detail },
+      { withCredentials: true },
+    );
+  }
+
+  /** CU-296 : choix de la cliente quand un Livret A est détenu ailleurs. */
+  choisirSuite(reference: string, choix: SuiteLivretAExistant): Observable<DemandeLivretA> {
+    return this.http.post<DemandeLivretA>(
+      `${this.base}/livret-a/demandes/${encodeURIComponent(reference)}/suite`,
+      { choix },
+      { withCredentials: true },
+    );
+  }
+
+  /** CU-296 : dépôt du certificat de clôture (envoi en multipart, champ « fichier »). */
+  deposerCertificat(reference: string, fichier: File): Observable<DemandeLivretA> {
+    const formulaire = new FormData();
+    formulaire.append('fichier', fichier, fichier.name);
+    return this.http.post<DemandeLivretA>(
+      `${this.base}/livret-a/demandes/${encodeURIComponent(reference)}/certificats`,
+      formulaire,
       { withCredentials: true },
     );
   }
@@ -187,6 +250,24 @@ export class LivretAService {
     return this.http.post<DemandeLivretA>(
       `${this.base}/test/livret-a/demandes/${encodeURIComponent(reference)}/expiration-delai`,
       {},
+      { withCredentials: true },
+    );
+  }
+
+  /** CU-296 (environnement de test) : un conseiller valide le certificat de clôture. */
+  simulerValidationCertificat(reference: string): Observable<DemandeLivretA> {
+    return this.http.post<DemandeLivretA>(
+      `${this.base}/test/livret-a/demandes/${encodeURIComponent(reference)}/certificat/validation`,
+      {},
+      { withCredentials: true },
+    );
+  }
+
+  /** CU-296 (environnement de test) : un conseiller refuse le certificat de clôture, avec un motif. */
+  simulerRefusCertificat(reference: string, motif: string): Observable<DemandeLivretA> {
+    return this.http.post<DemandeLivretA>(
+      `${this.base}/test/livret-a/demandes/${encodeURIComponent(reference)}/certificat/refus`,
+      { motif },
       { withCredentials: true },
     );
   }

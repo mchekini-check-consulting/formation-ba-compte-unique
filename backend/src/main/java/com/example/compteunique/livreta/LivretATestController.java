@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -17,6 +18,10 @@ import com.example.compteunique.livreta.LivretAService.Suivi;
 // POST /test/livret-a/demandes/{reference}/expiration-delai : demande transmise et sans réponse -> conseiller
 // alerté, comme au bout de 2 jours ouvrés.
 // POST /test/livret-a/identite/{reference}/validation-responsable : CU-28, PPE validée par un responsable.
+// CU-296 (pas encore de back-office conseiller) :
+// POST /test/livret-a/demandes/{reference}/certificat/validation : certificat validé, l'ouverture reprend.
+// POST /test/livret-a/demandes/{reference}/certificat/refus      : {"motif"} certificat refusé, nouveau dépôt possible.
+// L'expiration de la date limite se teste en avançant la date métier (CU-380, /test/date-metier).
 @RestController
 @RequestMapping("/test/livret-a")
 @ConditionalOnProperty(name = "app.test.livret-a-simule", havingValue = "true")
@@ -24,10 +29,31 @@ public class LivretATestController {
 
 	private final LivretAService service;
 	private final IdentiteLivretAService identites;
+	private final ClotureLivretAService clotures;
 
-	public LivretATestController(LivretAService service, IdentiteLivretAService identites) {
+	public LivretATestController(LivretAService service, IdentiteLivretAService identites,
+			ClotureLivretAService clotures) {
 		this.service = service;
 		this.identites = identites;
+		this.clotures = clotures;
+	}
+
+	/** CU-296 : motif saisi par la testeuse pour un refus simulé. */
+	public record RefusCertificat(String motif) {
+	}
+
+	/** CU-296 : « Simuler la validation du certificat par un conseiller » ; l'ouverture reprend. */
+	@PostMapping("/demandes/{reference}/certificat/validation")
+	public DemandeLivretAVue validerCertificat(@PathVariable String reference) {
+		return DemandeLivretAVue.de(service.suivi(clotures.simulerValidation(reference)));
+	}
+
+	/** CU-296 : « Simuler le refus du certificat par un conseiller », avec un motif. */
+	@PostMapping("/demandes/{reference}/certificat/refus")
+	public DemandeLivretAVue refuserCertificat(@PathVariable String reference,
+			@RequestBody(required = false) RefusCertificat refus) {
+		return DemandeLivretAVue
+				.de(service.suivi(clotures.simulerRefus(reference, refus == null ? null : refus.motif())));
 	}
 
 	@PostMapping("/demandes/{reference}/expiration-delai")

@@ -17,6 +17,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockMultipartFile;
 
 import com.example.compteunique.beneficiaire.DemandeRefusee;
 import com.example.compteunique.compte.ClienteNonConnecteeException;
@@ -46,7 +47,8 @@ class LivretAControllerTest {
 	private final LivretAService service = mock(LivretAService.class);
 	private final IdentiteLivretAService identites = mock(IdentiteLivretAService.class);
 	private final PieceLivretAService pieces = mock(PieceLivretAService.class);
-	private final LivretAController controleur = new LivretAController(service, identites, pieces);
+	private final ClotureLivretAService clotures = mock(ClotureLivretAService.class);
+	private final LivretAController controleur = new LivretAController(service, identites, pieces, clotures);
 
 	private static DemandeLivretA demande() {
 		return new DemandeLivretA(7L, UUID.randomUUID(), true, MAINTENANT);
@@ -84,14 +86,14 @@ class LivretAControllerTest {
 	void reponseFiscaleTransmise() {
 		DemandeLivretA demande = demande();
 		demande.recevoirReponse("i", ReponseFiscale.AUCUN_LIVRET_A, MAINTENANT);
-		when(service.enregistrerReponse("j", "ref", "i", ReponseFiscale.AUCUN_LIVRET_A))
+		when(service.enregistrerReponse("j", "ref", "i", ReponseFiscale.AUCUN_LIVRET_A, null))
 				.thenReturn(new Suivi(demande, null));
 		DemandeLivretAVue vue = controleur.reponseFiscale("j", "ref",
 				new ResultatInterrogation("i", ReponseFiscale.AUCUN_LIVRET_A));
 		assertEquals(StatutDemandeLivretA.OUVERTURE_VALIDEE, vue.statut());
 		assertEquals(DemandeLivretAVue.VALIDEE, vue.message());
 		assertNull(vue.transmission());
-		when(service.enregistrerReponse("j", "ref", null, null))
+		when(service.enregistrerReponse("j", "ref", null, null, null))
 				.thenThrow(new DemandeRefusee(HttpStatus.BAD_REQUEST, "y"));
 		assertThrows(DemandeRefusee.class,
 				() -> controleur.reponseFiscale("j", "ref", null));
@@ -117,6 +119,45 @@ class LivretAControllerTest {
 		assertEquals(MAINTENANT, enRetard.interrogationLe());
 	}
 
+	// CU-296 : choix de la suite, dépôt du certificat (multipart) et boutons de test du conseiller.
+	@Test
+	void choixDeLaSuiteEtDepotDuCertificat() throws Exception {
+		DemandeLivretA demande = demande();
+		demande.recevoirReponse("i", ReponseFiscale.LIVRET_A_EXISTANT, MAINTENANT);
+		demande.choisirCloture(MAINTENANT);
+		when(clotures.choisirSuite("j", "ref", SuiteLivretAExistant.CLOTURE_PAR_CLIENTE)).thenReturn(demande);
+		when(service.suivi(demande)).thenReturn(new Suivi(demande, null));
+		DemandeLivretAVue vue = controleur.choisirSuite("j", "ref",
+				new LivretAController.ChoixSuite(SuiteLivretAExistant.CLOTURE_PAR_CLIENTE));
+		assertEquals(StatutDemandeLivretA.EN_ATTENTE_CERTIFICAT, vue.statut());
+		assertEquals(LocalDate.of(2027, 2, 12), vue.dateLimiteCertificat());
+		when(clotures.choisirSuite("j", "ref", null)).thenThrow(new DemandeRefusee(HttpStatus.BAD_REQUEST, "c"));
+		assertThrows(DemandeRefusee.class, () -> controleur.choisirSuite("j", "ref", null));
+
+		MockMultipartFile fichier = new MockMultipartFile("fichier", "certificat.pdf", "application/pdf",
+				new byte[] { 1 });
+		when(clotures.deposerCertificat("j", "ref", "certificat.pdf", "application/pdf", new byte[] { 1 }))
+				.thenReturn(demande);
+		assertEquals(HttpStatus.CREATED, controleur.deposerCertificat("j", "ref", fichier).getStatusCode());
+		when(clotures.deposerCertificat("j", "ref", null, null, null))
+				.thenThrow(new DemandeRefusee(HttpStatus.BAD_REQUEST, "f"));
+		assertThrows(DemandeRefusee.class, () -> controleur.deposerCertificat("j", "ref", null));
+	}
+
+	@Test
+	void controleurDeTestValideOuRefuseLeCertificat() {
+		DemandeLivretA demande = demande();
+		when(clotures.simulerValidation("ref")).thenReturn(demande);
+		when(clotures.simulerRefus("ref", "illisible")).thenReturn(demande);
+		when(clotures.simulerRefus("ref", null)).thenReturn(demande);
+		when(service.suivi(demande)).thenReturn(new Suivi(demande, null));
+		LivretATestController test = new LivretATestController(service, identites, clotures);
+		assertEquals(demande.getReference(), test.validerCertificat("ref").reference());
+		assertEquals(demande.getReference(),
+				test.refuserCertificat("ref", new LivretATestController.RefusCertificat("illisible")).reference());
+		assertEquals(demande.getReference(), test.refuserCertificat("ref", null).reference());
+	}
+
 	@Test
 	void sansSessionOuSansCompte() {
 		ResponseEntity<Refus> nonConnectee = controleur.refus(new ClienteNonConnecteeException());
@@ -133,7 +174,7 @@ class LivretAControllerTest {
 		demande.recevoirReponse("i", ReponseFiscale.SANS_REPONSE, MAINTENANT);
 		demande.alerterConseiller(MAINTENANT);
 		when(service.simulerExpirationDelai("ref")).thenReturn(demande);
-		LivretATestController test = new LivretATestController(service, identites);
+		LivretATestController test = new LivretATestController(service, identites, clotures);
 		assertTrue(test.expirerDelai("ref").retard());
 		ResponseEntity<Refus> refus = test.refus(new DemandeRefusee(HttpStatus.CONFLICT, "z"));
 		assertEquals(HttpStatus.CONFLICT, refus.getStatusCode());
@@ -200,7 +241,7 @@ class LivretAControllerTest {
 		controle.recevoirResultat(ResultatSanctions.CORRESPONDANCE_PEP, 1, MAINTENANT);
 		controle.validerParResponsable(MAINTENANT);
 		when(identites.validerParResponsable("ref")).thenReturn(controle);
-		LivretATestController test = new LivretATestController(service, identites);
+		LivretATestController test = new LivretATestController(service, identites, clotures);
 		ControleIdentiteVue vue = test.validerParResponsable("ref");
 		assertEquals(StatutControleIdentite.VALIDE, vue.statut());
 		assertTrue(vue.utilisable());

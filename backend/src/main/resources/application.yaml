@@ -7,6 +7,12 @@ spring:
     url: jdbc:postgresql://localhost:5432/compte_unique
     username: app
     password: app
+  # CU-296 : certificat de clôture du Livret A, 2 Mo maximum (contrôlé par le service avec un message clair) ;
+  # marge ici pour que la cliente reçoive ce message plutôt qu'une erreur technique.
+  servlet:
+    multipart:
+      max-file-size: 3MB
+      max-request-size: 3MB
   jpa:
     open-in-view: false
     hibernate:
