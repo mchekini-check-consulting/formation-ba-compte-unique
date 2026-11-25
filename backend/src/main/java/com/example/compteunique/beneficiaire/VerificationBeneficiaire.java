@@ -114,12 +114,12 @@ public class VerificationBeneficiaire {
 	/** Sélecteur « Service indisponible » du bouchon (CU-145 critère 4). */
 	@Transactional(readOnly = true)
 	public boolean estIndisponible() {
-		return bouchon.findById(BouchonVerification.ID).map(BouchonVerification::isIndisponible).orElse(false);
+		return bouchon.findById(BouchonVerification.ID_UNIQUE).map(BouchonVerification::isIndisponible).orElse(false);
 	}
 
 	@Transactional
 	public void rendreIndisponible(boolean indisponible) {
-		BouchonVerification selecteur = bouchon.findById(BouchonVerification.ID)
+		BouchonVerification selecteur = bouchon.findById(BouchonVerification.ID_UNIQUE)
 				.orElseGet(() -> new BouchonVerification(false));
 		selecteur.setIndisponible(indisponible);
 		bouchon.save(selecteur);

@@ -7,9 +7,11 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZonedDateTime;
+import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +41,8 @@ import com.example.compteunique.logging.Loggable;
 public class OrdresService {
 
 	static final int CONTRAT_LONGUEUR_MAX = 30;
+
+	private static final Set<DayOfWeek> WEEK_END = EnumSet.of(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY);
 
 	private final OrdreRepository ordres;
 	private final PositionsContrat positions;
@@ -130,7 +134,7 @@ public class OrdresService {
 	}
 
 	private static boolean estOuvre(LocalDate jour) {
-		return jour.getDayOfWeek() != DayOfWeek.SATURDAY && jour.getDayOfWeek() != DayOfWeek.SUNDAY;
+		return !WEEK_END.contains(jour.getDayOfWeek());
 	}
 
 	// Règle 5 de l'ADR-001 : un événement petit, identifiants et montants seulement.

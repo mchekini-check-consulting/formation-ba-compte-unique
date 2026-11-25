@@ -29,11 +29,11 @@ public record DemandeLivretAVue(String reference, StatutDemandeLivretA statut, S
 		}
 	}
 
-	static final String DELAI = "2 jours ouvrés";
+	static final String DELAI_REPONSE = "2 jours ouvrés";
 	static final String DELAI_VERIFICATION = "48 heures ouvrées";
 	static final String EN_COURS = "Votre demande est en cours de vérification auprès de l'administration fiscale (délai de 2 jours ouvrés). Aucun versement n'est débité.";
 	static final String INDISPONIBLE = "Le service de l'administration fiscale est momentanément indisponible. Votre demande reste en cours de vérification et aucun Livret A n'est ouvert.";
-	static final String RETARD = "L'administration fiscale n'a pas encore répondu : votre demande reste en attente et un conseiller a été alerté. Nous vous tiendrons informée.";
+	static final String MESSAGE_RETARD = "L'administration fiscale n'a pas encore répondu : votre demande reste en attente et un conseiller a été alerté. Nous vous tiendrons informée.";
 	static final String VALIDEE = "Aucun autre Livret A n'a été trouvé : l'ouverture de votre Livret A est validée. Prochaine étape : le versement initial.";
 	static final String EXISTANT = "L'administration fiscale indique que vous détenez déjà un Livret A dans un autre établissement. Votre Livret A n'a pas été ouvert. Pour continuer, choisissez de clôturer vous-même votre ancien livret ou de renoncer à l'ouverture.";
 	// CU-296 : textes proposés, à valider par la BA (point à valider de l'US).
@@ -50,7 +50,7 @@ public record DemandeLivretAVue(String reference, StatutDemandeLivretA statut, S
 		return new DemandeLivretAVue(demande.getReference(), demande.getStatut(),
 				message(demande, retard, suivi.certificat()), demande.getAttestationLe(),
 				demande.isPartageDetailAutorise(), demande.getChoixPartageLe(), demande.getInterrogationLe(),
-				demande.getReponseFiscale(), retard, DELAI, suivi.transmission(), demande.getDetail(),
+				demande.getReponseFiscale(), retard, DELAI_REPONSE, suivi.transmission(), demande.getDetail(),
 				demande.getSuiteChoisie(), demande.getDateLimiteCertificat(), CertificatVue.de(suivi.certificat()),
 				DELAI_VERIFICATION);
 	}
@@ -70,7 +70,7 @@ public record DemandeLivretAVue(String reference, StatutDemandeLivretA statut, S
 			case RENONCEE -> RENONCEE;
 			case EN_COURS_DE_VERIFICATION -> {
 				if (retard) {
-					yield RETARD;
+					yield MESSAGE_RETARD;
 				}
 				yield demande.getReponseFiscale() == ReponseFiscale.INDISPONIBLE ? INDISPONIBLE : EN_COURS;
 			}

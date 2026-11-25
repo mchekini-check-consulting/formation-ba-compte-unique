@@ -106,7 +106,7 @@ public class OrdresTestController {
 	}
 
 	@GetMapping("/positions")
-	public List<PositionVue> positions() {
+	public List<PositionVue> listerPositions() {
 		return positions.positionsDeTest().stream()
 				.map(p -> new PositionVue(p.getNumeroContrat(), p.getCodeIsin(), p.getMontant(), p.getNombreParts(),
 						paris(p.getEnregistreeLe())))

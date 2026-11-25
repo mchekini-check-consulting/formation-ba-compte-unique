@@ -14,7 +14,7 @@ import jakarta.persistence.Table;
 
 import com.example.compteunique.ordres.OrdresService.DemandeOrdre;
 
-// CU-376 (TECH-08) : un ordre, identifié par l'identifiant créé par l'écran (db/migration/V30__ordres.sql).
+// CU-376 (TECH-08) : un ordre, identifié par l'identifiant créé par l'écran (db/migration/V31__ordres.sql).
 @Entity
 @Table(schema = "ordres", name = "ordre")
 public class Ordre {

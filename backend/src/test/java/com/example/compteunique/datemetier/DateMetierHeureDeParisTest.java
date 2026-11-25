@@ -32,7 +32,7 @@ class DateMetierHeureDeParisTest {
 
 	@BeforeEach
 	void baseEnMemoire() {
-		when(reglages.findById(ReglageDateMetier.ID)).thenAnswer(appel -> Optional.ofNullable(reglage));
+		when(reglages.findById(ReglageDateMetier.ID_UNIQUE)).thenAnswer(appel -> Optional.ofNullable(reglage));
 		when(reglages.save(any())).thenAnswer(appel -> reglage = appel.getArgument(0));
 		when(journal.save(any())).thenAnswer(appel -> {
 			traces.add(appel.getArgument(0));
