@@ -112,7 +112,7 @@ public class DateMetier {
 		String nom = auteurValide(auteur);
 		ZonedDateTime ancienne = reel.plusSeconds(decalageSecondes());
 		long decalage = Duration.between(reel, nouvelle).toSeconds();
-		ReglageDateMetier reglage = reglages.findById(ReglageDateMetier.ID)
+		ReglageDateMetier reglage = reglages.findById(ReglageDateMetier.ID_UNIQUE)
 				.orElseGet(() -> new ReglageDateMetier(0, reel.toOffsetDateTime()));
 		reglage.decaler(decalage, reel.toOffsetDateTime());
 		reglages.save(reglage);
@@ -143,7 +143,7 @@ public class DateMetier {
 		if (!modifiable) {
 			return 0;
 		}
-		return reglages.findById(ReglageDateMetier.ID).map(ReglageDateMetier::getDecalageSecondes).orElse(0L);
+		return reglages.findById(ReglageDateMetier.ID_UNIQUE).map(ReglageDateMetier::getDecalageSecondes).orElse(0L);
 	}
 
 	// CU-413 : heure réelle à la seconde. Avec les fractions, l'écart calculé en secondes entières était arrondi

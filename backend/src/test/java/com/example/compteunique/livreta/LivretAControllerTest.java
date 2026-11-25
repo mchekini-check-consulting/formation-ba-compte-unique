@@ -114,7 +114,7 @@ class LivretAControllerTest {
 		indisponible.alerterConseiller(MAINTENANT);
 		DemandeLivretAVue enRetard = DemandeLivretAVue.de(new Suivi(indisponible, TRANSMISSION));
 		assertTrue(enRetard.retard());
-		assertEquals(DemandeLivretAVue.RETARD, enRetard.message());
+		assertEquals(DemandeLivretAVue.MESSAGE_RETARD, enRetard.message());
 		assertEquals(ReponseFiscale.INDISPONIBLE, enRetard.reponseFiscale());
 		assertEquals(MAINTENANT, enRetard.interrogationLe());
 	}

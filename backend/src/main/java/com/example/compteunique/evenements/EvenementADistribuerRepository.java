@@ -1,6 +1,8 @@
 package com.example.compteunique.evenements;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -13,6 +15,8 @@ interface EvenementADistribuerRepository extends JpaRepository<EvenementADistrib
 	List<EvenementADistribuer> enAttente();
 
 	List<EvenementADistribuer> findTop50ByOrderByIdDesc();
+
+	Optional<EvenementADistribuer> findByEvenementId(UUID evenementId);
 
 	/**
 	 * Un seul relais à la fois, même avec 2 réplicas (preprod, prod) : sinon deux relais pourraient publier les

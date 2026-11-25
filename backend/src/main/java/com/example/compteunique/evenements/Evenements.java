@@ -2,6 +2,7 @@ package com.example.compteunique.evenements;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -61,6 +62,12 @@ public class Evenements {
 	@Transactional(propagation = Propagation.MANDATORY)
 	public boolean premiereFois(String groupe, UUID evenementId) {
 		return traites.noter(groupe, evenementId, dateMetier.maintenant().toOffsetDateTime()) == 1;
+	}
+
+	/** Un événement de la boîte d'envoi, pour suivre sa publication (ex. page /test/ordres). */
+	@Transactional(readOnly = true)
+	public Optional<EvenementADistribuer> aDistribuer(UUID evenementId) {
+		return aDistribuer.findByEvenementId(evenementId);
 	}
 
 	/** Les 50 derniers événements de la boîte d'envoi (page de test). */

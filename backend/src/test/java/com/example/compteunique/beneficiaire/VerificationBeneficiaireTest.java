@@ -52,7 +52,7 @@ class VerificationBeneficiaireTest {
 		ReflectionTestUtils.setField(dossier, "nomNaissance", "Cliente-A");
 		when(comptes.findByIban(IBAN_TEST)).thenReturn(Optional.of(compte));
 		when(dossiers.findById(3L)).thenReturn(Optional.of(dossier));
-		when(bouchon.findById(BouchonVerification.ID)).thenReturn(Optional.of(new BouchonVerification(false)));
+		when(bouchon.findById(BouchonVerification.ID_UNIQUE)).thenReturn(Optional.of(new BouchonVerification(false)));
 	}
 
 	private AppelVerification appelTrace() {
@@ -109,7 +109,7 @@ class VerificationBeneficiaireTest {
 
 	@Test
 	void critere4_leSelecteurServiceIndisponibleRendIndisponible() {
-		when(bouchon.findById(BouchonVerification.ID)).thenReturn(Optional.of(new BouchonVerification(true)));
+		when(bouchon.findById(BouchonVerification.ID_UNIQUE)).thenReturn(Optional.of(new BouchonVerification(true)));
 
 		assertEquals(ResultatVerification.INDISPONIBLE, bouchon(true).verifier(IBAN_TEST, "Test Cliente-A").resultat());
 	}
@@ -140,7 +140,7 @@ class VerificationBeneficiaireTest {
 	@Test
 	void leSelecteurEstEnregistreEtLeJournalLu() {
 		BouchonVerification selecteur = new BouchonVerification(false);
-		when(bouchon.findById(BouchonVerification.ID)).thenReturn(Optional.of(selecteur));
+		when(bouchon.findById(BouchonVerification.ID_UNIQUE)).thenReturn(Optional.of(selecteur));
 		AppelVerification appel = new AppelVerification(OffsetDateTime.now(), IBAN_TEST, ResultatVerification.CORRESPOND);
 		when(journal.findTop50ByOrderByAppeleLeDescIdDesc()).thenReturn(List.of(appel));
 		VerificationBeneficiaire verification = bouchon(true);
@@ -154,7 +154,7 @@ class VerificationBeneficiaireTest {
 
 	@Test
 	void sansLigneDeSelecteurLeServiceEstDisponibleEtLaLigneEstCreee() {
-		when(bouchon.findById(BouchonVerification.ID)).thenReturn(Optional.empty());
+		when(bouchon.findById(BouchonVerification.ID_UNIQUE)).thenReturn(Optional.empty());
 		VerificationBeneficiaire verification = bouchon(true);
 
 		assertThat(verification.estIndisponible()).isFalse();

@@ -92,7 +92,7 @@ class LivretAIT {
 
 		DemandeLivretAVue enRetard = test.expirerDelai(creee.reference());
 		assertThat(enRetard.retard()).isTrue();
-		assertThat(livretA.etat(clienteA).demande().message()).isEqualTo(DemandeLivretAVue.RETARD);
+		assertThat(livretA.etat(clienteA).demande().message()).isEqualTo(DemandeLivretAVue.MESSAGE_RETARD);
 
 		DemandeRefusee doublon = assertThrows(DemandeRefusee.class,
 				() -> livretA.demander(clienteA, new Eligibilite(true, true)));

@@ -11,7 +11,7 @@ import jakarta.persistence.Table;
 @Table(name = "verification_beneficiaire_bouchon")
 public class BouchonVerification {
 
-	static final short ID = 1;
+	static final short ID_UNIQUE = 1;
 
 	@Id
 	private Short id;
@@ -23,7 +23,7 @@ public class BouchonVerification {
 	}
 
 	BouchonVerification(boolean indisponible) {
-		this.id = ID;
+		this.id = ID_UNIQUE;
 		this.indisponible = indisponible;
 	}
 
