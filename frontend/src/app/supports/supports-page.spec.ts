@@ -59,7 +59,10 @@ function creer(produit: string | null = null) {
 async function pagePrete(donnees: SupportsDisponibles, produit: string | null = null) {
   const fixture = creer(produit);
   const http = TestBed.inject(HttpTestingController);
-  http.expectOne(`${URL}?produit=${donnees.produit}`).flush(donnees);
+  const requete = http.expectOne(`${URL}?produit=${donnees.produit}`);
+  // CU-417 : sans le cookie de session, le backend répond 401 et l'application revient sur l'espace.
+  expect(requete.request.withCredentials).toBe(true);
+  requete.flush(donnees);
   await fixture.whenStable();
   return { fixture, http, page: fixture.nativeElement as HTMLElement };
 }

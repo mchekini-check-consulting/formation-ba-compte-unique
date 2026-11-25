@@ -87,6 +87,14 @@ type Etat = 'chargement' | 'affiche' | 'indisponible';
             </div>
           }
 
+          <h2>Liste des supports (écran /supports)</h2>
+          <p class="vide" data-test="simulation-supports">
+            Liste des supports : <strong>{{ supportsIndisponibles() ? 'indisponible (simulée)' : 'disponible' }}</strong>. En simulant la panne, l’écran affiche « La liste des supports est momentanément indisponible ».
+          </p>
+          <button type="button" class="secondaire" data-test="basculer-simulation" (click)="basculerSimulation()">
+            {{ supportsIndisponibles() ? 'Rétablir la liste des supports' : 'Simuler la liste des supports indisponible' }}
+          </button>
+
           <h2>Vider le catalogue</h2>
           <p class="vide">Avant une recette : efface les supports et leurs valeurs liquidatives, puis redéposez le fichier de référence et relancez le batch. Le journal est conservé.</p>
           @if (confirmerVidage()) {
@@ -189,6 +197,7 @@ export class CatalogueTest {
   protected readonly historique = signal<ValeurLiquidative[]>([]);
   protected readonly messageVl = signal<string | null>(null);
   protected readonly confirmerVidage = signal(false);
+  protected readonly supportsIndisponibles = signal(false);
 
   constructor() {
     this.charger();
@@ -223,6 +232,16 @@ export class CatalogueTest {
             ? `Aucun support ${codeIsin} au catalogue.`
             : 'L’historique est momentanément indisponible. Réessayez.',
         ),
+    });
+  }
+
+  /** CU-417 : simule (ou rétablit) la liste des supports indisponible, pour vérifier le message de l'écran. */
+  protected basculerSimulation(): void {
+    this.message.set(null);
+    this.erreur.set(null);
+    this.service.simulerSupports(!this.supportsIndisponibles()).subscribe({
+      next: (simulation) => this.supportsIndisponibles.set(simulation.indisponible),
+      error: () => this.erreur.set('La simulation n’a pas pu être changée. Réessayez.'),
     });
   }
 
@@ -285,8 +304,14 @@ export class CatalogueTest {
   }
 
   private charger(): void {
-    forkJoin({ date: this.dates.lire(), fichiers: this.service.fichiers(), journal: this.service.journal() }).subscribe({
-      next: ({ date, fichiers, journal }) => {
+    forkJoin({
+      date: this.dates.lire(),
+      fichiers: this.service.fichiers(),
+      journal: this.service.journal(),
+      simulation: this.service.simulationSupports(),
+    }).subscribe({
+      next: ({ date, fichiers, journal, simulation }) => {
+        this.supportsIndisponibles.set(simulation.indisponible);
         this.dateMetier.set(new Date(date.dateMetier).toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris', dateStyle: 'full' }));
         this.fichiers.set(fichiers);
         this.journal.set(journal);

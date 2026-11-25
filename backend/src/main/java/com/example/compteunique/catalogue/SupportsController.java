@@ -29,12 +29,16 @@ public class SupportsController {
 
 	static final String PROFIL_A_VALIDER = "Votre profil doit être validé pour investir en unités de compte";
 
+	static final String LISTE_INDISPONIBLE = "La liste des supports est momentanément indisponible";
+
 	private final SupportsEligibles eligibles;
 	private final ProfilClientService profils;
+	private final SimulationSupports simulation;
 
-	public SupportsController(SupportsEligibles eligibles, ProfilClientService profils) {
+	public SupportsController(SupportsEligibles eligibles, ProfilClientService profils, SimulationSupports simulation) {
 		this.eligibles = eligibles;
 		this.profils = profils;
+		this.simulation = simulation;
 	}
 
 	public record SupportsDisponibles(Produit produit, boolean profilValide, String profilInvestisseur,
@@ -48,6 +52,9 @@ public class SupportsController {
 	public SupportsDisponibles supports(
 			@CookieValue(name = ConnexionController.COOKIE_SESSION, required = false) String jetonSession,
 			@RequestParam("produit") String produit) {
+		if (simulation.estIndisponible()) {
+			throw new ListeIndisponible();
+		}
 		Produit choisi = produit(produit);
 		ProfilClientService.Etat etat = profils.etat(jetonSession);
 		String profil = etat.profil().map(ProfilKyc::getProfilInvestisseur).orElse(null);
@@ -67,6 +74,12 @@ public class SupportsController {
 		throw new ProduitInconnu();
 	}
 
+	/** CU-417 : liste simulée indisponible (test) : 503, aucune liste incomplète. */
+	@ExceptionHandler(ListeIndisponible.class)
+	public ResponseEntity<Refus> indisponible() {
+		return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new Refus(LISTE_INDISPONIBLE));
+	}
+
 	@ExceptionHandler(ProduitInconnu.class)
 	public ResponseEntity<Refus> produitInconnu() {
 		return ResponseEntity.badRequest().body(new Refus("Produit inconnu : PER ou AV attendu."));
@@ -84,6 +97,13 @@ public class SupportsController {
 
 	/** Produit autre que PER ou AV (400). */
 	static class ProduitInconnu extends RuntimeException {
+
+		private static final long serialVersionUID = 1L;
+
+	}
+
+	/** Liste des supports simulée indisponible (503, test seulement). */
+	static class ListeIndisponible extends RuntimeException {
 
 		private static final long serialVersionUID = 1L;
 

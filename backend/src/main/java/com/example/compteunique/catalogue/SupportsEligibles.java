@@ -2,8 +2,10 @@ package com.example.compteunique.catalogue;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.text.Collator;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -71,8 +73,20 @@ public class SupportsEligibles {
 				.filter(s -> List.of(s.getProduitsOuverts().split("\\|")).contains(produit.name()))
 				.filter(s -> s.getNiveauRisque() <= maximum)
 				.map(SupportEligible::de)
-				.sorted(Comparator.comparingInt(SupportEligible::niveauRisque).thenComparing(SupportEligible::nom))
+				.sorted(Comparator.comparingInt(SupportEligible::niveauRisque).thenComparing(SupportEligible::nom,
+						ordreAlphabetiqueFrancais()))
 				.toList();
+	}
+
+	/**
+	 * CU-417 : ordre alphabétique français, sans tenir compte des majuscules ni des accents (« Crédit Euro Investment
+	 * Grade » avant « Crédit Euro ISR », « Énergie » avant « Europe »). Un comparateur par tri : Collator n'est pas
+	 * partagé entre les appels.
+	 */
+	private static Comparator<String> ordreAlphabetiqueFrancais() {
+		Collator collator = Collator.getInstance(Locale.FRENCH);
+		collator.setStrength(Collator.PRIMARY);
+		return collator::compare;
 	}
 
 	/** Frais de gestion annuels du contrat pour les unités de compte, en % (0,50 PER, 0,65 assurance vie). */

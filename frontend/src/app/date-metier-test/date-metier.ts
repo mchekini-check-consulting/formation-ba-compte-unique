@@ -37,6 +37,11 @@ export class DateMetierService {
     return this.http.post<EtatDateMetier>(`${this.url}/date-reelle`, { auteur });
   }
 
+  /** CU-415 : lance la tâche quotidienne de revalidation des profils (test seulement). */
+  lancerRevalidation(): Observable<{ profilsARevalider: number }> {
+    return this.http.post<{ profilsARevalider: number }>(`${apiBase('backend')}/test/profils/revalidation`, {});
+  }
+
   journal(): Observable<ChangementDateMetier[]> {
     return this.http.get<ChangementDateMetier[]>(`${this.url}/journal`);
   }
