@@ -63,16 +63,23 @@ class ClotureLivretAIT {
 	@Autowired
 	private DateMetier dateMetier;
 
+	@Autowired
+	private QuestionsLivretAController questions;
+
 	private String jeton(String identifiant) {
 		return connexion.connecter(identifiant, MOT_DE_PASSE, null).jetonSession();
 	}
 
-	/** Identité confirmée, demande transmise et réponse « Livret A existant » (avec le détail si partagé). */
+	/**
+	 * Identité confirmée, questionnaire rempli (CU-32), demande transmise et réponse « Livret A existant » (avec le
+	 * détail si partagé).
+	 */
 	private DemandeLivretAVue livretAExistant(String jeton, boolean partage) {
 		Coordonnees coordonnees = livretA.identite(jeton).identite().coordonnees();
 		ControleIdentiteVue controle = livretA.confirmerIdentite(jeton, new Confirmation(coordonnees, true)).getBody();
 		livretA.resultatControle(jeton, controle.reference(),
 				new ResultatControle(ResultatSanctions.AUCUNE_CORRESPONDANCE, 1));
+		QuestionnaireDeTest.rempli(questions, jeton);
 		DemandeLivretAVue creee = livretA.demander(jeton, new Eligibilite(true, partage)).getBody();
 		return livretA.reponseFiscale(jeton, creee.reference(),
 				new ResultatInterrogation("interro", ReponseFiscale.LIVRET_A_EXISTANT, partage ? DETAIL : null));

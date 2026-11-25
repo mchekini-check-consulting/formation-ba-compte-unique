@@ -54,6 +54,9 @@ class PieceLivretAIT {
 	@Autowired
 	private DossierRepository dossiers;
 
+	@Autowired
+	private QuestionsLivretAController questions;
+
 	private String identiteConfirmee(String identifiant) {
 		String jeton = connexion.connecter(identifiant, MOT_DE_PASSE, null).jetonSession();
 		Coordonnees coordonnees = livretA.identite(jeton).identite().coordonnees();
@@ -73,6 +76,10 @@ class PieceLivretAIT {
 		DemandeRefusee expiree = assertThrows(DemandeRefusee.class,
 				() -> livretA.demander(jeton, new Eligibilite(true, true)));
 		assertEquals(LivretAService.PIECE_EXPIREE, expiree.getMessage());
+		// CU-32 : l'étape « Questions et données » vient après la nouvelle pièce.
+		DemandeRefusee questionsAvantPiece = assertThrows(DemandeRefusee.class,
+				() -> QuestionnaireDeTest.rempli(questions, jeton));
+		assertEquals(LivretAService.PIECE_EXPIREE, questionsAvantPiece.getMessage());
 
 		PieceLivretAVue piece = livretA
 				.soumettrePiece(jeton, new NouvellePiece(TypePiece.PASSEPORT, "18AB12345", NOUVELLE_EXPIRATION))
@@ -92,6 +99,7 @@ class PieceLivretAIT {
 			assertEquals(NOUVELLE_EXPIRATION, dossier.getDateExpiration());
 		});
 		assertFalse(livretA.piece(jeton).requise());
+		QuestionnaireDeTest.rempli(questions, jeton);
 		assertEquals(StatutDemandeLivretA.EN_COURS_DE_VERIFICATION,
 				livretA.demander(jeton, new Eligibilite(true, false)).getBody().statut());
 	}
