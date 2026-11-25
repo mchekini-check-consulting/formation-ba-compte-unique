@@ -126,6 +126,10 @@ public class ChargementCatalogue {
 				if (support.mettreAJour(ligne, le)) {
 					if (etaitActif && !support.estActif()) {
 						retires++;
+						// CU-383 : seul un passage actif → retire publie l'événement, clé = code ISIN. Un support déjà
+						// retiré au premier chargement n'a jamais été proposé : rien à signaler aux autres modules.
+						kafka.enregistrer(Topic.CATALOGUE, "SupportRetire", support.getCodeIsin(),
+								Map.of("codeIsin", support.getCodeIsin(), "nom", support.getNom()));
 					} else {
 						modifies++;
 					}
@@ -182,6 +186,17 @@ public class ChargementCatalogue {
 			throw new DepotInvalide("Le fichier est trop volumineux (5 Mo au plus).");
 		}
 		return fichiers.save(new FichierDepose(nom, date, contenu, dateMetier.maintenant().toOffsetDateTime()));
+	}
+
+	/**
+	 * CU-383 / CU-412, environnements de test uniquement (seule la page de test l'appelle, absente en preprod et
+	 * prod) : efface les supports et leurs valeurs liquidatives pour recharger un fichier de référence. Le journal du
+	 * batch, les fichiers déposés et les événements sont gardés pour la traçabilité.
+	 */
+	@Transactional
+	public void vider() {
+		historique.deleteAllInBatch();
+		supports.deleteAllInBatch();
 	}
 
 	@Transactional(readOnly = true)
