@@ -158,6 +158,11 @@
             Tous nos produits d'épargne sont ouverts à la souscription depuis votre espace. Le minimum d'ouverture et le
             plafond sont affichés sur chaque carte.
           </p>
+          <!-- CU-412 : supports en unités de compte disponibles pour le PER et l'assurance vie. -->
+          <p class="actions">
+            <a class="btn o sm" data-test="supports-av" routerLink="/supports" [queryParams]="{ produit: 'AV' }">Supports de l'assurance vie</a>
+            <a class="btn o sm" data-test="supports-per" routerLink="/supports" [queryParams]="{ produit: 'PER' }">Supports du PER</a>
+          </p>
           <div class="cards">
             @for (produit of epargne; track produit.nom) {
               <div class="card produit">

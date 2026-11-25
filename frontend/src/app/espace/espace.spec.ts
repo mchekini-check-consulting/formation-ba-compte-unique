@@ -89,6 +89,12 @@ describe('Espace', () => {
     expect(lien.getAttribute('href')).toBe('/livret-a');
   });
 
+  it('la rubrique Épargne mène aux supports disponibles de l’assurance vie et du PER (CU-412)', async () => {
+    const { page } = await ouvrir([COMPTE]);
+    expect(page.querySelector('#epargne [data-test="supports-av"]')!.getAttribute('href')).toBe('/supports?produit=AV');
+    expect(page.querySelector('#epargne [data-test="supports-per"]')!.getAttribute('href')).toBe('/supports?produit=PER');
+  });
+
   it('les deux boutons « Faire un virement » ouvrent la page de virement (CU-11)', async () => {
     const { page } = await ouvrir([COMPTE]);
     const boutons = Array.from(page.querySelectorAll('a')).filter((lien) =>

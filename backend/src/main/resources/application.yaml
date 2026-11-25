@@ -90,6 +90,16 @@ app:
   catalogue:
     # CU-381 : heure du batch nocturne, selon la date métier (TECH-12), du lundi au vendredi. « 2 h, à confirmer ».
     heure: ${CATALOGUE_HEURE:2}
+    # CU-412 : niveau de risque maximum par profil investisseur (décision PO du 23/11/2026, à confirmer par la
+    # conformité), commun au PER et à l'assurance vie. Le niveau 7 n'est jamais proposé en ligne.
+    risque-max:
+      prudent: ${CATALOGUE_RISQUE_MAX_PRUDENT:3}
+      equilibre: ${CATALOGUE_RISQUE_MAX_EQUILIBRE:4}
+      dynamique: ${CATALOGUE_RISQUE_MAX_DYNAMIQUE:6}
+    # CU-412 : frais de gestion annuels du contrat sur les unités de compte, en %.
+    frais-contrat:
+      per: ${CATALOGUE_FRAIS_CONTRAT_PER:0.50}
+      av: ${CATALOGUE_FRAIS_CONTRAT_AV:0.65}
   virements:
     # CU-147 critère 5 : plafond d'un virement en centimes, à valider avec la conformité. 0 = pas de plafond.
     plafond-centimes: ${VIREMENTS_PLAFOND_CENTIMES:0}
