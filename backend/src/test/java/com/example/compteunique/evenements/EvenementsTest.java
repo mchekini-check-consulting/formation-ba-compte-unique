@@ -86,7 +86,7 @@ class EvenementsTest {
 			assertThat(e.getTopic()).isEqualTo("cu-epargne.profil-client");
 			assertThat(e.getCle()).isEqualTo("cliente-1");
 			assertThat(e.getDateMetier()).isEqualTo(LocalDate.of(2026, 12, 31));
-			assertThat(e.getVersion()).isEqualTo(1);
+			assertThat(e.getVersion()).isEqualTo(2);
 			assertThat(e.getContenu()).isEqualTo("{\"statut\":\"VALIDE\"}");
 			assertThat(e.getCreeLe()).isEqualTo(FIN_ANNEE.toOffsetDateTime());
 			assertThat(e.getPublieLe()).isNull();
@@ -106,7 +106,8 @@ class EvenementsTest {
 		ArgumentCaptor<String> valeur = ArgumentCaptor.forClass(String.class);
 		verify(kafka).send(eq("cu-epargne.profil-client"), eq("cliente-1"), valeur.capture());
 		assertThat(MessageEvenement.lire(valeur.getValue())).isEqualTo(new MessageEvenement(id,
-				"StatutProfilModifie", "cliente-1", LocalDate.of(2026, 12, 31), 1, Map.of("statut", "VALIDE")));
+				"StatutProfilModifie", "cliente-1", LocalDate.of(2026, 12, 31), "2026-12-31T11:00:00+01:00", 2,
+				Map.of("statut", "VALIDE")));
 		assertThat(boite.getFirst().getPublieLe()).isEqualTo(FIN_ANNEE.toOffsetDateTime());
 		assertThat(relais.publierEnAttente()).isZero();
 	}
@@ -187,11 +188,38 @@ class EvenementsTest {
 	}
 
 	@Test
+	@DisplayName("CU-413 : étant donné une date métier réglée au 31/12/2026 à 10:00, quand un événement est publié "
+			+ "dans Kafka, alors sa date correspond au 31/12/2026 à 10:00 heure de Paris")
+	void evenementALHeureDeParis() {
+		ZonedDateTime dixHeures = ZonedDateTime.of(2026, 12, 31, 10, 0, 0, 0, DateMetier.PARIS);
+		when(dateMetier.maintenant()).thenReturn(dixHeures);
+		when(dateMetier.aujourdhui()).thenReturn(dixHeures.toLocalDate());
+		enregistrer("cliente-1");
+		// Relu de la base, l'horodatage revient en UTC (09:00Z) : le message doit quand même porter 10:00 à Paris.
+		EvenementADistribuer relu = new EvenementADistribuer(UUID.randomUUID(), "StatutProfilModifie",
+				"cu-epargne.profil-client", "cliente-2", dixHeures.toLocalDate(), Evenements.VERSION, "{}",
+				dixHeures.toOffsetDateTime().withOffsetSameInstant(java.time.ZoneOffset.UTC));
+		boite.add(relu);
+		when(kafka.send(anyString(), anyString(), anyString())).thenReturn(succes());
+
+		assertThat(relais.publierEnAttente()).isEqualTo(2);
+
+		ArgumentCaptor<String> valeurs = ArgumentCaptor.forClass(String.class);
+		verify(kafka, org.mockito.Mockito.times(2)).send(anyString(), anyString(), valeurs.capture());
+		assertThat(valeurs.getAllValues()).allSatisfy(json -> {
+			assertThat(json).contains("\"dateHeure\":\"2026-12-31T10:00:00+01:00\"");
+			MessageEvenement message = MessageEvenement.lire(json);
+			assertThat(message.date()).isEqualTo(LocalDate.of(2026, 12, 31));
+			assertThat(message.version()).isEqualTo(2);
+		});
+	}
+
+	@Test
 	@DisplayName("Un message reçu est relu au format stable ; illisible ou incomplet, il est refusé")
 	void formatDuMessage() {
 		UUID id = UUID.randomUUID();
 		MessageEvenement message = new MessageEvenement(id, "CatalogueMisAJour", "2026-12-31",
-				LocalDate.of(2026, 12, 31), 1, Map.of("ajoutes", 102));
+				LocalDate.of(2026, 12, 31), "2026-12-31T02:00:00+01:00", 2, Map.of("ajoutes", 102));
 
 		MessageEvenement relu = MessageEvenement.lire(message.json());
 		assertThat(relu.id()).isEqualTo(id);

@@ -1,5 +1,6 @@
 package com.example.compteunique.evenements;
 
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -60,7 +61,9 @@ public class RelaisEvenements {
 
 	private boolean envoyer(EvenementADistribuer evenement) {
 		MessageEvenement message = new MessageEvenement(evenement.getEvenementId(), evenement.getType(),
-				evenement.getCle(), evenement.getDateMetier(), evenement.getVersion(),
+				evenement.getCle(), evenement.getDateMetier(),
+				DateMetier.heureDeParis(evenement.getCreeLe()).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+				evenement.getVersion(),
 				MessageEvenement.contenu(evenement.getContenu()));
 		try {
 			kafka.send(evenement.getTopic(), evenement.getCle(), message.json()).get(attenteMs, TimeUnit.MILLISECONDS);
