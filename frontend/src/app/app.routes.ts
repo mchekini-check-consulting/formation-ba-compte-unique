@@ -58,6 +58,8 @@ const PAGES_DE_L_ESPACE: Routes = [
   { path: 'livret-a', loadComponent: () => import('./livret-a/livret-a-page').then((m) => m.LivretAPage) },
   // CU-10 : profil client, requis avant une souscription de PER ou d'assurance vie.
   { path: 'profil', loadComponent: () => import('./profil/profil-page').then((m) => m.ProfilPage) },
+  // CU-412 : supports en unités de compte disponibles pour le PER et l'assurance vie (?produit=PER|AV).
+  { path: 'supports', loadComponent: () => import('./supports/supports-page').then((m) => m.SupportsPage) },
 ];
 
 const protegee = (route: Route): Route => ({ ...route, canActivate: [espaceProtege, ...(route.canActivate ?? [])] });
