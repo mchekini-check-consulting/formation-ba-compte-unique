@@ -13,7 +13,7 @@ applications:
     # remplace tout jusqu'à la fin de la ligne.
     tag:
       dev: cec293d
-      qualif: 6b2d323
+      qualif: cec293d
       preprod: ""
       prod: ""
     containerPort: 8080
@@ -116,7 +116,7 @@ applications:
     # remplace tout jusqu'à la fin de la ligne.
     tag:
       dev: cec293d
-      qualif: 6b2d323
+      qualif: cec293d
       preprod: ""
       prod: ""
     containerPort: 8080
