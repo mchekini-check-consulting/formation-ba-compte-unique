@@ -14,6 +14,9 @@ import {
   LivretAPage,
   PIECE_EXPIREE,
   SANS_IDENTITE_CONFIRMEE,
+  CERTIFICAT_OBLIGATOIRE,
+  MOTIF_REFUS_TEST,
+  SUITE_OBLIGATOIRE,
 } from './livret-a-page';
 
 const EN_COURS: DemandeLivretA = {
@@ -64,6 +67,10 @@ describe('LivretAPage (CU-31)', () => {
     transmettreControle: vi.fn(),
     simulerValidationResponsable: vi.fn(),
     piece: vi.fn(),
+    choisirSuite: vi.fn(),
+    deposerCertificat: vi.fn(),
+    simulerValidationCertificat: vi.fn(),
+    simulerRefusCertificat: vi.fn(),
   };
   const PIECE_VALIDE = { requise: false, dateExpirationActuelle: '2035-01-01', verification: null };
   const PIECE_EXPIREE_ETAPE = { requise: true, dateExpirationActuelle: '2024-01-01', verification: null };
@@ -142,7 +149,7 @@ describe('LivretAPage (CU-31)', () => {
       partageDetailAutorise: true,
       casDeTest: 'DETENU_AILLEURS',
     });
-    expect(service.transmettreReponse).toHaveBeenCalledWith('ref-1', 'i-1', 'AUCUN_LIVRET_A');
+    expect(service.transmettreReponse).toHaveBeenCalledWith('ref-1', 'i-1', 'AUCUN_LIVRET_A', null);
     expect(page.querySelector('.statut')?.textContent?.trim()).toBe('Ouverture validée');
     expect(page.querySelector('.texte')?.textContent).toBe('Ouverture validée.');
   });
@@ -154,7 +161,7 @@ describe('LivretAPage (CU-31)', () => {
     page.querySelector<HTMLInputElement>('input[name=attestation]')!.click();
     page.querySelector<HTMLInputElement>('input[name=partage][value=oui]')!.click();
     await valider(fixture, page);
-    expect(service.transmettreReponse).toHaveBeenCalledWith('ref-1', null, 'INDISPONIBLE');
+    expect(service.transmettreReponse).toHaveBeenCalledWith('ref-1', null, 'INDISPONIBLE', null);
     expect(page.querySelector('.statut')?.textContent?.trim()).toBe('En cours de vérification');
     expect(page.textContent).toContain('2 jours ouvrés');
   });
@@ -196,7 +203,7 @@ describe('LivretAPage (CU-31)', () => {
     const boutons = Array.from(page.querySelectorAll<HTMLButtonElement>('button.secondaire'));
     boutons.find((b) => b.textContent?.includes('Relancer'))!.click();
     await fixture.whenStable();
-    expect(service.transmettreReponse).toHaveBeenCalledWith('ref-1', 'i-1', 'AUCUN_LIVRET_A');
+    expect(service.transmettreReponse).toHaveBeenCalledWith('ref-1', 'i-1', 'AUCUN_LIVRET_A', null);
 
     fixture.detectChanges();
     Array.from(page.querySelectorAll<HTMLButtonElement>('button.secondaire'))
@@ -343,5 +350,152 @@ describe('LivretAPage (CU-31)', () => {
     page.querySelector<HTMLInputElement>('input[name=partage][value=oui]')!.click();
     await valider(fixture, page);
     expect(page.querySelector('.message')).toBeNull();
+  });
+
+  // CU-296 (US-22B) : Livret A déjà détenu dans une autre banque.
+  describe('Livret A détenu ailleurs (CU-296)', () => {
+    const EXISTANT: DemandeLivretA = {
+      ...VALIDEE,
+      statut: 'LIVRET_A_EXISTANT',
+      message: 'Vous détenez déjà un Livret A.',
+      reponseFiscale: 'LIVRET_A_EXISTANT',
+      partageDetailAutorise: false,
+      detail: null,
+      delaiVerification: '48 heures ouvrées',
+    };
+    const EN_ATTENTE: DemandeLivretA = {
+      ...EXISTANT,
+      statut: 'EN_ATTENTE_CERTIFICAT',
+      message: 'Déposez votre certificat.',
+      suiteChoisie: 'CLOTURE_PAR_CLIENTE',
+      dateLimiteCertificat: '2027-02-12',
+    };
+    const A_VERIFIER: DemandeLivretA = {
+      ...EN_ATTENTE,
+      statut: 'CERTIFICAT_A_VERIFIER',
+      message: 'Certificat reçu.',
+      certificat: { nomFichier: 'certificat.pdf', deposeLe: '2026-11-25T09:00:00Z', decision: null, motifRefus: null },
+    };
+
+    async function rafraichir(fixture: { whenStable: () => Promise<unknown>; detectChanges: () => void }) {
+      await fixture.whenStable();
+      fixture.detectChanges();
+    }
+
+    function deposer(page: HTMLElement, fichier: File) {
+      const champ = page.querySelector<HTMLInputElement>('#certificat-fichier')!;
+      Object.defineProperty(champ, 'files', { value: [fichier], configurable: true });
+      champ.dispatchEvent(new Event('change'));
+    }
+
+    it('partage refusé : établissement non communiqué et deux choix, choix obligatoire', async () => {
+      service.etat.mockReturnValue(of({ demande: EXISTANT }));
+      service.choisirSuite.mockReturnValue(of(EN_ATTENTE));
+      const { fixture, page } = await afficher();
+      expect(page.querySelector('.detail')?.textContent).toContain('établissement non communiqué');
+      expect(page.querySelectorAll('input[name=suite]').length).toBe(2);
+
+      page.querySelector<HTMLButtonElement>('form.choix-suite button')!.click();
+      await rafraichir(fixture);
+      expect(page.querySelector('.message')?.textContent).toBe(SUITE_OBLIGATOIRE);
+      expect(service.choisirSuite).not.toHaveBeenCalled();
+
+      page.querySelector<HTMLInputElement>('input[name=suite][value=CLOTURE_PAR_CLIENTE]')!.click();
+      page.querySelector<HTMLButtonElement>('form.choix-suite button')!.click();
+      await rafraichir(fixture);
+      expect(service.choisirSuite).toHaveBeenCalledWith('ref-1', 'CLOTURE_PAR_CLIENTE');
+      expect(page.querySelector('.statut')?.textContent?.trim()).toBe('En attente du certificat de clôture');
+      expect(page.querySelector('.limite')?.textContent).toContain('12/02/2027');
+    });
+
+    it('partage accepté : détail du livret existant enregistré par le backend', async () => {
+      service.etat.mockReturnValue(
+        of({
+          demande: {
+            ...EXISTANT,
+            partageDetailAutorise: true,
+            detail: { etablissement: 'Banque Exemple', agence: 'Agence Paris Centre', dateOuverture: '2015-03-02' },
+          },
+        }),
+      );
+      const { page } = await afficher();
+      expect(page.querySelector('.detail')?.textContent).toContain('Banque Exemple, Agence Paris Centre, ouvert le 02/03/2015');
+    });
+
+    it('fichier de 3 Mo ou mauvais format refusé avant envoi, puis certificat envoyé', async () => {
+      service.etat.mockReturnValue(of({ demande: EN_ATTENTE }));
+      service.deposerCertificat.mockReturnValue(of(A_VERIFIER));
+      const { fixture, page } = await afficher();
+
+      page.querySelector<HTMLButtonElement>('form.certificat button')!.click();
+      await rafraichir(fixture);
+      expect(page.querySelector('#err-certificat')?.textContent).toBe(CERTIFICAT_OBLIGATOIRE);
+
+      deposer(page, new File([new Uint8Array(3 * 1024 * 1024)], 'lourd.pdf', { type: 'application/pdf' }));
+      await rafraichir(fixture);
+      expect(page.querySelector('#err-certificat')?.textContent).toContain('2 Mo maximum');
+      deposer(page, new File(['x'], 'certificat.docx', { type: 'application/msword' }));
+      await rafraichir(fixture);
+      expect(page.querySelector('#err-certificat')?.textContent).toContain('Format non accepté');
+      page.querySelector<HTMLButtonElement>('form.certificat button')!.click();
+      expect(service.deposerCertificat).not.toHaveBeenCalled();
+
+      const bon = new File(['%PDF'], 'certificat.pdf', { type: 'application/pdf' });
+      deposer(page, bon);
+      page.querySelector<HTMLButtonElement>('form.certificat button')!.click();
+      await rafraichir(fixture);
+      expect(service.deposerCertificat).toHaveBeenCalledWith('ref-1', bon);
+      expect(page.querySelector('.statut')?.textContent?.trim()).toBe('Certificat à vérifier');
+      expect(page.querySelector('.certificat-depose')?.textContent).toContain('48 heures ouvrées');
+    });
+
+    it('dépôt refusé par le backend (date limite dépassée) : message et rechargement', async () => {
+      service.etat.mockReturnValue(of({ demande: EN_ATTENTE }));
+      service.deposerCertificat.mockReturnValue(refus(409, { message: 'Date limite dépassée.', termine: true }));
+      const { fixture, page } = await afficher();
+      deposer(page, new File(['%PDF'], 'certificat.pdf', { type: 'application/pdf' }));
+      page.querySelector<HTMLButtonElement>('form.certificat button')!.click();
+      await rafraichir(fixture);
+      expect(page.querySelector('.message')?.textContent).toBe('Date limite dépassée.');
+      expect(service.etat).toHaveBeenCalledTimes(2);
+    });
+
+    it('boutons de test : refus puis validation du certificat par un conseiller', async () => {
+      service.etat.mockReturnValue(of({ demande: A_VERIFIER }));
+      service.simulerValidationCertificat.mockReturnValue(of({ ...VALIDEE, message: 'Certificat validé.' }));
+      service.simulerRefusCertificat.mockReturnValue(of(A_VERIFIER));
+      const { fixture, page } = await afficher();
+      expect(page.querySelector('a[href="/test/date-metier"]')).not.toBeNull();
+      const bouton = (texte: string) =>
+        Array.from(page.querySelectorAll<HTMLButtonElement>('button.secondaire')).find((b) => b.textContent?.includes(texte))!;
+
+      bouton('Simuler le refus').click();
+      await rafraichir(fixture);
+      expect(service.simulerRefusCertificat).toHaveBeenCalledWith('ref-1', MOTIF_REFUS_TEST);
+
+      bouton('Simuler la validation').click();
+      await rafraichir(fixture);
+      expect(service.simulerValidationCertificat).toHaveBeenCalledWith('ref-1');
+      expect(page.querySelector('.statut')?.textContent?.trim()).toBe('Ouverture validée');
+    });
+
+    it('demande renoncée : nouvelle demande possible depuis l’étape « Mon identité »', async () => {
+      service.etat.mockReturnValue(of({ demande: { ...EXISTANT, statut: 'RENONCEE', message: 'Renoncée.' } }));
+      const { fixture, page } = await afficher();
+      expect(page.querySelector('.statut')?.textContent?.trim()).toBe('Demande annulée (renonciation)');
+      page.querySelector<HTMLButtonElement>('button.nouvelle')!.click();
+      await rafraichir(fixture);
+      expect(service.identite).toHaveBeenCalled();
+      expect(page.querySelector('form.eligibilite')).not.toBeNull();
+    });
+
+    it('nouvelle demande : étapes indisponibles, message d’erreur', async () => {
+      service.etat.mockReturnValue(of({ demande: { ...EXISTANT, statut: 'ANNULEE', message: 'Annulée.' } }));
+      service.identite.mockReturnValue(refus(500, null));
+      const { fixture, page } = await afficher();
+      page.querySelector<HTMLButtonElement>('button.nouvelle')!.click();
+      await rafraichir(fixture);
+      expect(page.querySelector('[role=alert]')?.textContent).toContain('momentanément indisponible');
+    });
   });
 });

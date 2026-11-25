@@ -33,7 +33,7 @@ describe('LivretAService (CU-31) et bouchon fiscal (CU-295)', () => {
       requete.flush(null);
     }
     expect(demander.request.body).toEqual({ attestation: true, partageDetailAutorise: false });
-    expect(reponse.request.body).toEqual({ interrogationId: 'i-1', resultat: 'AUCUN_LIVRET_A' });
+    expect(reponse.request.body).toEqual({ interrogationId: 'i-1', resultat: 'AUCUN_LIVRET_A', detail: null });
   });
 
   it('appelle les routes /livret-a/identite du backend (CU-28) avec le cookie de session', () => {
@@ -106,5 +106,30 @@ describe('LivretAService (CU-31) et bouchon fiscal (CU-295)', () => {
     });
     expect(requete.request.body).toEqual(interrogation);
     requete.flush(null);
+  });
+
+  it('appelle les routes de CU-296 (choix, certificat en multipart, boutons de test du conseiller)', () => {
+    const service = TestBed.inject(LivretAService);
+    const fichier = new File([new Uint8Array(4)], 'certificat.pdf', { type: 'application/pdf' });
+    const detail = { etablissement: 'Banque Exemple', agence: 'Agence Paris Centre', dateOuverture: '2015-03-02' };
+    service.transmettreReponse('ref', 'i-1', 'LIVRET_A_EXISTANT', detail).subscribe();
+    service.choisirSuite('ref', 'CLOTURE_PAR_CLIENTE').subscribe();
+    service.deposerCertificat('ref', fichier).subscribe();
+    service.simulerValidationCertificat('ref').subscribe();
+    service.simulerRefusCertificat('ref', 'Illisible').subscribe();
+
+    const reponse = http.expectOne('/api/backend/livret-a/demandes/ref/reponse-fiscale');
+    const suite = http.expectOne({ method: 'POST', url: '/api/backend/livret-a/demandes/ref/suite' });
+    const depot = http.expectOne({ method: 'POST', url: '/api/backend/livret-a/demandes/ref/certificats' });
+    const validation = http.expectOne({ method: 'POST', url: '/api/backend/test/livret-a/demandes/ref/certificat/validation' });
+    const refus = http.expectOne({ method: 'POST', url: '/api/backend/test/livret-a/demandes/ref/certificat/refus' });
+    expect(reponse.request.body).toEqual({ interrogationId: 'i-1', resultat: 'LIVRET_A_EXISTANT', detail });
+    expect(suite.request.body).toEqual({ choix: 'CLOTURE_PAR_CLIENTE' });
+    expect((depot.request.body as FormData).get('fichier')).toBeInstanceOf(File);
+    expect(refus.request.body).toEqual({ motif: 'Illisible' });
+    for (const requete of [reponse, suite, depot, validation, refus]) {
+      expect(requete.request.withCredentials).toBe(true);
+      requete.flush(null);
+    }
   });
 });

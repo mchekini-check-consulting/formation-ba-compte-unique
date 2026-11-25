@@ -23,4 +23,7 @@ public interface DemandeLivretARepository extends JpaRepository<DemandeLivretA, 
 	/** Tâche quotidienne : demandes encore en cours de vérification, sans alerte du conseiller. */
 	List<DemandeLivretA> findByStatutAndConseillerAlerteLeIsNull(StatutDemandeLivretA statut);
 
+	/** CU-296 : tâche quotidienne, demandes en attente du certificat de clôture ou de sa vérification. */
+	List<DemandeLivretA> findByStatutIn(Collection<StatutDemandeLivretA> statuts);
+
 }
