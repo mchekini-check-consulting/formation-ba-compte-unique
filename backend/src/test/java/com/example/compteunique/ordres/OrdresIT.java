@@ -34,6 +34,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.kafka.KafkaContainer;
@@ -75,6 +76,9 @@ class OrdresIT {
 	@Autowired
 	private ConfigurationKafka configuration;
 
+	@Autowired
+	private TransactionTemplate transactions;
+
 	@MockitoBean
 	private CatalogueService catalogue;
 
@@ -104,8 +108,9 @@ class OrdresIT {
 			+ "échoue, alors ni l'ordre ni l'événement « ordre demandé » n'existent en base")
 	void critere5AnnulationComplete() {
 		UUID id = UUID.randomUUID();
-		doThrow(new IllegalStateException("panne de la boîte d'envoi")).when(evenements)
-				.enregistrer(eq(Topic.ORDRES), anyString(), anyString(), any());
+		// La boîte d'envoi exige une transaction (propagation MANDATORY), y compris pendant la préparation de la panne.
+		transactions.executeWithoutResult(statut -> doThrow(new IllegalStateException("panne de la boîte d'envoi"))
+				.when(evenements).enregistrer(eq(Topic.ORDRES), anyString(), anyString(), any()));
 
 		assertThatThrownBy(() -> service.passer(
 				new DemandeOrdre(id, contrat(), TypeOrdre.VERSEMENT, null, UC, new BigDecimal("100"))))
