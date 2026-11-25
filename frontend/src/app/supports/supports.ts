@@ -35,6 +35,8 @@ export class SupportsService {
   private readonly url = `${apiBase('backend')}/catalogue/supports`;
 
   lister(produit: Produit): Observable<SupportsDisponibles> {
-    return this.http.get<SupportsDisponibles>(this.url, { params: { produit } });
+    // CU-417 : withCredentials pour envoyer le cookie de session au gateway (autre adresse que l'écran) ; sans lui,
+    // le backend répond 401 et l'application renvoie vers la connexion, puis vers l'espace.
+    return this.http.get<SupportsDisponibles>(this.url, { params: { produit }, withCredentials: true });
   }
 }

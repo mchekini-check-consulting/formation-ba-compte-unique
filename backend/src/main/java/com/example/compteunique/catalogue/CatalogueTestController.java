@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -30,6 +31,7 @@ import com.example.compteunique.catalogue.JournalBatch.Declenchement;
 // GET  /test/catalogue/journal   : les 20 dernières exécutions, avec les lignes rejetées.
 // GET  /test/catalogue/supports/{isin}/valeurs-liquidatives : historique des VL d'un support (CU-383).
 // DELETE /test/catalogue/supports  : vider le catalogue (supports et VL), avant de recharger un fichier (CU-383).
+// GET|PUT /test/catalogue/simulation-supports : simuler la liste des supports indisponible {indisponible} (CU-417).
 // Absent en preprod et prod (CATALOGUE_SIMULE=false, helm.yaml : 404) ; le batch automatique y tourne toujours.
 @RestController
 @RequestMapping("/test/catalogue")
@@ -38,10 +40,13 @@ public class CatalogueTestController {
 
 	private final ChargementCatalogue chargement;
 	private final CatalogueService catalogue;
+	private final SimulationSupports simulation;
 
-	public CatalogueTestController(ChargementCatalogue chargement, CatalogueService catalogue) {
+	public CatalogueTestController(ChargementCatalogue chargement, CatalogueService catalogue,
+			SimulationSupports simulation) {
 		this.chargement = chargement;
 		this.catalogue = catalogue;
+		this.simulation = simulation;
 	}
 
 	public record Depot(String nomFichier, String contenu) {
@@ -70,6 +75,10 @@ public class CatalogueTestController {
 							.toList());
 		}
 
+	}
+
+	/** CU-417 : liste des supports simulée indisponible ou non. */
+	public record Simulation(boolean indisponible) {
 	}
 
 	public record Refus(String message) {
@@ -110,6 +119,19 @@ public class CatalogueTestController {
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public void vider() {
 		chargement.vider();
+	}
+
+	/** CU-417 : état de la simulation « liste des supports indisponible ». */
+	@GetMapping("/simulation-supports")
+	public Simulation simulationSupports() {
+		return new Simulation(simulation.estIndisponible());
+	}
+
+	/** CU-417 : active ou désactive la simulation ; l'écran /supports affiche alors son message d'indisponibilité. */
+	@PutMapping("/simulation-supports")
+	public Simulation simulerSupports(@RequestBody Simulation demande) {
+		simulation.indisponible(demande.indisponible());
+		return simulationSupports();
 	}
 
 	@ExceptionHandler(DepotInvalide.class)

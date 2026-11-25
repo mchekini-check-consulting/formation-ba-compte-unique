@@ -446,7 +446,7 @@ class ChargementCatalogueTest {
 	@Test
 	@DisplayName("Page de test : dépôt, lancement, journal, et refus clairs (400 dépôt invalide, 409 week-end)")
 	void routesDeTest() {
-		CatalogueTestController routes = new CatalogueTestController(chargement, catalogue);
+		CatalogueTestController routes = new CatalogueTestController(chargement, catalogue, new SimulationSupports());
 
 		assertThat(routes.deposer(new Depot(" catalogue_uc_2026-11-23.csv ", FichiersCatalogue.avecAnomalies())))
 				.satisfies(f -> assertThat(f.dateFichier()).isEqualTo(LocalDate.of(2026, 11, 23)));
@@ -470,7 +470,7 @@ class ChargementCatalogueTest {
 	@DisplayName("Page de test : historique des valeurs liquidatives (404 si le support est inconnu) et action "
 			+ "« Vider le catalogue »")
 	void routesHistoriqueEtVider() {
-		CatalogueTestController routes = new CatalogueTestController(chargement, catalogue);
+		CatalogueTestController routes = new CatalogueTestController(chargement, catalogue, new SimulationSupports());
 		routes.deposer(new Depot("catalogue_uc_2026-11-23.csv", FichiersCatalogue.principal()));
 		routes.lancer();
 
