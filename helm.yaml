@@ -13,7 +13,7 @@ applications:
     # remplace tout jusqu'à la fin de la ligne.
     tag:
       dev: 2e5d5e4
-      qualif: ff05269
+      qualif: 2e5d5e4
       preprod: ""
       prod: ""
     containerPort: 8080
@@ -123,7 +123,7 @@ applications:
     # remplace tout jusqu'à la fin de la ligne.
     tag:
       dev: 365dffd
-      qualif: ff05269
+      qualif: 365dffd
       preprod: ""
       prod: ""
     containerPort: 8080
