@@ -12,12 +12,23 @@ import com.example.compteunique.livreta.LivretAService.Transmission;
  * ouvrés). transmission : identité à transmettre à l'administration fiscale, tant que la demande est en cours.
  * CU-296 : detail du livret existant (null = « établissement non communiqué »), suite choisie, date limite de dépôt
  * du certificat de clôture, dernier certificat déposé et délai de vérification annoncé.
+ * CU-33 : versement initial choisi (en centimes) et date de saisie, null tant qu'il n'est pas choisi.
  */
 public record DemandeLivretAVue(String reference, StatutDemandeLivretA statut, String message,
 		OffsetDateTime attestationLe, boolean partageDetailAutorise, OffsetDateTime choixPartageLe,
 		OffsetDateTime interrogationLe, ReponseFiscale reponseFiscale, boolean retard, String delai,
 		Transmission transmission, DetailLivretA detail, SuiteLivretAExistant suiteChoisie,
-		LocalDate dateLimiteCertificat, CertificatVue certificat, String delaiVerification) {
+		LocalDate dateLimiteCertificat, CertificatVue certificat, String delaiVerification,
+		Long versementInitialCentimes, OffsetDateTime versementSaisiLe) {
+
+	/** CU-33 : montant enregistré, débité seulement à la signature (CU-34). */
+	static final String VERSEMENT_ENREGISTRE = "Votre versement initial de %s est enregistré. Il sera débité de votre compte courant à la signature de votre convention. Prochaine étape : la signature de votre convention.";
+
+	/** « 1 240,50 € » pour 124050 centimes. */
+	static String euros(long centimes) {
+		String entier = String.valueOf(centimes / 100).replaceAll("\\B(?=(\\d{3})+(?!\\d))", " ");
+		return "%s,%02d €".formatted(entier, centimes % 100);
+	}
 
 	/** CU-296 : dernier certificat de clôture déposé (sans le fichier). decision null = à vérifier. */
 	public record CertificatVue(String nomFichier, OffsetDateTime deposeLe, Decision decision, String motifRefus) {
@@ -52,11 +63,14 @@ public record DemandeLivretAVue(String reference, StatutDemandeLivretA statut, S
 				demande.isPartageDetailAutorise(), demande.getChoixPartageLe(), demande.getInterrogationLe(),
 				demande.getReponseFiscale(), retard, DELAI_REPONSE, suivi.transmission(), demande.getDetail(),
 				demande.getSuiteChoisie(), demande.getDateLimiteCertificat(), CertificatVue.de(suivi.certificat()),
-				DELAI_VERIFICATION);
+				DELAI_VERIFICATION, demande.getVersementInitialCentimes(), demande.getVersementSaisiLe());
 	}
 
 	private static String message(DemandeLivretA demande, boolean retard, CertificatClotureLivretA certificat) {
 		String dateLimite = ClotureLivretAService.jour(demande.getDateLimiteCertificat());
+		if (demande.getStatut() == StatutDemandeLivretA.OUVERTURE_VALIDEE && demande.getVersementInitialCentimes() != null) {
+			return VERSEMENT_ENREGISTRE.formatted(euros(demande.getVersementInitialCentimes()));
+		}
 		return switch (demande.getStatut()) {
 			case OUVERTURE_VALIDEE -> demande.getSuiteChoisie() == SuiteLivretAExistant.CLOTURE_PAR_CLIENTE
 					? CERTIFICAT_VALIDE

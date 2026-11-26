@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
+import { ComptesService } from '../comptes/comptes';
 import { BouchonsIdentiteService, ReponseFiscale } from '../identification/bouchons-identite';
 import { SuiviSession } from '../session/suivi-session';
 import { ControleIdentite, DemandeLivretA, EtapeQuestions, IdentiteLivretA, LivretAService } from './livret-a';
@@ -111,6 +112,11 @@ describe('LivretAPage (CU-31)', () => {
         { provide: LivretAService, useValue: service },
         { provide: BouchonsIdentiteService, useValue: bouchons },
         { provide: SuiviSession, useValue: suivi },
+        // CU-33 : compte courant lu par le versement initial, quand l'ouverture est validée.
+        {
+          provide: ComptesService,
+          useValue: { mesComptes: vi.fn(() => of([{ id: 1, ibanMasque: '•••• 0105', statut: 'ACTIF', soldeCentimes: 124050, soldeMisAJourLe: null, premierVersementAttendu: false }])) },
+        },
       ],
     }).compileComponents();
   });
@@ -377,6 +383,23 @@ describe('LivretAPage (CU-31)', () => {
     const { page } = await afficher();
     expect(page.querySelector('form.eligibilite')).toBeNull();
     expect(page.querySelector('app-etape-questions-livret-a')).toBeNull();
+  });
+
+  // CU-33 : versement initial seulement quand l'ouverture est validée ; la demande mise à jour est affichée.
+  it('ouverture validée : versement initial proposé, demande mise à jour après validation du montant', async () => {
+    service.etat.mockReturnValue(of({ demande: VALIDEE }));
+    const { fixture, page } = await afficher();
+    expect(page.querySelector('app-versement-initial-livret-a')).not.toBeNull();
+    const enregistree = { ...VALIDEE, message: 'Versement enregistré.', versementInitialCentimes: 15050 };
+    fixture.debugElement.query((e) => e.name === 'app-versement-initial-livret-a').componentInstance.demandeChange.emit(enregistree);
+    fixture.detectChanges();
+    expect(page.querySelector('.suivi .texte')?.textContent).toBe('Versement enregistré.');
+  });
+
+  it('demande en cours de vérification : pas de versement initial', async () => {
+    service.etat.mockReturnValue(of({ demande: EN_COURS }));
+    const { page } = await afficher();
+    expect(page.querySelector('app-versement-initial-livret-a')).toBeNull();
   });
 
   it('pièce indisponible : message de chargement en erreur', async () => {

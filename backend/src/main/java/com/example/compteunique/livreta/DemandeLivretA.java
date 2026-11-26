@@ -101,7 +101,41 @@ public class DemandeLivretA {
 	@Column(name = "annulee_le")
 	private OffsetDateTime annuleeLe;
 
+	// CU-33 : versement initial choisi (débité seulement à la signature, CU-34).
+	@Column(name = "versement_initial_centimes")
+	private Long versementInitialCentimes;
+
+	@Column(name = "compte_debit_id")
+	private Long compteDebitId;
+
+	@Column(name = "versement_saisi_le")
+	private OffsetDateTime versementSaisiLe;
+
 	protected DemandeLivretA() {
+	}
+
+	/** CU-33 : ouverture validée, le versement initial peut être choisi (ou remplacé avant la signature). */
+	boolean attendVersementInitial() {
+		return statut == StatutDemandeLivretA.OUVERTURE_VALIDEE;
+	}
+
+	/** CU-33 : montant enregistré avec le compte courant à débiter et la date ; rien n'est débité ici. */
+	void choisirVersementInitial(long montantCentimes, Long compteId, OffsetDateTime maintenant) {
+		versementInitialCentimes = montantCentimes;
+		compteDebitId = compteId;
+		versementSaisiLe = maintenant;
+	}
+
+	public Long getVersementInitialCentimes() {
+		return versementInitialCentimes;
+	}
+
+	public Long getCompteDebitId() {
+		return compteDebitId;
+	}
+
+	public OffsetDateTime getVersementSaisiLe() {
+		return versementSaisiLe;
 	}
 
 	/** Attestation validée et choix de partage enregistrés avec la date et l'heure. */
