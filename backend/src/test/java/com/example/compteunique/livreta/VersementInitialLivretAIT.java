@@ -26,7 +26,7 @@ import com.example.compteunique.livreta.LivretAController.ResultatControle;
 import com.example.compteunique.livreta.LivretAController.ResultatInterrogation;
 import com.example.compteunique.livreta.VersementInitialLivretAController.VersementInitial;
 
-// CU-33 contre un vrai PostgreSQL (migration V33, comptes de test de db/demo : TEST-CLIENTE-A, solde 1 240,50 €) :
+// CU-33 contre un vrai PostgreSQL (migration V35, comptes de test de db/demo : TEST-CLIENTE-A, solde 1 240,50 €) :
 // versement refusé avant l'ouverture validée, sous le minimum ou au-delà du solde ; montant enregistré dans la
 // demande avec le compte courant à débiter, sans débit ni Livret A créé.
 @SpringBootTest(properties = "spring.flyway.locations=classpath:db/migration,classpath:db/demo")
