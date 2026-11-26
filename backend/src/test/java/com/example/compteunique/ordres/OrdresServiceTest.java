@@ -21,8 +21,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -34,10 +36,14 @@ import com.example.compteunique.catalogue.CatalogueService.SupportUc;
 import com.example.compteunique.datemetier.DateMetier;
 import com.example.compteunique.evenements.ConfigurationKafka.Topic;
 import com.example.compteunique.evenements.Evenements;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import com.example.compteunique.ordres.OrdresService.AnnulationImpossible;
 import com.example.compteunique.ordres.OrdresService.DemandeInvalide;
 import com.example.compteunique.ordres.OrdresService.DemandeOrdre;
 import com.example.compteunique.ordres.OrdresService.Enregistrement;
 import com.example.compteunique.ordres.OrdresService.MontantInsuffisant;
+import com.example.compteunique.ordres.OrdresService.OrdreIntrouvable;
 
 // CU-376 (TECH-08) : critères d'acceptation de l'enregistrement des ordres, base et Kafka simulés en mémoire.
 // La publication par le relais (critères 7 et 8, tests CU-387, CU-388, CU-390) est vérifiée dans OrdresKafkaTest ;
@@ -74,14 +80,14 @@ class OrdresServiceTest {
 			baseOrdres.add(appel.getArgument(0));
 			return appel.getArgument(0);
 		});
-		when(ordres.montantEnCours(anyString(), anyString(), anyCollection())).thenAnswer(appel -> {
-			Collection<StatutOrdre> statuts = appel.getArgument(2);
-			return baseOrdres.stream()
-					.filter(o -> o.getNumeroContrat().equals(appel.getArgument(0))
-							&& appel.getArgument(1).equals(o.getSupportDepart()) && statuts.contains(o.getStatut()))
-					.map(Ordre::getMontant)
-					.reduce(BigDecimal.ZERO, BigDecimal::add);
-		});
+		when(ordres.verrouillerOrdre(any())).thenAnswer(
+				appel -> baseOrdres.stream().filter(o -> o.getId().equals(appel.getArgument(0))).findFirst());
+		when(ordres.montantEnCours(anyString(), anyString(), anyCollection()))
+				.thenAnswer(appel -> somme(appel.getArgument(0), appel.getArgument(1), appel.getArgument(2),
+						Ordre::getMontant));
+		when(ordres.partsEnCours(anyString(), anyString(), anyCollection()))
+				.thenAnswer(appel -> somme(appel.getArgument(0), appel.getArgument(1), appel.getArgument(2),
+						Ordre::getNombreParts));
 		when(ordres.findTop50ByOrderByDemandeLeDesc()).thenAnswer(appel -> baseOrdres.reversed());
 		doAnswer(appel -> {
 			baseOrdres.clear();
@@ -101,6 +107,16 @@ class OrdresServiceTest {
 			return null;
 		}).when(positionsTest).deleteAllInBatch();
 		when(evenements.enregistrer(any(), anyString(), anyString(), any())).thenAnswer(appel -> UUID.randomUUID());
+	}
+
+	private BigDecimal somme(String contrat, String support, Collection<StatutOrdre> statuts,
+			Function<Ordre, BigDecimal> valeur) {
+		return baseOrdres.stream()
+				.filter(o -> o.getNumeroContrat().equals(contrat) && support.equals(o.getSupportDepart())
+						&& statuts.contains(o.getStatut()))
+				.map(valeur)
+				.filter(Objects::nonNull)
+				.reduce(BigDecimal.ZERO, BigDecimal::add);
 	}
 
 	static SupportUc support(String isin, String vl) {
@@ -314,6 +330,155 @@ class OrdresServiceTest {
 		assertThat(baseOrdres).isEmpty();
 		assertThat(basePositions).isEmpty();
 		assertThat(service.montantDisponible(CONTRAT, UC)).isEqualByComparingTo("0");
+	}
+
+	// --- Compléments CU-376 : ordre en nombre de parts (rachat, arbitrage) ---
+
+	private static DemandeOrdre rachatEnParts(UUID id, String parts) {
+		return new DemandeOrdre(id, CONTRAT, TypeOrdre.RACHAT, UC, null, null, new BigDecimal(parts));
+	}
+
+	@Test
+	@DisplayName("Ordre en parts : étant donné 3 000 € sur une UC à 25 €, quand la cliente rachète 40 parts, alors "
+			+ "l'ordre est enregistré en parts et 1 000 € (40 × dernière VL) sont bloqués")
+	void rachatEnPartsBloqueLaValeurDesParts() {
+		positions.enregistrerPositionTest(CONTRAT, UC, new BigDecimal("3000"), null);
+
+		Ordre ordre = service.passer(rachatEnParts(UUID.randomUUID(), "40")).ordre();
+
+		assertThat(ordre.enParts()).isTrue();
+		assertThat(ordre.getNombreParts()).isEqualByComparingTo("40");
+		assertThat(ordre.getMontant()).isNull();
+		assertThat(service.montantDisponible(CONTRAT, UC)).isEqualByComparingTo("2000");
+
+		service.passer(rachat(UUID.randomUUID(), "500"));
+		assertThat(service.montantDisponible(CONTRAT, UC)).isEqualByComparingTo("1500");
+	}
+
+	@Test
+	@DisplayName("Ordre en parts : le montant bloqué suit la dernière VL du catalogue, recalculée à chaque lecture")
+	void partsRevaloriseesALaDerniereVl() {
+		positions.enregistrerPositionTest(CONTRAT, UC, new BigDecimal("3000"), null);
+		service.passer(rachatEnParts(UUID.randomUUID(), "40"));
+
+		when(catalogue.support(UC)).thenReturn(Optional.of(support(UC, "30.00")));
+
+		assertThat(service.montantDisponible(CONTRAT, UC)).isEqualByComparingTo("1800");
+	}
+
+	@Test
+	@DisplayName("Ordre en parts : une demande qui dépasse le montant disponible est refusée avec ce montant")
+	void partsAuDelaDuDisponible() {
+		positions.enregistrerPositionTest(CONTRAT, UC, new BigDecimal("3000"), null);
+
+		assertThatThrownBy(() -> service.passer(rachatEnParts(UUID.randomUUID(), "120.5")))
+				.isInstanceOfSatisfying(MontantInsuffisant.class,
+						refus -> assertThat(refus.getDisponible()).isEqualByComparingTo("3000"));
+		assertThat(service.passer(rachatEnParts(UUID.randomUUID(), "120")).nouveau()).isTrue();
+		assertThat(service.montantDisponible(CONTRAT, UC)).isEqualByComparingTo("0");
+	}
+
+	@Test
+	@DisplayName("Ordre en parts : l'événement « ordre demandé » contient le nombre de parts à la place du montant")
+	void evenementDUnOrdreEnParts() {
+		UUID id = UUID.randomUUID();
+		positions.enregistrerPositionTest(CONTRAT, UC, new BigDecimal("3000"), null);
+
+		service.passer(new DemandeOrdre(id, CONTRAT, TypeOrdre.ARBITRAGE, UC, UC_ARRIVEE, null, new BigDecimal("2.5")));
+
+		verify(evenements).enregistrer(Topic.ORDRES, "OrdreDemande", CONTRAT,
+				Map.of("ordreId", id.toString(), "type", "ARBITRAGE", "numeroContrat", CONTRAT, "nombreParts",
+						"2.500000", "supportDepart", UC, "supportArrivee", UC_ARRIVEE, "dateExecutionPrevue",
+						"2026-12-01"));
+	}
+
+	@Test
+	@DisplayName("Ordre en parts refusé : versement en parts, montant et parts ensemble, parts nulles ou trop précises, "
+			+ "support sans valeur liquidative")
+	void ordresEnPartsInvalides() {
+		UUID id = UUID.randomUUID();
+		List.of(new DemandeOrdre(id, CONTRAT, TypeOrdre.VERSEMENT, null, UC, null, BigDecimal.ONE),
+				new DemandeOrdre(id, CONTRAT, TypeOrdre.RACHAT, UC, null, BigDecimal.TEN, BigDecimal.ONE),
+				rachatEnParts(id, "0"),
+				rachatEnParts(id, "-1"),
+				rachatEnParts(id, "1.0000001"))
+				.forEach(demande -> assertThatThrownBy(() -> service.passer(demande))
+						.as(demande.toString()).isInstanceOf(DemandeInvalide.class));
+
+		positions.enregistrerPositionTest(CONTRAT, UC, new BigDecimal("3000"), null);
+		when(catalogue.support(UC)).thenReturn(Optional.of(new SupportUc(UC, "Support", "Actions", "Actions monde",
+				"PER|AV", 4, true, new BigDecimal("0.80"), false, null, null, "EUR", "quotidienne", "aucun",
+				"Société de gestion")));
+		assertThatThrownBy(() -> service.passer(rachatEnParts(id, "1"))).isInstanceOf(DemandeInvalide.class)
+				.hasMessage("Aucune valeur liquidative connue pour " + UC + " : ordre en parts impossible.");
+		assertThat(baseOrdres).isEmpty();
+	}
+
+	// --- Compléments CU-376 : annulation d'un ordre ---
+
+	@Test
+	@DisplayName("Annulation : un ordre « demandé » annulé avant l'heure limite passe à « annulé », le montant redevient "
+			+ "disponible et l'événement « ordre annulé » est enregistré dans le topic des ordres")
+	void annulationAvantLHeureLimite() {
+		positions.enregistrerPositionTest(CONTRAT, UC, new BigDecimal("3000"), null);
+		Ordre ordre = service.passer(rachat(UUID.randomUUID(), "1000")).ordre();
+		heure(11, 30, 0);
+
+		var annulation = service.annuler(ordre.getId());
+
+		assertThat(annulation.nouvelle()).isTrue();
+		assertThat(ordre.getStatut()).isEqualTo(StatutOrdre.ANNULE);
+		assertThat(ordre.getAnnuleLe()).isEqualTo(MARDI_10H.withHour(11).withMinute(30).toOffsetDateTime());
+		assertThat(service.montantDisponible(CONTRAT, UC)).isEqualByComparingTo("3000");
+		verify(evenements).enregistrer(Topic.ORDRES, "OrdreAnnule", CONTRAT,
+				Map.of("ordreId", ordre.getId().toString(), "type", "RACHAT", "numeroContrat", CONTRAT, "annuleLe",
+						"2026-12-01T11:30+01:00"));
+	}
+
+	@Test
+	@DisplayName("Annulation : annuler deux fois le même ordre ne crée pas de second événement « ordre annulé »")
+	void doubleAnnulation() {
+		Ordre ordre = service.passer(new DemandeOrdre(UUID.randomUUID(), CONTRAT, TypeOrdre.VERSEMENT, null, UC,
+				BigDecimal.TEN)).ordre();
+
+		service.annuler(ordre.getId());
+		var seconde = service.annuler(ordre.getId());
+
+		assertThat(seconde.nouvelle()).isFalse();
+		verify(evenements, times(1)).enregistrer(eq(Topic.ORDRES), eq("OrdreAnnule"), anyString(), any());
+	}
+
+	@Test
+	@DisplayName("Annulation : à 12 h 00 pile le jour de la VL d'exécution, ou après, l'annulation est refusée ; un "
+			+ "ordre passé après 12 h (VL du lendemain) peut encore être annulé le jour même")
+	void annulationEtHeureLimite() {
+		Ordre duJour = service.passer(new DemandeOrdre(UUID.randomUUID(), CONTRAT, TypeOrdre.VERSEMENT, null, UC,
+				BigDecimal.TEN)).ordre();
+		heure(12, 0, 0);
+		Ordre duLendemain = service.passer(new DemandeOrdre(UUID.randomUUID(), CONTRAT, TypeOrdre.VERSEMENT, null,
+				UC, BigDecimal.TEN)).ordre();
+
+		assertThatThrownBy(() -> service.annuler(duJour.getId())).isInstanceOf(AnnulationImpossible.class)
+				.hasMessage("L'heure limite est passée (01/12/2026 à 12 h 00) : l'ordre ne peut plus être annulé.");
+		assertThat(duJour.getStatut()).isEqualTo(StatutOrdre.DEMANDE);
+
+		heure(18, 0, 0);
+		assertThat(service.annuler(duLendemain.getId()).ordre().getStatut()).isEqualTo(StatutOrdre.ANNULE);
+	}
+
+	@Test
+	@DisplayName("Annulation : un ordre en cours, exécuté ou rejeté ne peut pas être annulé ; un ordre inconnu est "
+			+ "introuvable")
+	void annulationRefusee() {
+		Ordre ordre = service.passer(new DemandeOrdre(UUID.randomUUID(), CONTRAT, TypeOrdre.VERSEMENT, null, UC,
+				BigDecimal.TEN)).ordre();
+		for (StatutOrdre statut : List.of(StatutOrdre.EN_COURS, StatutOrdre.EXECUTE, StatutOrdre.REJETE)) {
+			ReflectionTestUtils.setField(ordre, "statut", statut);
+			assertThatThrownBy(() -> service.annuler(ordre.getId())).isInstanceOf(AnnulationImpossible.class)
+					.hasMessageContaining("seul un ordre « demandé » peut être annulé");
+		}
+		assertThatThrownBy(() -> service.annuler(UUID.randomUUID())).isInstanceOf(OrdreIntrouvable.class);
+		verify(evenements, never()).enregistrer(eq(Topic.ORDRES), eq("OrdreAnnule"), anyString(), any());
 	}
 
 }

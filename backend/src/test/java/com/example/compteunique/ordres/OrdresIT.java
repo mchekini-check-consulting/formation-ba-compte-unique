@@ -136,6 +136,29 @@ class OrdresIT {
 	}
 
 	@Test
+	@DisplayName("Compléments CU-376 en base réelle (migration V33) : rachat de 40 parts à 25 € sur 3 000 €, 2 000 € "
+			+ "disponibles ; puis annulation : statut « annulé », heure d'annulation enregistrée, 3 000 € disponibles")
+	void partsEtAnnulationEnBase() {
+		String contrat = contrat();
+		positions.enregistrerPositionTest(contrat, UC, new BigDecimal("3000"), null);
+		UUID id = UUID.randomUUID();
+
+		service.passer(new DemandeOrdre(id, contrat, TypeOrdre.RACHAT, UC, null, null, new BigDecimal("40")));
+		assertThat(service.montantDisponible(contrat, UC)).isEqualByComparingTo("2000");
+
+		service.annuler(id);
+
+		assertThat(ordres.findById(id)).hasValueSatisfying(ordre -> {
+			assertThat(ordre.getStatut()).isEqualTo(StatutOrdre.ANNULE);
+			assertThat(ordre.getAnnuleLe()).isNotNull();
+			assertThat(ordre.getNombreParts()).isEqualByComparingTo("40");
+			assertThat(ordre.getMontant()).isNull();
+		});
+		assertThat(service.montantDisponible(contrat, UC)).isEqualByComparingTo("3000");
+		assertThat(service.annuler(id).nouvelle()).isFalse();
+	}
+
+	@Test
 	@DisplayName("Critère 7 / CU-387 : l'ordre enregistré, le relais publie « ordre demandé » dans le topic des ordres "
 			+ "avec le numéro de contrat comme clé")
 	void critere7PublieDansKafka() {

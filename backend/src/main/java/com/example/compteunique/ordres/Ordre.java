@@ -14,7 +14,8 @@ import jakarta.persistence.Table;
 
 import com.example.compteunique.ordres.OrdresService.DemandeOrdre;
 
-// CU-376 (TECH-08) : un ordre, identifié par l'identifiant créé par l'écran (db/migration/V31__ordres.sql).
+// CU-376 (TECH-08) : un ordre, identifié par l'identifiant créé par l'écran (db/migration/V31__ordres.sql), en euros
+// (montant) ou en nombre de parts du support vendu, et sa date d'annulation (V33__ordres_parts_et_annulation.sql).
 @Entity
 @Table(schema = "ordres", name = "ordre")
 public class Ordre {
@@ -33,6 +34,8 @@ public class Ordre {
 
 	private BigDecimal montant;
 
+	private BigDecimal nombreParts;
+
 	private OffsetDateTime demandeLe;
 
 	private LocalDate dateExecutionPrevue;
@@ -44,6 +47,8 @@ public class Ordre {
 
 	private UUID evenementId;
 
+	private OffsetDateTime annuleLe;
+
 	protected Ordre() {
 	}
 
@@ -53,7 +58,9 @@ public class Ordre {
 		this.type = demande.type();
 		this.supportDepart = demande.supportDepart();
 		this.supportArrivee = demande.supportArrivee();
-		this.montant = demande.montant().setScale(2, RoundingMode.UNNECESSARY);
+		this.montant = demande.montant() == null ? null : demande.montant().setScale(2, RoundingMode.UNNECESSARY);
+		this.nombreParts = demande.nombreParts() == null ? null
+				: demande.nombreParts().setScale(6, RoundingMode.UNNECESSARY);
 		this.demandeLe = demandeLe;
 		this.dateExecutionPrevue = dateExecutionPrevue;
 		this.statut = StatutOrdre.DEMANDE;
@@ -61,6 +68,16 @@ public class Ordre {
 
 	void evenementEnregistre(UUID evenement) {
 		this.evenementId = evenement;
+	}
+
+	void annuler(OffsetDateTime le) {
+		this.statut = StatutOrdre.ANNULE;
+		this.annuleLe = le;
+	}
+
+	/** Vrai pour un ordre exprimé en nombre de parts (le montant est alors vide). */
+	public boolean enParts() {
+		return nombreParts != null;
 	}
 
 	public UUID getId() {
@@ -83,8 +100,14 @@ public class Ordre {
 		return supportArrivee;
 	}
 
+	/** Montant en euros ; vide pour un ordre en parts. */
 	public BigDecimal getMontant() {
 		return montant;
+	}
+
+	/** Nombre de parts vendues ; vide pour un ordre en euros. */
+	public BigDecimal getNombreParts() {
+		return nombreParts;
 	}
 
 	public OffsetDateTime getDemandeLe() {
@@ -105,6 +128,10 @@ public class Ordre {
 
 	public UUID getEvenementId() {
 		return evenementId;
+	}
+
+	public OffsetDateTime getAnnuleLe() {
+		return annuleLe;
 	}
 
 }

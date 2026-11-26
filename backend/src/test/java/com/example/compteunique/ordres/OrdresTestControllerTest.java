@@ -19,12 +19,17 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 
+import tools.jackson.databind.json.JsonMapper;
+
 import com.example.compteunique.evenements.EvenementADistribuer;
 import com.example.compteunique.evenements.Evenements;
+import com.example.compteunique.ordres.OrdresService.Annulation;
+import com.example.compteunique.ordres.OrdresService.AnnulationImpossible;
 import com.example.compteunique.ordres.OrdresService.DemandeInvalide;
 import com.example.compteunique.ordres.OrdresService.DemandeOrdre;
 import com.example.compteunique.ordres.OrdresService.Enregistrement;
 import com.example.compteunique.ordres.OrdresService.MontantInsuffisant;
+import com.example.compteunique.ordres.OrdresService.OrdreIntrouvable;
 import com.example.compteunique.ordres.OrdresTestController.PositionDemandee;
 
 // CU-376 : page de test /test/ordres (routes du backend).
@@ -114,6 +119,46 @@ class OrdresTestControllerTest {
 		verify(positions).enregistrerPositionTest("AV-TEST-0001", "QZ0000000017", new BigDecimal("3000"), null);
 		assertThat(reponse.disponible()).isEqualByComparingTo("3000");
 		assertThat(routes.disponible("AV-TEST-0001", "QZ0000000017").disponible()).isEqualByComparingTo("3000");
+	}
+
+	@Test
+	@DisplayName("Ordre en parts : la demande JSON de l'écran porte le nombre de parts, affiché ensuite sur la page")
+	void ordreEnParts() {
+		DemandeOrdre demande = JsonMapper.builder().build().readValue("""
+				{"id":"8d2c3f8e-1a8b-4a5e-9a51-0e7f3b9c1d11","numeroContrat":"AV-TEST-0001","type":"RACHAT",
+				 "supportDepart":"QZ0000000017","supportArrivee":null,"montant":null,"nombreParts":12.5}
+				""", DemandeOrdre.class);
+		assertThat(demande.nombreParts()).isEqualByComparingTo("12.5");
+		assertThat(demande.montant()).isNull();
+		Ordre ordre = new Ordre(demande, LE, LocalDate.of(2026, 12, 1));
+		when(service.passer(demande)).thenReturn(new Enregistrement(ordre, true));
+		when(service.montantDisponible(any(), any())).thenReturn(BigDecimal.ZERO);
+
+		var vue = routes.passer(demande).getBody();
+
+		assertThat(vue.nombreParts()).isEqualByComparingTo("12.5");
+		assertThat(vue.montant()).isNull();
+		assertThat(vue.annuleLe()).isNull();
+	}
+
+	@Test
+	@DisplayName("Annuler un ordre : 200 avec l'ordre annulé et l'heure d'annulation (Paris) ; 404 ordre inconnu, 409 "
+			+ "annulation refusée")
+	void annulerUnOrdre() {
+		Ordre ordre = ordre(null);
+		ordre.annuler(LE.plusHours(1));
+		when(service.annuler(ordre.getId())).thenReturn(new Annulation(ordre, true));
+		when(service.montantDisponible(any(), any())).thenReturn(new BigDecimal("3000"));
+
+		var vue = routes.annuler(ordre.getId());
+
+		assertThat(vue.statut()).isEqualTo("ANNULE");
+		assertThat(vue.annuleLe()).isEqualTo("2026-12-01T11:00:00+01:00");
+		assertThat(vue.evenement()).isNull();
+		assertThat(routes.introuvable(new OrdreIntrouvable()).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+		var refus = routes.annulationImpossible(new AnnulationImpossible("L'heure limite est passée."));
+		assertThat(refus.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+		assertThat(refus.getBody().message()).isEqualTo("L'heure limite est passée.");
 	}
 
 	@Test
