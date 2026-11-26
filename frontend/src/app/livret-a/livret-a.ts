@@ -65,6 +65,9 @@ export interface DemandeLivretA {
   dateLimiteCertificat?: string | null;
   certificat?: CertificatCloture | null;
   delaiVerification?: string;
+  // CU-33 : versement initial choisi (en centimes) et date de saisie ; null tant qu'il n'est pas choisi.
+  versementInitialCentimes?: number | null;
+  versementSaisiLe?: string | null;
 }
 
 /** CU-28 : coordonnées modifiables par la cliente (complément d'adresse facultatif). */
@@ -242,6 +245,15 @@ export class LivretAService {
     return this.http.post<ControleIdentite>(
       `${this.base}/test/livret-a/identite/${encodeURIComponent(reference)}/validation-responsable`,
       {},
+      { withCredentials: true },
+    );
+  }
+
+  /** CU-33 : versement initial (« 150 » ou « 150,50 »), enregistré dans la demande ; débité à la signature. */
+  choisirVersementInitial(reference: string, montant: string): Observable<DemandeLivretA> {
+    return this.http.post<DemandeLivretA>(
+      `${this.base}/livret-a/demandes/${encodeURIComponent(reference)}/versement-initial`,
+      { montant },
       { withCredentials: true },
     );
   }

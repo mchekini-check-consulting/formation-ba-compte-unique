@@ -9,6 +9,7 @@ import { SuiviSession } from '../session/suivi-session';
 import { EtapeIdentiteLivretA } from './etape-identite-livret-a';
 import { EtapePieceLivretA, pieceAFournir } from './etape-piece-livret-a';
 import { EtapeQuestionsLivretA } from './etape-questions-livret-a';
+import { VersementInitialLivretA } from './versement-initial-livret-a';
 import {
   ControleIdentite,
   DemandeLivretA,
@@ -74,7 +75,7 @@ export const MOTIF_REFUS_TEST = 'Certificat illisible';
 // réponse au backend, qui applique les règles. Suivi de la demande ensuite (en cours, validée, existant).
 @Component({
   selector: 'app-livret-a-page',
-  imports: [CadreEspace, RouterLink, EtapeIdentiteLivretA, EtapePieceLivretA, EtapeQuestionsLivretA],
+  imports: [CadreEspace, RouterLink, EtapeIdentiteLivretA, EtapePieceLivretA, EtapeQuestionsLivretA, VersementInitialLivretA],
   template: `
     <app-cadre-espace page="livret-a" [identifiant]="identifiant()">
       <section class="block">
@@ -106,6 +107,10 @@ export const MOTIF_REFUS_TEST = 'Certificat illisible';
                     {{ statut(d) }}
                   </p>
                   <p class="texte">{{ d.message }}</p>
+                  @if (d.statut === 'OUVERTURE_VALIDEE') {
+                    <!-- CU-33 : versement initial depuis le compte courant, débité à la signature (CU-34). -->
+                    <app-versement-initial-livret-a [demande]="d" (demandeChange)="demande.set($event)" />
+                  }
                   @if (d.statut === 'EN_COURS_DE_VERIFICATION') {
                     <p class="muted">Délai de réponse de l’administration fiscale : {{ d.delai }}.</p>
                   }
