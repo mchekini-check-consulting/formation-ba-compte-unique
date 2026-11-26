@@ -95,6 +95,14 @@ describe('Espace', () => {
     expect(page.querySelector('#epargne [data-test="supports-per"]')!.getAttribute('href')).toBe('/supports?produit=PER');
   });
 
+  it('« Souscrire » de l’assurance vie et du PER mène à leur présentation et à leurs documents (CU-311, CU-331)', async () => {
+    const { page } = await ouvrir([COMPTE]);
+    const liens = Array.from(page.querySelectorAll<HTMLAnchorElement>('#epargne .produit a.btn')).map((a) =>
+      a.getAttribute('href'),
+    );
+    expect(liens).toEqual(['/livret-a', '/decouvrir?produit=AV', '/decouvrir?produit=PER']);
+  });
+
   it('les deux boutons « Faire un virement » ouvrent la page de virement (CU-11)', async () => {
     const { page } = await ouvrir([COMPTE]);
     const boutons = Array.from(page.querySelectorAll('a')).filter((lien) =>
