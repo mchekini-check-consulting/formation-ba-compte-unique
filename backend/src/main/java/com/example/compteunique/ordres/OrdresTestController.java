@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,17 +24,21 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.compteunique.datemetier.DateMetier;
 import com.example.compteunique.evenements.EvenementADistribuer;
 import com.example.compteunique.evenements.Evenements;
+import com.example.compteunique.ordres.OrdresService.AnnulationImpossible;
 import com.example.compteunique.ordres.OrdresService.DemandeInvalide;
 import com.example.compteunique.ordres.OrdresService.DemandeOrdre;
 import com.example.compteunique.ordres.OrdresService.Enregistrement;
 import com.example.compteunique.ordres.OrdresService.MontantInsuffisant;
+import com.example.compteunique.ordres.OrdresService.OrdreIntrouvable;
 
 // CU-376 (TECH-08) : page de test /test/ordres (sans session, comme les autres /test/...). Aucun écran client ne
 // passe encore d'ordre et les positions ne viendront qu'avec TECH-10 : la testeuse passe des ordres sur des contrats
 // de test et enregistre des positions de test.
-// POST   /test/ordres                 : passer un ordre {id, numeroContrat, type, supportDepart, supportArrivee, montant}
+// POST   /test/ordres                 : passer un ordre {id, numeroContrat, type, supportDepart, supportArrivee,
+//                                       montant | nombreParts}
 //                                       (201 créé, 200 doublon, 400 invalide, 422 montant insuffisant).
 // GET    /test/ordres                 : les 50 derniers ordres, avec le montant disponible et l'événement.
+// POST   /test/ordres/{id}/annulation : annuler un ordre « demandé » avant l'heure limite (200 ; 404, 409).
 // POST   /test/ordres/positions       : enregistrer une position de test {numeroContrat, codeIsin, montant | nombreParts}.
 // GET    /test/ordres/positions       : les 50 dernières positions de test.
 // GET    /test/ordres/disponible      : montant disponible ?contrat=&support=.
@@ -59,8 +64,8 @@ public class OrdresTestController {
 	}
 
 	public record OrdreVue(UUID id, String numeroContrat, String type, String supportDepart, String supportArrivee,
-			BigDecimal montant, String demandeLe, LocalDate dateExecutionPrevue, String statut,
-			BigDecimal montantDisponible, EvenementVue evenement) {
+			BigDecimal montant, BigDecimal nombreParts, String demandeLe, LocalDate dateExecutionPrevue,
+			String statut, String annuleLe, BigDecimal montantDisponible, EvenementVue evenement) {
 	}
 
 	public record PositionDemandee(String numeroContrat, String codeIsin, BigDecimal montant, BigDecimal nombreParts) {
@@ -89,6 +94,11 @@ public class OrdresTestController {
 	@GetMapping
 	public List<OrdreVue> ordres() {
 		return service.derniers().stream().map(this::vue).toList();
+	}
+
+	@PostMapping("/{id}/annulation")
+	public OrdreVue annuler(@PathVariable("id") UUID id) {
+		return vue(service.annuler(id).ordre());
 	}
 
 	@PostMapping("/positions")
@@ -129,6 +139,16 @@ public class OrdresTestController {
 		return ResponseEntity.badRequest().body(new Refus(refus.getMessage()));
 	}
 
+	@ExceptionHandler(OrdreIntrouvable.class)
+	public ResponseEntity<Refus> introuvable(OrdreIntrouvable refus) {
+		return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new Refus(refus.getMessage()));
+	}
+
+	@ExceptionHandler(AnnulationImpossible.class)
+	public ResponseEntity<Refus> annulationImpossible(AnnulationImpossible refus) {
+		return ResponseEntity.status(HttpStatus.CONFLICT).body(new Refus(refus.getMessage()));
+	}
+
 	@ExceptionHandler(MontantInsuffisant.class)
 	public ResponseEntity<RefusMontant> insuffisant(MontantInsuffisant refus) {
 		return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT)
@@ -141,8 +161,9 @@ public class OrdresTestController {
 				: evenements.aDistribuer(ordre.getEvenementId()).map(e -> evenement(ordre.getEvenementId(), e))
 						.orElse(null);
 		return new OrdreVue(ordre.getId(), ordre.getNumeroContrat(), ordre.getType().name(), ordre.getSupportDepart(),
-				ordre.getSupportArrivee(), ordre.getMontant(), paris(ordre.getDemandeLe()),
+				ordre.getSupportArrivee(), ordre.getMontant(), ordre.getNombreParts(), paris(ordre.getDemandeLe()),
 				ordre.getDateExecutionPrevue(), ordre.getStatut().name(),
+				ordre.getAnnuleLe() == null ? null : paris(ordre.getAnnuleLe()),
 				service.montantDisponible(ordre.getNumeroContrat(), support), evenement);
 	}
 

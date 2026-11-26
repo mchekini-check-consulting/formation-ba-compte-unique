@@ -5,14 +5,18 @@ import { apiBase } from '../api';
 
 export type TypeOrdre = 'VERSEMENT' | 'RACHAT' | 'ARBITRAGE';
 
-/** Demande d'ordre (CU-376) : l'identifiant est créé par l'écran au moment de la validation. */
+/**
+ * Demande d'ordre (CU-376) : l'identifiant est créé par l'écran au moment de la validation. En euros (montant) ou,
+ * pour un rachat ou un arbitrage, en nombre de parts du support vendu.
+ */
 export interface DemandeOrdre {
   id: string;
   numeroContrat: string;
   type: TypeOrdre;
   supportDepart: string | null;
   supportArrivee: string | null;
-  montant: number;
+  montant: number | null;
+  nombreParts: number | null;
 }
 
 export interface EvenementOrdre {
@@ -28,10 +32,15 @@ export interface OrdreTest {
   type: TypeOrdre;
   supportDepart: string | null;
   supportArrivee: string | null;
-  montant: number;
+  /** Montant en euros ; vide pour un ordre en parts. */
+  montant: number | null;
+  /** Nombre de parts vendues ; vide pour un ordre en euros. */
+  nombreParts: number | null;
   demandeLe: string;
   dateExecutionPrevue: string;
   statut: 'DEMANDE' | 'EN_COURS' | 'EXECUTE' | 'REJETE' | 'ANNULE';
+  /** Date et heure métier de l'annulation (Paris) ; vide si l'ordre n'est pas annulé. */
+  annuleLe: string | null;
   montantDisponible: number;
   evenement: EvenementOrdre | null;
 }
@@ -63,6 +72,11 @@ export class OrdresTestService {
 
   ordres(): Observable<OrdreTest[]> {
     return this.http.get<OrdreTest[]>(this.url);
+  }
+
+  /** Annule un ordre « demandé » avant l'heure limite (409 sinon, avec le motif). */
+  annuler(id: string): Observable<OrdreTest> {
+    return this.http.post<OrdreTest>(`${this.url}/${encodeURIComponent(id)}/annulation`, null);
   }
 
   enregistrerPosition(

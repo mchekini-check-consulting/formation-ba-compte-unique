@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { afficherDate } from '../date-metier-test/date-metier';
@@ -19,7 +19,9 @@ const STATUTS: Record<OrdreTest['statut'], string> = {
 // CU-376 (TECH-08) : page /test/ordres. Aucun écran client ne passe encore d'ordre et les positions ne viendront
 // qu'avec TECH-10 : la testeuse passe un ordre sur un contrat de test (identifiant créé à la validation, « Renvoyer
 // le même ordre » pour vérifier l'absence de doublon), enregistre des positions de test et suit l'événement
-// « ordre demandé » (en attente ou publié dans Kafka). Absente en preprod et prod.
+// « ordre demandé » (en attente ou publié dans Kafka). Un rachat ou un arbitrage peut être passé en nombre de parts ;
+// un ordre « demandé » peut être annulé avant l'heure limite (le backend refuse sinon, avec le motif).
+// Absente en preprod et prod.
 @Component({
   selector: 'app-ordres-test',
   imports: [RouterLink],
@@ -78,7 +80,15 @@ const STATUTS: Record<OrdreTest['statut'], string> = {
             @if (type() !== 'RACHAT') {
               <label>Support acheté (ISIN) <input id="arrivee" name="arrivee" maxlength="12" [value]="arrivee()" (change)="arrivee.set(valeur($event))" /></label>
             }
-            <label>Montant (€) <input id="montant" name="montant" inputmode="decimal" [value]="montant()" (change)="montant.set(valeur($event))" /></label>
+            @if (type() !== 'VERSEMENT') {
+              <label>Unité
+                <select id="unite" name="unite" (change)="unite.set(valeur($event) === 'parts' ? 'parts' : 'euros')">
+                  <option value="euros" [selected]="unite() === 'euros'">Montant en euros</option>
+                  <option value="parts" [selected]="unite() === 'parts'">Nombre de parts</option>
+                </select>
+              </label>
+            }
+            <label>{{ enParts() ? 'Nombre de parts' : 'Montant (€)' }} <input id="montant" name="montant" inputmode="decimal" [value]="montant()" (change)="montant.set(valeur($event))" /></label>
             <button type="submit" [disabled]="enCours()">Passer l’ordre</button>
             @if (dernier()) {
               <button type="button" class="secondaire" data-test="renvoyer" [disabled]="enCours()" (click)="envoyer(dernier()!)">Renvoyer le même ordre</button>
@@ -100,8 +110,10 @@ const STATUTS: Record<OrdreTest['statut'], string> = {
                     <th scope="col">Montant</th>
                     <th scope="col">Statut</th>
                     <th scope="col">Exécution prévue (VL du)</th>
+                    <th scope="col">Annulé le (date métier)</th>
                     <th scope="col">Disponible</th>
                     <th scope="col">Événement « ordre demandé »</th>
+                    <th scope="col"><span class="masque">Actions</span></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -111,9 +123,10 @@ const STATUTS: Record<OrdreTest['statut'], string> = {
                       <td>{{ o.numeroContrat }}</td>
                       <td>{{ libelleType(o.type) }}</td>
                       <td>{{ o.supportDepart ?? '—' }} → {{ o.supportArrivee ?? '—' }}</td>
-                      <td>{{ euros(o.montant) }}</td>
+                      <td>{{ quantite(o) }}</td>
                       <td>{{ libelleStatut(o.statut) }}</td>
                       <td>{{ jour(o.dateExecutionPrevue) }}</td>
+                      <td>{{ o.annuleLe ? afficher(o.annuleLe) : '—' }}</td>
                       <td>{{ euros(o.montantDisponible) }}</td>
                       <td>
                         @if (o.evenement) {
@@ -124,6 +137,11 @@ const STATUTS: Record<OrdreTest['statut'], string> = {
                           }
                         } @else {
                           —
+                        }
+                      </td>
+                      <td>
+                        @if (o.statut === 'DEMANDE') {
+                          <button type="button" class="secondaire" data-test="annuler-ordre" [disabled]="enCours()" [attr.aria-label]="'Annuler l’ordre du ' + afficher(o.demandeLe)" (click)="annuler(o)">Annuler</button>
                         }
                       </td>
                     </tr>
@@ -195,6 +213,7 @@ const STATUTS: Record<OrdreTest['statut'], string> = {
     table { border-collapse: collapse; width: 100%; font-size: 14px; }
     th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #eef1f5; }
     th { background: #f4f6fa; white-space: nowrap; }
+    .masque { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   `,
 })
 export class OrdresTest {
@@ -213,6 +232,9 @@ export class OrdresTest {
   protected readonly depart = signal('');
   protected readonly arrivee = signal('');
   protected readonly montant = signal('');
+  protected readonly unite = signal<'euros' | 'parts'>('euros');
+  /** CU-376 : un rachat ou un arbitrage peut être exprimé en parts ; un versement reste en euros. */
+  protected readonly enParts = computed(() => this.type() !== 'VERSEMENT' && this.unite() === 'parts');
   protected readonly contratPosition = signal('AV-TEST-0001');
   protected readonly isinPosition = signal('');
   protected readonly unitePosition = signal<'euros' | 'parts'>('euros');
@@ -249,9 +271,14 @@ export class OrdresTest {
 
   protected passer(event: Event): void {
     event.preventDefault();
-    const montant = OrdresTest.nombre(this.montant());
-    if (montant === null) {
-      this.afficherErreur('Montant invalide : indiquez un nombre positif, par exemple 1000 ou 50,5.');
+    const quantite = OrdresTest.nombre(this.montant());
+    const enParts = this.enParts();
+    if (quantite === null) {
+      this.afficherErreur(
+        enParts
+          ? 'Nombre de parts invalide : indiquez un nombre positif, par exemple 10 ou 2,5.'
+          : 'Montant invalide : indiquez un nombre positif, par exemple 1000 ou 50,5.',
+      );
       return;
     }
     const type = this.type();
@@ -262,7 +289,31 @@ export class OrdresTest {
       type,
       supportDepart: type === 'VERSEMENT' ? null : OrdresTest.isin(this.depart()),
       supportArrivee: type === 'RACHAT' ? null : OrdresTest.isin(this.arrivee()),
-      montant,
+      montant: enParts ? null : quantite,
+      nombreParts: enParts ? quantite : null,
+    });
+  }
+
+  protected quantite(ordre: OrdreTest): string {
+    return ordre.nombreParts !== null
+      ? `${ordre.nombreParts.toLocaleString('fr-FR', { maximumFractionDigits: 6 })} parts`
+      : this.euros(ordre.montant ?? 0);
+  }
+
+  protected annuler(ordre: OrdreTest): void {
+    this.message.set(null);
+    this.erreur.set(null);
+    this.enCours.set(true);
+    this.service.annuler(ordre.id).subscribe({
+      next: () => {
+        this.enCours.set(false);
+        this.message.set('Ordre annulé : le montant est de nouveau disponible.');
+        this.charger();
+      },
+      error: (refus: HttpErrorResponse) => {
+        this.enCours.set(false);
+        this.afficherErreur(refus.error?.message ?? 'L’ordre n’a pas pu être annulé. Réessayez.');
+      },
     });
   }
 

@@ -13,9 +13,11 @@ const ORDRE: OrdreTest = {
   supportDepart: 'QZ0000000017',
   supportArrivee: null,
   montant: 1000,
+  nombreParts: null,
   demandeLe: '2026-12-01T11:59:00+01:00',
   dateExecutionPrevue: '2026-12-01',
   statut: 'DEMANDE',
+  annuleLe: null,
   montantDisponible: 2000,
   evenement: { id: 'e1', statut: 'EN_ATTENTE', publieLe: null, derniereErreur: 'Kafka indisponible : TimeoutException' },
 };
@@ -221,6 +223,84 @@ describe('OrdresTest (CU-376)', () => {
     repondreChargement(http, [], []);
     await fixture.whenStable();
     expect(page.querySelector('[role="status"]')!.textContent).toContain('Ordres et positions de test effacés');
+  });
+
+  it('passe un rachat en nombre de parts ; un versement reste en euros', async () => {
+    const { fixture, http, page } = await pagePrete([], []);
+    saisir(page, 'type', 'RACHAT');
+    saisir(page, 'contrat', 'AV-TEST-0001');
+    saisir(page, 'depart', 'QZ0000000017');
+    saisir(page, 'unite', 'parts');
+    await fixture.whenStable();
+    expect(page.textContent).toContain('Nombre de parts');
+    saisir(page, 'montant', '2,5');
+
+    soumettre(page, 'ordre');
+    const envoi = http.expectOne(envoiOrdre);
+    expect(envoi.request.body).toEqual(expect.objectContaining({ montant: null, nombreParts: 2.5 }));
+    envoi.flush({ ...ORDRE, montant: null, nombreParts: 2.5 }, { status: 201, statusText: 'Created' });
+    repondreChargement(http, [{ ...ORDRE, montant: null, nombreParts: 2.5 }], []);
+    await fixture.whenStable();
+    expect(page.querySelector('[data-test="ordres"] tbody tr')!.textContent).toContain('2,5 parts');
+
+    saisir(page, 'type', 'VERSEMENT');
+    await fixture.whenStable();
+    expect(page.querySelector('#unite')).toBeNull();
+    saisir(page, 'arrivee', 'US0378331005');
+    saisir(page, 'montant', '100');
+    soumettre(page, 'ordre');
+    const versement = http.expectOne(envoiOrdre);
+    expect(versement.request.body).toEqual(expect.objectContaining({ montant: 100, nombreParts: null }));
+    versement.flush(ORDRE, { status: 201, statusText: 'Created' });
+    repondreChargement(http, [ORDRE], []);
+    await fixture.whenStable();
+  });
+
+  it('refuse un nombre de parts illisible sans appeler le backend', async () => {
+    const { fixture, http, page } = await pagePrete([], []);
+    saisir(page, 'unite', 'parts');
+    saisir(page, 'montant', 'dix');
+    soumettre(page, 'ordre');
+    http.expectNone(envoiOrdre);
+    await fixture.whenStable();
+    expect(page.querySelector('[role="alert"]')!.textContent).toContain('Nombre de parts invalide');
+  });
+
+  it('annule un ordre « demandé » et affiche l’heure d’annulation', async () => {
+    const { fixture, http, page } = await pagePrete();
+
+    page.querySelector<HTMLButtonElement>('[data-test="annuler-ordre"]')!.click();
+    const annulation = http.expectOne(`${URL}/${ORDRE.id}/annulation`);
+    expect(annulation.request.method).toBe('POST');
+    const annule: OrdreTest = { ...ORDRE, statut: 'ANNULE', annuleLe: '2026-12-01T11:30:00+01:00' };
+    annulation.flush(annule);
+    repondreChargement(http, [annule], []);
+    await fixture.whenStable();
+
+    expect(page.querySelector('[role="status"]')!.textContent).toContain('Ordre annulé');
+    const ligne = page.querySelector('[data-test="ordres"] tbody tr')!.textContent!;
+    expect(ligne).toContain('Annulé');
+    expect(ligne).toContain('11:30');
+    expect(page.querySelector('[data-test="annuler-ordre"]')).toBeNull();
+  });
+
+  it('affiche le motif quand l’annulation est refusée (heure limite passée), ou un message si le backend ne répond pas', async () => {
+    const { fixture, http, page } = await pagePrete();
+
+    page.querySelector<HTMLButtonElement>('[data-test="annuler-ordre"]')!.click();
+    http
+      .expectOne(`${URL}/${ORDRE.id}/annulation`)
+      .flush(
+        { message: 'L’heure limite est passée (01/12/2026 à 12 h 00) : l’ordre ne peut plus être annulé.' },
+        { status: 409, statusText: 'Conflict' },
+      );
+    await fixture.whenStable();
+    expect(page.querySelector('[role="alert"]')!.textContent).toContain('L’heure limite est passée');
+
+    page.querySelector<HTMLButtonElement>('[data-test="annuler-ordre"]')!.click();
+    http.expectOne(`${URL}/${ORDRE.id}/annulation`).error(new ProgressEvent('error'));
+    await fixture.whenStable();
+    expect(page.querySelector('[role="alert"]')!.textContent).toContain('L’ordre n’a pas pu être annulé');
   });
 
   it('indique que la page est indisponible en preprod et prod (404)', async () => {
