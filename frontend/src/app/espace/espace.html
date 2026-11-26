@@ -180,6 +180,9 @@
                     @if (produit.nom === 'Livret A') {
                       <!-- CU-31 : ouverture d'un Livret A (éligibilité). -->
                       <a class="btn p sm" routerLink="/livret-a">Ouvrir mon Livret A</a>
+                    } @else if (produit.nom === 'PER' || produit.nom === 'Assurance-vie') {
+                      <!-- CU-311 / CU-331 : présentation et documents à lire avant de souscrire. -->
+                      <a class="btn p sm" routerLink="/decouvrir" [queryParams]="{ produit: produit.nom === 'PER' ? 'PER' : 'AV' }">Souscrire</a>
                     } @else {
                       <button class="btn p sm" type="button" (click)="annoncer('Souscription ' + produit.nom + ' : bientôt disponible.')">
                         Souscrire
