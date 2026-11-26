@@ -329,6 +329,12 @@ public class ModeDeGestion {
 			}
 		}
 		Reequilibrage reequilibrage = new Reequilibrage(numero, le);
+		arbitrer(numero, vendeurs, acheteurs, reequilibrage);
+		reequilibrages.save(reequilibrage);
+	}
+
+	/** Un ordre d'arbitrage par paire vendeur → acheteur, jusqu'à épuiser l'un des deux côtés. */
+	private void arbitrer(String numero, List<Ecart> vendeurs, List<Ecart> acheteurs, Reequilibrage reequilibrage) {
 		int v = 0;
 		int a = 0;
 		while (v < vendeurs.size() && a < acheteurs.size()) {
@@ -347,7 +353,6 @@ public class ModeDeGestion {
 				a++;
 			}
 		}
-		reequilibrages.save(reequilibrage);
 	}
 
 	/** Support non coté selon le catalogue (un support inconnu est traité comme coté). */

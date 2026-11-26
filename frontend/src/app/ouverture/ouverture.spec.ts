@@ -21,12 +21,14 @@ describe('OuvertureService et bouchon Docusign', () => {
 
   it('appelle le backend pour la signature et l’ouverture', () => {
     const api = TestBed.inject(OuvertureService);
-    api.signature('a b').subscribe();
-    http.expectOne({ method: 'GET', url: '/api/backend/dossiers/a%20b/signature' }).flush({});
-    api.ouverture('d1').subscribe();
-    http.expectOne({ method: 'GET', url: '/api/backend/dossiers/d1/ouverture' }).flush({});
-    api.renvoyer('d1', 'EMAIL').subscribe();
-    http.expectOne({ method: 'POST', url: '/api/backend/dossiers/d1/envois/EMAIL' }).flush({});
+    const recus: unknown[] = [];
+    api.signature('a b').subscribe((r) => recus.push(r));
+    http.expectOne({ method: 'GET', url: '/api/backend/dossiers/a%20b/signature' }).flush({ n: 1 });
+    api.ouverture('d1').subscribe((r) => recus.push(r));
+    http.expectOne({ method: 'GET', url: '/api/backend/dossiers/d1/ouverture' }).flush({ n: 2 });
+    api.renvoyer('d1', 'EMAIL').subscribe((r) => recus.push(r));
+    http.expectOne({ method: 'POST', url: '/api/backend/dossiers/d1/envois/EMAIL' }).flush({ n: 3 });
+    expect(recus).toEqual([{ n: 1 }, { n: 2 }, { n: 3 }]);
   });
 
   it('appelle le bouchon Docusign (CU-89)', () => {

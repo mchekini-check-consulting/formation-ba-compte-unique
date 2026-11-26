@@ -129,6 +129,7 @@ describe('CatalogueTest (CU-381)', () => {
     Object.defineProperty(champ, 'files', { value: [], configurable: true });
     champ.dispatchEvent(new Event('change'));
     http.expectNone(`${URL}/fichiers`);
+    expect(page.querySelector('[role="alert"]')).toBeNull();
   });
 
   it('lance le batch et affiche son résultat', async () => {
