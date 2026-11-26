@@ -79,7 +79,7 @@ class ClotureLivretAIT {
 		ControleIdentiteVue controle = livretA.confirmerIdentite(jeton, new Confirmation(coordonnees, true)).getBody();
 		livretA.resultatControle(jeton, controle.reference(),
 				new ResultatControle(ResultatSanctions.AUCUNE_CORRESPONDANCE, 1));
-		QuestionnaireDeTest.rempli(questions, jeton);
+		QuestionnaireExemple.rempli(questions, jeton);
 		DemandeLivretAVue creee = livretA.demander(jeton, new Eligibilite(true, partage)).getBody();
 		return livretA.reponseFiscale(jeton, creee.reference(),
 				new ResultatInterrogation("interro", ReponseFiscale.LIVRET_A_EXISTANT, partage ? DETAIL : null));

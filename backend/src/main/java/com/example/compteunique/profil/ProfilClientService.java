@@ -84,6 +84,13 @@ public class ProfilClientService {
 		return etat(customerId).statut();
 	}
 
+	/** CU-314 / CU-338 : profil validé de moins de 12 mois (vide sinon), lu par le module Gestion. */
+	@Transactional // CU-415 : la lecture peut enregistrer « à revalider »
+	public Optional<ProfilKyc> profilValide(UUID customerId) {
+		Etat etat = etat(customerId);
+		return etat.statut() == Statut.VALIDE ? etat.profil() : Optional.empty();
+	}
+
 	@Transactional // CU-415 : la lecture peut enregistrer « à revalider »
 	public Etat etat(String jetonSession) {
 		return etat(customerId(jetonSession));

@@ -6,9 +6,9 @@ import com.example.compteunique.livreta.ReponsesQuestionnaire.OrigineFonds;
 
 // CU-32 : questionnaire rempli et texte d'information accepté, préalable à l'éligibilité dans les tests
 // d'intégration du Livret A.
-final class QuestionnaireDeTest {
+final class QuestionnaireExemple {
 
-	private QuestionnaireDeTest() {
+	private QuestionnaireExemple() {
 	}
 
 	static QuestionnaireVue rempli(QuestionsLivretAController questions, String jeton) {

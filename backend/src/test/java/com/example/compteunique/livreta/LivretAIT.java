@@ -62,7 +62,7 @@ class LivretAIT {
 		ControleIdentiteVue controle = livretA.confirmerIdentite(jeton, new Confirmation(coordonnees, true)).getBody();
 		livretA.resultatControle(jeton, controle.reference(),
 				new ResultatControle(ResultatSanctions.AUCUNE_CORRESPONDANCE, 1));
-		QuestionnaireDeTest.rempli(questions, jeton);
+		QuestionnaireExemple.rempli(questions, jeton);
 	}
 
 	@Test

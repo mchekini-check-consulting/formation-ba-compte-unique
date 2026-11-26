@@ -78,7 +78,7 @@ class PieceLivretAIT {
 		assertEquals(LivretAService.PIECE_EXPIREE, expiree.getMessage());
 		// CU-32 : l'étape « Questions et données » vient après la nouvelle pièce.
 		DemandeRefusee questionsAvantPiece = assertThrows(DemandeRefusee.class,
-				() -> QuestionnaireDeTest.rempli(questions, jeton));
+				() -> QuestionnaireExemple.rempli(questions, jeton));
 		assertEquals(LivretAService.PIECE_EXPIREE, questionsAvantPiece.getMessage());
 
 		PieceLivretAVue piece = livretA
@@ -99,7 +99,7 @@ class PieceLivretAIT {
 			assertEquals(NOUVELLE_EXPIRATION, dossier.getDateExpiration());
 		});
 		assertFalse(livretA.piece(jeton).requise());
-		QuestionnaireDeTest.rempli(questions, jeton);
+		QuestionnaireExemple.rempli(questions, jeton);
 		assertEquals(StatutDemandeLivretA.EN_COURS_DE_VERIFICATION,
 				livretA.demander(jeton, new Eligibilite(true, false)).getBody().statut());
 	}

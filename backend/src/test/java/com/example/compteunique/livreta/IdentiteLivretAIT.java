@@ -82,11 +82,11 @@ class IdentiteLivretAIT {
 
 		// CU-32 : les questions viennent après l'identité confirmée.
 		DemandeRefusee questionsAvantIdentite = assertThrows(DemandeRefusee.class,
-				() -> QuestionnaireDeTest.rempli(questions, clienteA));
+				() -> QuestionnaireExemple.rempli(questions, clienteA));
 		assertEquals(IdentiteLivretAService.SANS_IDENTITE_CONFIRMEE, questionsAvantIdentite.getMessage());
 
 		assertEquals(StatutControleIdentite.VALIDE, test.validerParResponsable(controle.reference()).statut());
-		QuestionnaireDeTest.rempli(questions, clienteA);
+		QuestionnaireExemple.rempli(questions, clienteA);
 		DemandeLivretAVue demande = livretA.demander(clienteA, new Eligibilite(true, true)).getBody();
 		assertThat(controles.findByReference(controle.reference())).hasValueSatisfying(c -> {
 			assertEquals(demande.reference(), c.getDemandeReference());

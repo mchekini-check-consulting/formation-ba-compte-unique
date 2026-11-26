@@ -1,7 +1,8 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { vi } from 'vitest';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { EtatDecouverte, EtatDocument } from './decouverte';
 import { DecouvertePage } from './decouverte-page';
 
@@ -85,13 +86,13 @@ describe('DecouvertePage (CU-311, CU-331)', () => {
     expect(page.querySelector<HTMLButtonElement>('[data-test="continuer"]')!.disabled).toBe(true);
   });
 
-  it('les deux documents ouverts et cochés : « Continuer » est actif et annonce la souscription', async () => {
-    const { fixture, page } = await ouvrirPage(etat(doc('DIC', true, true), doc('FICHE_PRODUIT', true, true)));
+  it('les deux documents ouverts et cochés : « Continuer » mène au choix du mode de gestion du produit', async () => {
+    const { page } = await ouvrirPage(etat(doc('DIC', true, true), doc('FICHE_PRODUIT', true, true)));
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     const continuer = page.querySelector<HTMLButtonElement>('[data-test="continuer"]')!;
     expect(continuer.disabled).toBe(false);
     continuer.click();
-    fixture.detectChanges();
-    expect(page.querySelector('.annonce')?.textContent).toBe('Souscription PER : bientôt disponible.');
+    expect(navigate).toHaveBeenCalledWith(['/gestion'], { queryParams: { produit: 'PER' } });
   });
 
   it('une case refusée par le backend redevient décochée, avec un message', async () => {

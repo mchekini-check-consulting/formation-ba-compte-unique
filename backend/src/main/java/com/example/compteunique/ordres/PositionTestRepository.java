@@ -8,6 +8,8 @@ interface PositionTestRepository extends JpaRepository<PositionTest, Long> {
 
 	List<PositionTest> findByNumeroContratAndCodeIsin(String numeroContrat, String codeIsin);
 
+	List<PositionTest> findByNumeroContrat(String numeroContrat);
+
 	List<PositionTest> findTop50ByOrderByIdDesc();
 
 }

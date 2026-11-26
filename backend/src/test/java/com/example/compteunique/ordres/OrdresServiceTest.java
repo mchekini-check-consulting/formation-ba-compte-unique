@@ -291,6 +291,18 @@ class OrdresServiceTest {
 		assertThatThrownBy(production::viderPositionsDeTest)
 				.isInstanceOf(PositionsContrat.PositionsDeTestRefusees.class);
 		assertThat(production.encours(CONTRAT, UC)).isEqualByComparingTo("0");
+		assertThat(production.encoursParSupport(CONTRAT)).isEmpty();
+	}
+
+	@Test
+	@DisplayName("CU-314 / CU-338 : encours du contrat par support, montants et parts valorisées additionnés")
+	void encoursParSupport() {
+		when(positionsTest.findByNumeroContrat(CONTRAT)).thenReturn(List.of(
+				new PositionTest(CONTRAT, UC, new BigDecimal("1000.00"), null, MARDI_10H.toOffsetDateTime()),
+				new PositionTest(CONTRAT, UC, new BigDecimal("500.004"), null, MARDI_10H.toOffsetDateTime())));
+
+		assertThat(positions.encoursParSupport(CONTRAT)).containsExactly(java.util.Map.entry(UC,
+				new BigDecimal("1500.00")));
 	}
 
 	@Test

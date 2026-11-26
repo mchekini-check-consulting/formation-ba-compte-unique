@@ -70,7 +70,7 @@ class VersementInitialLivretAIT {
 		ControleIdentiteVue controle = livretA.confirmerIdentite(jeton, new Confirmation(coordonnees, true)).getBody();
 		livretA.resultatControle(jeton, controle.reference(),
 				new ResultatControle(ResultatSanctions.AUCUNE_CORRESPONDANCE, 1));
-		QuestionnaireDeTest.rempli(questions, jeton);
+		QuestionnaireExemple.rempli(questions, jeton);
 		String reference = livretA.demander(jeton, new Eligibilite(true, true)).getBody().reference();
 
 		// Prérequis : ouverture validée par l'administration fiscale.
