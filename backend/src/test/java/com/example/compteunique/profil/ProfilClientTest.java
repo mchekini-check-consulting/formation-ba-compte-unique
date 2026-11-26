@@ -109,6 +109,17 @@ class ProfilClientTest {
 	}
 
 	@Test
+	void leProfilValideEstLuParLeModuleGestionSeulementTantQu_ilEstValide() {
+		assertThat(service.profilValide(CLIENTE)).isEmpty();
+		valider(completes(0L, "MARIE", "ATTENDRE"), true);
+
+		assertThat(service.profilValide(CLIENTE)).get().extracting(ProfilKyc::getProfilInvestisseur)
+				.isEqualTo("EQUILIBRE");
+		maintenant = AUJOURDHUI.plusMonths(13);
+		assertThat(service.profilValide(CLIENTE)).isEmpty();
+	}
+
+	@Test
 	void leProfilInvestisseurSuitLaReactionAUneBaisse() {
 		assertThat(valider(completes(0L, "MARIE", "RETIRER"), true).getBody())
 				.extracting(ProfilVue::profilInvestisseur, ProfilVue::scoreInvestisseur).containsExactly("PRUDENT", 1);

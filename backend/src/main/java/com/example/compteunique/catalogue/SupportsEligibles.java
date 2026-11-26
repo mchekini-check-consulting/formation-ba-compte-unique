@@ -89,6 +89,14 @@ public class SupportsEligibles {
 		return collator::compare;
 	}
 
+	/**
+	 * Niveau de risque maximum d'un profil (prudent 3, équilibré 4, dynamique 6 ; paramètres), 0 pour un profil inconnu.
+	 * Lu par le module Gestion pour signaler les supports non cotés hors profil (AV-07).
+	 */
+	public int niveauRisqueMax(String profil) {
+		return niveauMax.getOrDefault(profil == null ? "" : profil, 0);
+	}
+
 	/** Frais de gestion annuels du contrat pour les unités de compte, en % (0,50 PER, 0,65 assurance vie). */
 	public BigDecimal fraisContrat(Produit produit) {
 		return fraisContratParProduit.get(produit);

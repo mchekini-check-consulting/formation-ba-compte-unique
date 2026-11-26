@@ -3,6 +3,8 @@ package com.example.compteunique.ordres;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -49,6 +51,24 @@ public class PositionsContrat {
 					: valoriser(position.getNombreParts(), codeIsin));
 		}
 		return total.setScale(2, RoundingMode.HALF_EVEN);
+	}
+
+	/**
+	 * CU-314 / CU-338 : encours du contrat par support détenu (code ISIN → euros), pour le rééquilibrage et le minimum
+	 * du mandat. Vide hors dev et qualif, comme {@link #encours(String, String)}.
+	 */
+	@Transactional(readOnly = true)
+	public Map<String, BigDecimal> encoursParSupport(String numeroContrat) {
+		Map<String, BigDecimal> parSupport = new TreeMap<>();
+		if (!positionsDeTestActives) {
+			return parSupport;
+		}
+		for (PositionTest position : positionsTest.findByNumeroContrat(numeroContrat)) {
+			parSupport.merge(position.getCodeIsin(), position.getMontant() != null ? position.getMontant()
+					: valoriser(position.getNombreParts(), position.getCodeIsin()), BigDecimal::add);
+		}
+		parSupport.replaceAll((isin, montant) -> montant.setScale(2, RoundingMode.HALF_EVEN));
+		return parSupport;
 	}
 
 	private BigDecimal valoriser(BigDecimal parts, String codeIsin) {

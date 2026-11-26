@@ -112,6 +112,11 @@ class SupportsEligiblesTest {
 	void fraisSepares() {
 		assertThat(service.fraisContrat(Produit.PER)).isEqualByComparingTo("0.50");
 		assertThat(service.fraisContrat(Produit.AV)).isEqualByComparingTo("0.65");
+		// AV-07 : maximum de risque par profil, lu par le module Gestion.
+		assertThat(service.niveauRisqueMax("PRUDENT")).isEqualTo(3);
+		assertThat(service.niveauRisqueMax("EQUILIBRE")).isEqualTo(4);
+		assertThat(service.niveauRisqueMax("DYNAMIQUE")).isEqualTo(6);
+		assertThat(service.niveauRisqueMax(null)).isZero();
 		assertThat(service.lister(Produit.AV, "PRUDENT")).filteredOn(s -> s.nom().equals("SCPI Bureaux Europe"))
 				.singleElement().satisfies(s -> assertThat(s.fraisSupportPct()).isEqualByComparingTo("1.60"));
 	}

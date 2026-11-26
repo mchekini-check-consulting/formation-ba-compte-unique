@@ -1,5 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Observable } from 'rxjs';
 import { CodeDocument, DecouverteService, EtatDecouverte, Produit } from './decouverte';
 
@@ -105,9 +105,6 @@ const PRESENTATIONS: Record<Produit, Presentation> = {
           <button class="btn p" type="button" data-test="continuer" [disabled]="!donnees()!.peutContinuer" (click)="continuer()">
             Continuer
           </button>
-          @if (annonce()) {
-            <p class="annonce" role="status">{{ annonce() }}</p>
-          }
         }
       }
     </main>
@@ -133,11 +130,11 @@ const PRESENTATIONS: Record<Produit, Presentation> = {
     .btn.p { border: 0; background: #0b2545; color: #fff; }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .erreur { color: #b42318; font-weight: 700; }
-    .annonce { color: #067647; font-weight: 700; }
   `,
 })
 export class DecouvertePage {
   private readonly service = inject(DecouverteService);
+  private readonly router = inject(Router);
   protected readonly produit: Produit =
     inject(ActivatedRoute).snapshot.queryParamMap.get('produit') === 'PER' ? 'PER' : 'AV';
   protected readonly presentation = PRESENTATIONS[this.produit];
@@ -147,7 +144,6 @@ export class DecouvertePage {
   protected readonly ouverts = signal<CodeDocument[]>([]);
   protected readonly envoi = signal(false);
   protected readonly erreur = signal('');
-  protected readonly annonce = signal('');
 
   constructor() {
     this.service.etat(this.produit).subscribe({
@@ -169,8 +165,9 @@ export class DecouvertePage {
     this.envoyer(this.service.cocher(this.produit, document), undefined, () => (caseACocher.checked = false));
   }
 
+  // CU-314 / CU-338 : étape suivante, le choix du mode de gestion (la souscription PER-04 / AV-01 viendra ensuite).
   protected continuer(): void {
-    this.annonce.set(`Souscription ${this.produit === 'PER' ? 'PER' : 'assurance vie'} : bientôt disponible.`);
+    void this.router.navigate(['/gestion'], { queryParams: { produit: this.produit } });
   }
 
   private envoyer(
