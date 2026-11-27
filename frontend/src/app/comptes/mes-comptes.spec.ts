@@ -50,12 +50,9 @@ describe('MesComptes', () => {
     expect(page.querySelector('a.compte')?.getAttribute('href')).toBe('/comptes/5');
   });
 
-  it("s'affiche dans le cadre de l'espace, « Mes comptes » marqué dans le menu", async () => {
+  it("s'affiche comme une page du gabarit de l'espace (lot 2)", async () => {
     const page = await afficher([{ id: 5, ibanMasque: 'FR76 •••• •••• 0105', statut: 'ACTIF' }]);
-    expect(page.querySelector('.espace aside')).not.toBeNull();
-    expect(page.querySelector('h1.titre')?.textContent).toBe('Mes comptes');
-    expect(page.querySelector('.hello')?.textContent).toContain('ABC');
-    expect(page.querySelector('aside a[aria-current="page"]')?.textContent).toContain('Mes comptes');
+    expect(page.querySelector('.page h1.titre')?.textContent).toBe('Mes comptes');
     expect(page.querySelector('.card.compte .tag')?.className).toContain('t-mint');
   });
 

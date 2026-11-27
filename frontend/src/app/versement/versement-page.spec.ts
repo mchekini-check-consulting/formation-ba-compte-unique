@@ -66,12 +66,9 @@ describe('VersementPage', () => {
     return fixture.nativeElement as HTMLElement;
   }
 
-  it('affiche le compte courant et la rubrique Versements de ce compte, dans le menu de l’espace', async () => {
+  it('affiche le compte courant et la rubrique Versements de ce compte', async () => {
     const page = await ouvrir([COMPTE]);
     expect(page.querySelector('h1')?.textContent).toBe('Faire un virement');
-    expect(page.querySelector('.hello')?.textContent).toContain('ABC');
-    expect(page.querySelector('aside a[aria-current="page"]')?.textContent).toContain('Faire un virement');
-    expect(page.querySelector('a[href="/espace"]')).not.toBeNull();
     expect(page.querySelector('app-carte-compte')).not.toBeNull();
     expect(page.querySelector('.compte-id')?.textContent).toBe('5');
   });
@@ -103,10 +100,4 @@ describe('VersementPage', () => {
     expect(page.querySelector('[role=alert]')).toBeNull();
   });
 
-  it('« Me déconnecter » ferme la session', async () => {
-    const page = await ouvrir([COMPTE]);
-    vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-    (page.querySelector('.deconnexion') as HTMLButtonElement).click();
-    http.expectOne('/api/backend/connexion/deconnexion').flush(null);
-  });
 });

@@ -1,6 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, inject, signal } from '@angular/core';
-import { CadreEspace } from '../espace/cadre-espace';
 import { SuiviSession } from '../session/suivi-session';
 import { EtatProfil, LIBELLES_PROFIL, LIBELLES_STATUT, Profil, ProfilService, QUESTIONS, Question, reponsesDe } from './profil';
 
@@ -22,9 +21,9 @@ export function formaterJour(date: string): string {
 // des versions avec leur date.
 @Component({
   selector: 'app-profil-page',
-  imports: [CadreEspace],
+  imports: [],
   template: `
-    <app-cadre-espace page="profil" [identifiant]="identifiant()">
+    <div class="page">
       <section class="block">
         <div class="wrap">
           <div class="eyebrow">Épargne et placements</div>
@@ -113,7 +112,7 @@ export function formaterJour(date: string): string {
           </div>
         </div>
       </section>
-    </app-cadre-espace>
+    </div>
   `,
   styles: `
     .profil { background: #fff; border: 1px solid #e5eaf3; border-radius: 20px; padding: 24px; display: grid; gap: 16px; }

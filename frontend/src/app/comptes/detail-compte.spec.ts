@@ -57,8 +57,6 @@ describe('DetailCompte', () => {
     expect(page.textContent).toContain('FR76 •••• •••• 0105');
     expect(page.querySelector('.solde')?.textContent).toBe('1 240,50 €');
     // Cadre de l'espace : menu, « Mes comptes » marqué, identifiant de la cliente.
-    expect(page.querySelector('aside a[aria-current="page"]')?.textContent).toContain('Mes comptes');
-    expect(page.querySelector('.hello')?.textContent).toContain('ABC');
     expect(page.querySelector('h1.titre')?.textContent).toBe('Mon compte');
   });
 

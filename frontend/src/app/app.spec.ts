@@ -45,7 +45,9 @@ describe('Routes', () => {
 // ajoutée sans protection, ou rendue publique par erreur, fait échouer ce test.
 describe('Routes protégées par défaut', () => {
   const publiques = new Set(PAGES_PUBLIQUES.map((route) => route.path));
-  const protegees = routes.filter((route) => !publiques.has(route.path) && route.path !== '**');
+  // Lot 2 : les pages de l'espace sont les enfants du gabarit unique ; chacune reste protégée.
+  const pages = routes.flatMap((route) => route.children ?? [route]);
+  const protegees = pages.filter((route) => !publiques.has(route.path) && route.path !== '**');
 
   it('chaque page non publique exige une session', () => {
     expect(protegees.map((route) => route.path)).toEqual(expect.arrayContaining(['espace', 'comptes', 'comptes/:id']));
@@ -56,12 +58,16 @@ describe('Routes protégées par défaut', () => {
 
   it("une adresse inconnue mène vers une page protégée", () => {
     const inconnue = routes.find((route) => route.path === '**');
-    const cible = routes.find((route) => route.path === inconnue?.redirectTo);
+    const cible = pages.find((route) => route.path === inconnue?.redirectTo);
     expect(cible?.canActivate).toContain(espaceProtege);
   });
 
+  it('le gabarit des pages de l’espace exige lui aussi une session', () => {
+    expect(routes.find((route) => route.children)?.canActivate).toContain(espaceProtege);
+  });
+
   it("la page /items n'existe plus", () => {
-    expect(routes.some((route) => route.path?.startsWith('items'))).toBe(false);
+    expect(pages.some((route) => route.path?.startsWith('items'))).toBe(false);
   });
 
   describe('sans session', () => {

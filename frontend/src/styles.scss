@@ -7,3 +7,7 @@
 body {
   margin: 0;
 }
+
+// Lot 2 (RGAA) : lien d'évitement « Aller au contenu », visible quand il reçoit le focus clavier.
+.evitement { position: absolute; left: -9999px; top: 8px; z-index: 100; background: #0b2545; color: #fff; padding: 10px 16px; border-radius: 10px; font: 700 15px system-ui, sans-serif; }
+.evitement:focus { left: 8px; }

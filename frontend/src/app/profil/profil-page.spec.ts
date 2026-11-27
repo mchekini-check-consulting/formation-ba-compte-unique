@@ -77,7 +77,6 @@ describe('ProfilPage (CU-10)', () => {
     expect(page.querySelector('[data-test="statut"]')?.textContent).toContain('À compléter');
     expect(page.querySelectorAll('select, input[type="number"]')).toHaveLength(13);
     expect((page.querySelector('#statutMatrimonial') as HTMLSelectElement).value).toBe('');
-    expect(page.querySelector('a[href="/profil"]')?.getAttribute('aria-current')).toBe('page');
   });
 
   it('profil de plus de 12 mois : « À revalider » et réponses pré-remplies', async () => {

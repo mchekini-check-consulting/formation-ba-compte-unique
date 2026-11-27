@@ -51,8 +51,7 @@ const ligneComplete = (l: Ligne) =>
   selector: 'app-souscription-page',
   imports: [RouterLink],
   template: `
-    <main class="souscription">
-      <a routerLink="/decouvrir" [queryParams]="{ produit }">← Découvrir {{ textes.nom }}</a>
+    <div class="page souscription">
       <h1>{{ textes.titre }}</h1>
 
       @if (message()) {
@@ -157,26 +156,14 @@ const ligneComplete = (l: Ligne) =>
           }
         }
       }
-    </main>
+    </div>
   `,
   styles: `
-    .souscription { max-width: 720px; margin: 0 auto; padding: 24px 16px; display: grid; gap: 16px; }
-    .carte { display: grid; gap: 12px; padding: 16px; border: 1px solid #d0d5dd; border-radius: 12px; background: #fff; }
     label { display: grid; gap: 4px; font-weight: 700; }
     .choix { display: flex; gap: 8px; align-items: center; font-weight: 400; }
-    fieldset { border: 0; padding: 0; display: grid; gap: 8px; }
-    legend { font-weight: 700; margin-bottom: 4px; }
-    input { padding: 8px; font: inherit; max-width: 100%; }
     .beneficiaire { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; align-items: end;
       padding: 8px; border: 1px solid #eef1f5; border-radius: 8px; }
     .code { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
-    .btn { justify-self: start; padding: 10px 18px; border-radius: 999px; font-weight: 700; cursor: pointer; font: inherit; }
-    .btn.o { border: 1px solid #0b2545; background: #fff; color: #0b2545; }
-    .btn.p { border: 0; background: #0b2545; color: #fff; }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .lien { border: 0; background: none; color: #0b2545; text-decoration: underline; cursor: pointer; font: inherit; }
-    .erreur { color: #b42318; font-weight: 700; }
-    .succes { color: #067647; font-weight: 700; }
   `,
 })
 export class SouscriptionPage {

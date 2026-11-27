@@ -3,7 +3,6 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CarteCompte } from '../comptes/carte-compte';
 import { Compte, ComptesService } from '../comptes/comptes';
-import { CadreEspace } from '../espace/cadre-espace';
 import { SuiviSession } from '../session/suivi-session';
 import { FormulaireVirement } from './formulaire-virement';
 import { RubriqueVersements } from './rubrique-versements';
@@ -11,16 +10,16 @@ import { RubriqueVersements } from './rubrique-versements';
 type Etat = { lu: false } | { lu: true; erreur: boolean; compte: Compte | null };
 
 // CU-11 (US-06) : page « Faire un virement », ouverte par les boutons « Faire un virement » de l'espace
-// (haut de page et actions du compte courant). Même menu et même style que l'espace (CadreEspace) :
+// (haut de page et actions du compte courant). Même menu et même style que l'espace (GabaritEspace) :
 // solde du compte courant, IBAN à communiquer à l'émetteur, mouvements et, en test, simulation d'un
 // virement entrant (CU-143) ou sortant (CU-144). Sans session, retour à la connexion.
 // CU-147 : virement vers un de mes bénéficiaires (FormulaireVirement) ; une fois exécuté, le solde et les
 // mouvements sont relus.
 @Component({
   selector: 'app-versement-page',
-  imports: [CadreEspace, CarteCompte, FormulaireVirement, RouterLink, RubriqueVersements],
+  imports: [CarteCompte, FormulaireVirement, RouterLink, RubriqueVersements],
   template: `
-    <app-cadre-espace page="virement" [identifiant]="identifiant()">
+    <div class="page">
       <section class="block">
         <div class="wrap">
           <div class="eyebrow">Mes comptes · Compte courant</div>
@@ -59,7 +58,7 @@ type Etat = { lu: false } | { lu: true; erreur: boolean; compte: Compte | null }
           }
         </div>
       </section>
-    </app-cadre-espace>
+    </div>
   `,
   styles: `
     .feature.versement { align-items: start; }

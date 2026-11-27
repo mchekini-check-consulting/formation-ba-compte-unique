@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import com.example.compteunique.compte.Compte;
 import com.example.compteunique.compte.CompteService;
 import com.example.compteunique.datemetier.DateMetier;
+import com.example.compteunique.dossier.DossierRepository;
 import com.example.compteunique.evenements.ConfigurationKafka.Topic;
 import com.example.compteunique.evenements.Evenements;
 import com.example.compteunique.profil.ProfilClientService.Statut;
@@ -44,7 +45,7 @@ class RevalidationProfilsTest {
 	private final CompteService comptes = mock(CompteService.class);
 	private final PublicationStatutProfil publication = new PublicationStatutProfil(publies, evenements, dateMetier);
 	private final ProfilClientService service = new ProfilClientService(comptes, dateMetier, profils,
-			mock(ConsentementRepository.class), publication);
+			mock(ConsentementRepository.class), publication, mock(DossierRepository.class));
 	private final Map<UUID, StatutPublie> base = new HashMap<>();
 	private ZonedDateTime maintenant = APRES_ECHEANCE;
 

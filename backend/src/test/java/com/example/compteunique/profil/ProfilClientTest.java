@@ -23,6 +23,8 @@ import com.example.compteunique.compte.ClienteNonConnecteeException;
 import com.example.compteunique.compte.Compte;
 import com.example.compteunique.compte.CompteService;
 import com.example.compteunique.datemetier.DateMetier;
+import com.example.compteunique.dossier.Dossier;
+import com.example.compteunique.dossier.DossierRepository;
 import com.example.compteunique.profil.ProfilClientController.EtatVue;
 import com.example.compteunique.profil.ProfilClientController.ProfilVue;
 import com.example.compteunique.profil.ProfilClientController.Questionnaire;
@@ -43,8 +45,9 @@ class ProfilClientTest {
 	private final ProfilKycRepository profils = mock(ProfilKycRepository.class);
 	private final ConsentementRepository consentements = mock(ConsentementRepository.class);
 	private final PublicationStatutProfil publication = mock(PublicationStatutProfil.class);
+	private final DossierRepository dossiers = mock(DossierRepository.class);
 	private final ProfilClientService service = new ProfilClientService(comptes, dateMetier, profils, consentements,
-			publication);
+			publication, dossiers);
 	private final ProfilClientController controller = new ProfilClientController(service);
 	private final List<ProfilKyc> base = new ArrayList<>();
 	private ZonedDateTime maintenant = AUJOURDHUI;
@@ -203,6 +206,24 @@ class ProfilClientTest {
 		assertThatThrownBy(() -> controller.etat("expire")).isInstanceOf(ClienteNonConnecteeException.class);
 		assertThat(controller.nonConnectee().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
 		assertThat(controller.sansCompte().getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+	}
+
+	@Test
+	void d8PremierPrenomDuDossierEnLectureSeuleSinonRien() {
+		Compte compte = comptes.compteCourant("jeton");
+		when(compte.getDossierId()).thenReturn(3L);
+		Dossier dossier = mock(Dossier.class);
+		when(dossiers.findById(3L)).thenReturn(java.util.Optional.of(dossier));
+
+		when(dossier.getPrenoms()).thenReturn(" Marie Claire ");
+		assertThat(controller.etat("jeton").prenom()).isEqualTo("Marie");
+		when(dossier.getPrenoms()).thenReturn("Jean-Pierre, Louis");
+		assertThat(service.prenom("jeton")).contains("Jean-Pierre");
+		when(dossier.getPrenoms()).thenReturn("  ");
+		assertThat(service.prenom("jeton")).isEmpty();
+		when(compte.getDossierId()).thenReturn(null);
+		assertThat(controller.etat("jeton").prenom()).isNull();
+		verify(dossiers, never()).save(any());
 	}
 
 }

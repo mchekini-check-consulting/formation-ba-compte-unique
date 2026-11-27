@@ -2,16 +2,15 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Compte, ComptesService, libelleStatut } from './comptes';
-import { CadreEspace } from '../espace/cadre-espace';
 import { SuiviSession } from '../session/suivi-session';
 
 // CU-20 : liste des comptes dont la cliente est titulaire, dans le cadre et le style de l'espace
-// (CadreEspace). Sans session, retour à la connexion.
+// (GabaritEspace). Sans session, retour à la connexion.
 @Component({
   selector: 'app-mes-comptes',
-  imports: [CadreEspace, RouterLink],
+  imports: [RouterLink],
   template: `
-    <app-cadre-espace page="comptes" [identifiant]="identifiant()">
+    <div class="page">
       <section class="block">
         <div class="wrap">
           <div class="eyebrow">Mes comptes</div>
@@ -49,7 +48,7 @@ import { SuiviSession } from '../session/suivi-session';
           }
         </div>
       </section>
-    </app-cadre-espace>
+    </div>
   `,
 })
 export class MesComptes {
