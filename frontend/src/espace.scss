@@ -179,7 +179,8 @@
   footer { padding: 30px 44px; font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 8px 24px; }
 
   /* Fil d'Ariane et bouton retour */
-  .ariane-barre { display: flex; align-items: center; gap: 18px; padding: 16px 44px 0; font-size: 14px; color: var(--muted); }
+  // Aligné sur le contenu des pages (même largeur maximale, centré).
+  .ariane-barre { display: flex; align-items: center; gap: 18px; max-width: 1100px; margin: 0 auto; padding: 16px 44px 0; font-size: 14px; color: var(--muted); }
   .ariane ol { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; }
   .ariane li + li::before { content: "›"; margin-right: 6px; }
   .ariane a, .retour { color: var(--navy); font-weight: 700; }
