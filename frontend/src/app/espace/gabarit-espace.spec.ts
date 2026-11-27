@@ -2,8 +2,9 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { Observable, of, throwError } from 'rxjs';
+import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
 import { vi } from 'vitest';
+import { FonctionnalitesService } from '../fonctionnalites/fonctionnalites';
 import { ProfilService } from '../profil/profil';
 import { SuiviSession } from '../session/suivi-session';
 import { Ariane, GabaritEspace, MENU } from './gabarit-espace';
@@ -29,11 +30,13 @@ describe('GabaritEspace', () => {
     restant: vi.fn(() => 600) as unknown as () => number | null,
   };
   const profils = { lire: vi.fn() };
+  let etats: BehaviorSubject<Record<string, boolean>>;
 
   beforeEach(() => {
     suivi.ouvrir.mockReset().mockReturnValue(of({ identifiant: 'ABC', expireDansSecondes: 600 }));
     suivi.arreter.mockReset();
     suivi.deconnecter.mockReset();
+    etats = new BehaviorSubject<Record<string, boolean>>({});
     profils.lire.mockReset().mockReturnValue(of({ statut: 'VALIDE', profil: null, prenom: 'Marie' }));
     TestBed.configureTestingModule({
       providers: [
@@ -50,6 +53,7 @@ describe('GabaritEspace', () => {
         ]),
         { provide: SuiviSession, useValue: suivi },
         { provide: ProfilService, useValue: profils },
+        { provide: FonctionnalitesService, useValue: { etats: () => etats } },
       ],
     });
   });
@@ -119,15 +123,18 @@ describe('GabaritEspace', () => {
     expect(document.activeElement?.id).toBe('contenu');
   });
 
-  it('« Messages » annonce la messagerie à venir', async () => {
-    vi.useFakeTimers();
-    const { harness, page } = await ouvrir('/espace');
-    [...page.querySelectorAll<HTMLButtonElement>('.top button')].find((b) => b.textContent?.includes('Messages'))!.click();
-    harness.detectChanges();
-    expect(page.querySelector('.toast')?.textContent).toContain('Messagerie');
-    vi.advanceTimersByTime(3200);
-    harness.detectChanges();
+  it('lot 3 : « Messages » est un bouton « Bientôt » ; « Outils de test » n’apparaît que si son interrupteur est activé', async () => {
+    const { page } = await ouvrir('/espace');
+    const messages = page.querySelector<HTMLButtonElement>('.top [data-fonctionnalite="messagerie"]')!;
+    expect(messages.getAttribute('aria-disabled')).toBe('true');
+    messages.click();
     expect(page.querySelector('.toast')).toBeNull();
-    vi.useRealTimers();
+    expect(page.querySelector('[data-test="outils-test"]')).toBeNull();
+  });
+
+  it('« Outils de test » apparaît quand son interrupteur est activé (dev et qualif)', async () => {
+    etats.next({ 'outils-test': true });
+    const { page } = await ouvrir('/espace');
+    expect(page.querySelector('[data-test="outils-test"]')?.getAttribute('href')).toBe('/test/fonctionnalites');
   });
 });

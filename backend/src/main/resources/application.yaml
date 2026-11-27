@@ -43,6 +43,26 @@ server:
   forward-headers-strategy: native
 
 app:
+  # Lot 3 : interrupteurs des fonctionnalités (helm.yaml), lus par GET /fonctionnalites. Vide : désactivée.
+  fonctionnalites:
+    messagerie: ${FONCTIONNALITE_MESSAGERIE:false}
+    ajout-compte-externe: ${FONCTIONNALITE_AJOUT_COMPTE_EXTERNE:false}
+    virement-programme: ${FONCTIONNALITE_VIREMENT_PROGRAMME:false}
+    cloture-compte: ${FONCTIONNALITE_CLOTURE_COMPTE:false}
+    ldds: ${FONCTIONNALITE_LDDS:false}
+    cel: ${FONCTIONNALITE_CEL:false}
+    simulateur-credit: ${FONCTIONNALITE_SIMULATEUR_CREDIT:false}
+    demande-credit-conso: ${FONCTIONNALITE_DEMANDE_CREDIT_CONSO:false}
+    demande-credit-immo: ${FONCTIONNALITE_DEMANDE_CREDIT_IMMO:false}
+    demande-rachat-credits: ${FONCTIONNALITE_DEMANDE_RACHAT_CREDITS:false}
+    simulateur-per: ${FONCTIONNALITE_SIMULATEUR_PER:false}
+    simulateur-av: ${FONCTIONNALITE_SIMULATEUR_AV:false}
+    document-convention: ${FONCTIONNALITE_DOCUMENT_CONVENTION:false}
+    document-releve: ${FONCTIONNALITE_DOCUMENT_RELEVE:false}
+    document-attestation-livret-a: ${FONCTIONNALITE_DOCUMENT_ATTESTATION_LIVRET_A:false}
+    contact-conseiller: ${FONCTIONNALITE_CONTACT_CONSEILLER:false}
+    changement-mot-de-passe: ${FONCTIONNALITE_CHANGEMENT_MOT_DE_PASSE:false}
+    outils-test: ${FONCTIONNALITE_OUTILS_TEST:true}
   conseiller:
     # CU-9 critère 8 : coordonnées affichées quand une ouverture en ligne est annulée par contrôle.
     # Valeur fictive du prototype, à remplacer par les vraies coordonnées.

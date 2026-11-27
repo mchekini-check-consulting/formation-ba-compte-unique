@@ -6,6 +6,7 @@ import { MesComptes } from './comptes/mes-comptes';
 import { ConnexionPage } from './connexion-page/connexion-page';
 import { DateMetierTest } from './date-metier-test/date-metier-test';
 import { Espace } from './espace/espace';
+import { outilsDeTest } from './fonctionnalites/outils-test';
 import { Ariane, GabaritEspace } from './espace/gabarit-espace';
 import { JournalTest } from './journal-test/journal-test';
 import { Landing } from './landing/landing';
@@ -21,7 +22,10 @@ import { VersementPage } from './versement/versement-page';
 // les autres, y compris une page ajoutée plus tard ou une adresse inconnue, exigent une session
 // (CU-18 : sans session valide, retour à la connexion). Rendre une page publique est un choix
 // explicite, ici.
-export const PAGES_PUBLIQUES: Routes = [
+// Lot 3 (D4) : les pages /test/... ne s'ouvrent que si l'interrupteur « Outils de test » est activé (dev et qualif).
+const outils = (route: Route): Route => (route.path?.startsWith('test/') ? { ...route, canActivate: [outilsDeTest] } : route);
+
+export const PAGES_PUBLIQUES: Routes = ([
   { path: '', component: Landing, pathMatch: 'full' },
   { path: 'connexion', component: ConnexionPage, canActivate: [connexionPublique] },
   { path: 'activation', component: ActivationPage },
@@ -46,12 +50,14 @@ export const PAGES_PUBLIQUES: Routes = [
   { path: 'test/scenarios', loadComponent: () => import('./outils-test/scenarios-test').then((m) => m.ScenariosTest) },
   { path: 'test/livret-a', loadComponent: () => import('./outils-test/livret-a-test').then((m) => m.LivretATest) },
   { path: 'test/virements', loadComponent: () => import('./outils-test/virements-test-page').then((m) => m.VirementsTestPage) },
+  // Lot 3 : état des interrupteurs de fonctionnalités et accès aux outils de test.
+  { path: 'test/fonctionnalites', loadComponent: () => import('./fonctionnalites/fonctionnalites-test').then((m) => m.FonctionnalitesTest) },
   // CU-27 : présentation du Livret A, ouverte à toutes ; son bouton d'ouverture mène à /livret-a (protégée).
   { path: 'epargne/livret-a', loadComponent: () => import('./livret-a/presentation-livret-a').then((m) => m.PresentationLivretA) },
   { path: 'mentions-legales', component: PageInfo, data: { titre: 'Mentions légales' } },
   { path: 'protection-des-donnees', component: PageInfo, data: { titre: 'Politique de protection des données' } },
   { path: 'accessibilite', component: PageInfo, data: { titre: 'Accessibilité' } },
-];
+] satisfies Routes).map(outils);
 
 const ACCUEIL = { libelle: 'Accueil', lien: '/espace' };
 const EPARGNE = { libelle: 'Produits à souscrire', lien: '/espace', fragment: 'epargne' };

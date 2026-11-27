@@ -46,6 +46,10 @@ describe('Espace', () => {
     http.expectOne(PROFIL).flush({ statut: 'A_COMPLETER', profil: null });
     http.expectOne(PARAMETRES).flush(parametres as never);
     await fixture.whenStable();
+    // Lot 3 : interrupteurs des boutons de fonctionnalité, tous désactivés (« Bientôt »).
+    http.match('/api/backend/fonctionnalites').forEach((r) => r.flush({}));
+    fixture.detectChanges();
+    await fixture.whenStable();
     return { fixture, page: fixture.nativeElement as HTMLElement };
   }
 
@@ -92,11 +96,15 @@ describe('Espace', () => {
     }
   });
 
-  it('annonce les parcours pas encore développés, sans rien envoyer', async () => {
+  it('lot 3 : les parcours pas encore développés sont des boutons « Bientôt » ; un clic n’affiche plus aucun message', async () => {
     const { fixture, page } = await ouvrir([COMPTE]);
-    page.querySelectorAll<HTMLButtonElement>('#epargne .produit .btn')[1].click();
+    const ldds = page.querySelector<HTMLButtonElement>('#epargne [data-fonctionnalite="ldds"]')!;
+    expect(ldds.getAttribute('aria-disabled')).toBe('true');
+    expect(ldds.textContent).toContain('Souscrire');
+    ldds.click();
     await fixture.whenStable();
-    expect(page.querySelector('.toast')?.textContent).toBe('Souscription LDDS : bientôt disponible.');
+    expect(page.querySelector('.toast')).toBeNull();
+    expect(page.textContent).not.toContain('bientôt disponible.');
   });
 
   it('la carte Livret A ouvre la page « Ouvrir mon Livret A » (CU-31)', async () => {

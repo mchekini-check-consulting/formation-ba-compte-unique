@@ -1,3 +1,4 @@
+import { CleFonctionnalite } from '../fonctionnalites/fonctionnalites';
 import { DETAIL_TAUX_LIVRET_A, LIVRET_A, TAUX_LIVRET_A, euros } from '../livret-a/parametres';
 
 // Produits proposés à la souscription dans l'espace client (maquette « Espace client Hi-Tech Bank »).
@@ -13,6 +14,10 @@ export interface Produit {
   tauxAvant?: string;
   minimum?: string;
   note?: string;
+  /** Lot 3 : bouton « Souscrire » d'un produit pas encore ouvert en ligne (LDDS, CEL). */
+  souscription?: CleFonctionnalite;
+  /** Lot 3 : bouton « Faire une demande » d'un crédit. */
+  demande?: CleFonctionnalite;
 }
 
 export const EPARGNE: Produit[] = [
@@ -29,6 +34,7 @@ export const EPARGNE: Produit[] = [
   },
   {
     nom: 'LDDS',
+    souscription: 'ldds',
     categorie: 'Épargne réglementée',
     teinte: 'mint',
     description:
@@ -40,6 +46,7 @@ export const EPARGNE: Produit[] = [
   },
   {
     nom: 'CEL',
+    souscription: 'cel',
     categorie: 'Épargne logement',
     teinte: 'amber',
     description:
@@ -73,6 +80,7 @@ export const EPARGNE: Produit[] = [
 export const CREDITS: Produit[] = [
   {
     nom: 'Crédit immobilier',
+    demande: 'demande-credit-immo',
     categorie: 'Crédit',
     teinte: 'blue',
     description:
@@ -80,6 +88,7 @@ export const CREDITS: Produit[] = [
   },
   {
     nom: 'Crédit à la consommation',
+    demande: 'demande-credit-conso',
     categorie: 'Crédit',
     teinte: 'rose',
     description:
@@ -87,6 +96,7 @@ export const CREDITS: Produit[] = [
   },
   {
     nom: 'Rachat de crédits',
+    demande: 'demande-rachat-credits',
     categorie: 'Regroupement',
     teinte: 'mint',
     description:

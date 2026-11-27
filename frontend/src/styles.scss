@@ -11,3 +11,6 @@ body {
 // Lot 2 (RGAA) : lien d'évitement « Aller au contenu », visible quand il reçoit le focus clavier.
 .evitement { position: absolute; left: -9999px; top: 8px; z-index: 100; background: #0b2545; color: #fff; padding: 10px 16px; border-radius: 10px; font: 700 15px system-ui, sans-serif; }
 .evitement:focus { left: 8px; }
+
+// Lot 3 : texte lu par les lecteurs d'écran seulement (« Bientôt disponible »).
+.visuellement-cache { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
