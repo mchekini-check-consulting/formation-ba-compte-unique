@@ -26,7 +26,7 @@ export function formaterJour(date: string): string {
     <div class="page">
       <section class="block">
         <div class="wrap">
-          <div class="eyebrow">Mon profil et sécurité</div>
+          <div class="eyebrow">Mon profil investisseur</div>
           <h1 class="titre">Mon profil investisseur</h1>
           <p class="lead">
             Rempli une fois, il sert à toutes vos souscriptions de PER et d’assurance vie pendant 12 mois.
