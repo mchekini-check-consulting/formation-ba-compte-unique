@@ -92,14 +92,14 @@ describe('DecouvertePage (CU-311, CU-331)', () => {
     const continuer = page.querySelector<HTMLButtonElement>('[data-test="continuer"]')!;
     expect(continuer.disabled).toBe(false);
     continuer.click();
-    expect(navigate).toHaveBeenCalledWith(['/souscrire']);
+    expect(navigate).toHaveBeenCalledWith(['/souscrire'], { queryParams: { produit: 'PER' } });
   });
 
-  it('assurance vie : « Continuer » mène encore au choix du mode de gestion', async () => {
+  it('assurance vie : « Continuer » mène à la souscription de l’assurance vie (CU-330)', async () => {
     const { page } = await ouvrirPage(etat(doc('DIC', true, true), doc('FICHE_PRODUIT', true, true), 'AV'), 'AV');
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     page.querySelector<HTMLButtonElement>('[data-test="continuer"]')!.click();
-    expect(navigate).toHaveBeenCalledWith(['/gestion'], { queryParams: { produit: 'AV' } });
+    expect(navigate).toHaveBeenCalledWith(['/souscrire'], { queryParams: { produit: 'AV' } });
   });
 
   it('une case refusée par le backend redevient décochée, avec un message', async () => {

@@ -62,7 +62,8 @@ const PAGES_DE_L_ESPACE: Routes = [
   { path: 'supports', loadComponent: () => import('./supports/supports-page').then((m) => m.SupportsPage) },
   // CU-311 / CU-331 : découvrir le PER ou l'assurance vie et lire ses documents avant de souscrire (?produit=PER|AV).
   { path: 'decouvrir', loadComponent: () => import('./decouverte/decouverte-page').then((m) => m.DecouvertePage) },
-  // CU-312 : souscrire son PER (premier versement et signature par code SMS) après « Continuer » sur Découvrir.
+  // CU-312 / CU-330 : souscrire son PER ou son assurance vie (premier versement, clause bénéficiaire pour l'assurance
+  // vie, signature par code SMS) après « Continuer » sur Découvrir (?produit=PER|AV).
   { path: 'souscrire', loadComponent: () => import('./souscription/souscription-page').then((m) => m.SouscriptionPage) },
   // CU-314 / CU-338 : choisir son mode de gestion (libre, pilotée, sous mandat) après « Continuer » (?produit=PER|AV).
   { path: 'gestion', loadComponent: () => import('./gestion/gestion-page').then((m) => m.GestionPage) },

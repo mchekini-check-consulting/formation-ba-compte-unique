@@ -204,7 +204,9 @@ public class ModeDeGestion {
 		UUID cliente = customerId(jetonSession);
 		ContratGestion contrat = contrats.findWithLockByCustomerIdAndProduit(cliente, produit)
 				.orElseThrow(ContratIntrouvable::new);
-		ProfilGestion profil = profilDemande != null ? profilDemande : contrat.getProfil();
+		// CU-460 : en gestion libre, le profil de gestion n'est pas utilisé (champ masqué à l'écran) : celui en vigueur
+		// est conservé, sans contrôle du profil envoyé.
+		ProfilGestion profil = profilDemande != null && mode != ModeGestion.LIBRE ? profilDemande : contrat.getProfil();
 		Optional<ProfilKyc> kyc = profils.profilValide(cliente);
 		// PER et AV (décision PO du 26/11/2026) : jamais au-dessus du profil investisseur.
 		if (profil != contrat.getProfil()) {

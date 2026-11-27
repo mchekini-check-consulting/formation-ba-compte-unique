@@ -1,12 +1,13 @@
 package com.example.compteunique.souscription;
 
-import java.math.BigDecimal;
+import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,27 +15,28 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.compteunique.beneficiaire.DemandeRefusee;
 import com.example.compteunique.catalogue.Adequation.SupportInadapte;
+import com.example.compteunique.catalogue.CatalogueService.Produit;
 import com.example.compteunique.compte.ClienteNonConnecteeException;
 import com.example.compteunique.compte.CompteInaccessibleException;
 import com.example.compteunique.connexion.ConnexionController;
-import com.example.compteunique.souscription.SouscriptionPer.Etat;
+import com.example.compteunique.souscription.SouscriptionService.DemandeVersement;
+import com.example.compteunique.souscription.SouscriptionService.Etat;
 
-// CU-312 (PER-04) : parcours de souscription du PER de la cliente connectée (session obligatoire).
-// GET /souscriptions/per : état ; POST /versement {montant, origineFonds, originePrecision} ; POST /code : envoi du
-// code SMS ; POST /signature {code} : contrat créé et premier versement placé. Refus : {message}.
+// CU-312 (PER-04) et CU-330 (AV-01) : parcours de souscription de la cliente connectée (session obligatoire), produit
+// « per » ou « av ». GET /souscriptions/{produit} : état ; POST /versement {montant, origineFonds, originePrecision,
+// beneficiaires} ; POST /code : envoi du code SMS ; POST /signature {code} : contrat créé et premier versement placé.
+// Refus : {message}.
 @RestController
-@RequestMapping("/souscriptions/per")
+@RequestMapping("/souscriptions/{produit}")
 public class SouscriptionController {
 
 	private static final String COOKIE = ConnexionController.COOKIE_SESSION;
+	private static final Map<String, Produit> PRODUITS = Map.of("per", Produit.PER, "av", Produit.AV);
 
-	private final SouscriptionPer service;
+	private final SouscriptionService service;
 
-	public SouscriptionController(SouscriptionPer service) {
+	public SouscriptionController(SouscriptionService service) {
 		this.service = service;
-	}
-
-	public record DemandeVersement(BigDecimal montant, String origineFonds, String originePrecision) {
 	}
 
 	public record DemandeSignature(String code) {
@@ -44,26 +46,36 @@ public class SouscriptionController {
 	}
 
 	@GetMapping
-	public Etat etat(@CookieValue(name = COOKIE, required = false) String jetonSession) {
-		return service.etat(jetonSession);
+	public Etat etat(@CookieValue(name = COOKIE, required = false) String jetonSession,
+			@PathVariable("produit") String produit) {
+		return service.etat(jetonSession, produit(produit));
 	}
 
 	@PostMapping("/versement")
 	public Etat versement(@CookieValue(name = COOKIE, required = false) String jetonSession,
-			@RequestBody(required = false) DemandeVersement demande) {
-		DemandeVersement d = demande != null ? demande : new DemandeVersement(null, null, null);
-		return service.choisirVersement(jetonSession, d.montant(), d.origineFonds(), d.originePrecision());
+			@PathVariable("produit") String produit, @RequestBody(required = false) DemandeVersement demande) {
+		return service.choisirVersement(jetonSession, produit(produit),
+				demande != null ? demande : new DemandeVersement(null, null, null, null));
 	}
 
 	@PostMapping("/code")
-	public Etat code(@CookieValue(name = COOKIE, required = false) String jetonSession) {
-		return service.envoyerCode(jetonSession);
+	public Etat code(@CookieValue(name = COOKIE, required = false) String jetonSession,
+			@PathVariable("produit") String produit) {
+		return service.envoyerCode(jetonSession, produit(produit));
 	}
 
 	@PostMapping("/signature")
 	public Etat signature(@CookieValue(name = COOKIE, required = false) String jetonSession,
-			@RequestBody(required = false) DemandeSignature demande) {
-		return service.signer(jetonSession, demande == null ? null : demande.code());
+			@PathVariable("produit") String produit, @RequestBody(required = false) DemandeSignature demande) {
+		return service.signer(jetonSession, produit(produit), demande == null ? null : demande.code());
+	}
+
+	private static Produit produit(String produit) {
+		Produit connu = PRODUITS.get(produit);
+		if (connu == null) {
+			throw new DemandeRefusee(HttpStatus.NOT_FOUND, "Produit inconnu : per ou av attendu.");
+		}
+		return connu;
 	}
 
 	@ExceptionHandler(DemandeRefusee.class)

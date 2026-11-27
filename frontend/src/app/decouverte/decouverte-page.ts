@@ -165,13 +165,9 @@ export class DecouvertePage {
     this.envoyer(this.service.cocher(this.produit, document), undefined, () => (caseACocher.checked = false));
   }
 
-  // CU-312 : le PER continue vers sa souscription ; l'assurance vie vers le mode de gestion en attendant AV-01 (CU-330).
+  // CU-312 et CU-330 : étape suivante, la souscription du produit (PER-04, AV-01).
   protected continuer(): void {
-    if (this.produit === 'PER') {
-      void this.router.navigate(['/souscrire']);
-      return;
-    }
-    void this.router.navigate(['/gestion'], { queryParams: { produit: this.produit } });
+    void this.router.navigate(['/souscrire'], { queryParams: { produit: this.produit } });
   }
 
   private envoyer(

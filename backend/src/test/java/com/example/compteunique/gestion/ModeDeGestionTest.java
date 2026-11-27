@@ -219,6 +219,18 @@ class ModeDeGestionTest {
 	}
 
 	@Test
+	@DisplayName("CU-460 : cliente équilibrée qui passe en gestion libre avec « Dynamique » resté sélectionné (champ "
+			+ "masqué) : accepté, le profil en vigueur est conservé")
+	void libreAvecProfilMasqueTropRisque() {
+		creer(Produit.AV);
+
+		Etat etat = service.choisir(JETON, Produit.AV, ModeGestion.LIBRE, ProfilGestion.DYNAMIQUE);
+
+		assertThat(etat.contrat().mode()).isEqualTo(ModeGestion.LIBRE);
+		assertThat(etat.contrat().profil()).isEqualTo(ProfilGestion.EQUILIBRE);
+	}
+
+	@Test
 	@DisplayName("Une cliente en gestion libre qui passe en gestion pilotée (AV) : ordres d'arbitrage gratuits passés au "
 			+ "module Ordres, positions jamais modifiées ; le quota de non coté ne s'applique pas aux positions existantes")
 	void libreVersPiloteeReequilibre() {
