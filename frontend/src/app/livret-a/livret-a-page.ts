@@ -2,7 +2,6 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { refusDe } from '../beneficiaires/beneficiaires';
-import { CadreEspace } from '../espace/cadre-espace';
 import { BouchonsIdentiteService, CAS_FISCAUX, ReponseFiscale } from '../identification/bouchons-identite';
 import { scenarioChoisi } from '../outils-test/scenarios';
 
@@ -60,9 +59,9 @@ export const CERTIFICAT_OBLIGATOIRE = 'Sélectionnez votre certificat de clôtur
 // réponse au backend, qui applique les règles. Suivi de la demande ensuite (en cours, validée, existant).
 @Component({
   selector: 'app-livret-a-page',
-  imports: [CadreEspace, RouterLink, EtapeIdentiteLivretA, EtapePieceLivretA, EtapeQuestionsLivretA, VersementInitialLivretA],
+  imports: [RouterLink, EtapeIdentiteLivretA, EtapePieceLivretA, EtapeQuestionsLivretA, VersementInitialLivretA],
   template: `
-    <app-cadre-espace page="livret-a" [identifiant]="identifiant()">
+    <div class="page">
       <section class="block">
         <div class="wrap">
           <!-- CU-27 critère 8 : retour à la page Livret A, à l'endroit quitté. -->
@@ -229,7 +228,7 @@ export const CERTIFICAT_OBLIGATOIRE = 'Sélectionnez votre certificat de clôtur
           </div>
         </div>
       </section>
-    </app-cadre-espace>
+    </div>
   `,
   styles: `
     .livret, .test { background: #fff; border: 1px solid #e5eaf3; border-radius: 20px; padding: 24px; display: grid; gap: 14px; }

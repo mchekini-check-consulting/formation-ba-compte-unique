@@ -1,7 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { CadreEspace } from '../espace/cadre-espace';
 import { SuiviSession } from '../session/suivi-session';
 import { AjoutEnAttente, Beneficiaire, BeneficiairesService, refusDe } from './beneficiaires';
 
@@ -15,9 +14,9 @@ const INDISPONIBLE = 'Le service est momentanément indisponible. Veuillez rées
 // code reçu par SMS), modification du libellé et suppression. Les refus du backend sont affichés tels quels.
 @Component({
   selector: 'app-mes-beneficiaires',
-  imports: [CadreEspace, RouterLink],
+  imports: [RouterLink],
   template: `
-    <app-cadre-espace page="beneficiaires" [identifiant]="identifiant()">
+    <div class="page">
       <section class="block">
         <div class="wrap">
           <div class="eyebrow">Mes comptes · Virements</div>
@@ -105,7 +104,7 @@ const INDISPONIBLE = 'Le service est momentanément indisponible. Veuillez rées
           </div>
         </div>
       </section>
-    </app-cadre-espace>
+    </div>
   `,
   styles: `
     .beneficiaires { background: #fff; border: 1px solid #e5eaf3; border-radius: 20px; padding: 24px; display: grid; gap: 16px; }

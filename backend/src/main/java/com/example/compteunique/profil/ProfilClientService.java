@@ -13,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.compteunique.compte.CompteService;
 import com.example.compteunique.datemetier.DateMetier;
+import com.example.compteunique.dossier.Dossier;
+import com.example.compteunique.dossier.DossierRepository;
 import com.example.compteunique.logging.Loggable;
 
 /**
@@ -63,14 +65,27 @@ public class ProfilClientService {
 	private final ProfilKycRepository profils;
 	private final ConsentementRepository consentements;
 	private final PublicationStatutProfil publication;
+	private final DossierRepository dossiers;
 
 	public ProfilClientService(CompteService comptes, DateMetier dateMetier, ProfilKycRepository profils,
-			ConsentementRepository consentements, PublicationStatutProfil publication) {
+			ConsentementRepository consentements, PublicationStatutProfil publication, DossierRepository dossiers) {
 		this.comptes = comptes;
 		this.dateMetier = dateMetier;
 		this.profils = profils;
 		this.consentements = consentements;
 		this.publication = publication;
+		this.dossiers = dossiers;
+	}
+
+	/**
+	 * D8 (PO, 27/11/2026) : premier prénom de la cliente, enregistré à l'ouverture du compte (US-01), lu en lecture seule
+	 * pour « Bonjour + prénom » ; vide si absent (l'écran affiche alors l'identifiant).
+	 */
+	@Transactional(readOnly = true)
+	public Optional<String> prenom(String jetonSession) {
+		Long dossierId = comptes.compteCourant(jetonSession).getDossierId();
+		return Optional.ofNullable(dossierId).flatMap(dossiers::findById).map(Dossier::getPrenoms)
+				.map(String::strip).filter(p -> !p.isEmpty()).map(p -> p.split("[\s,]+")[0]);
 	}
 
 	/** Pour PER-01 et AV-01 : souscription possible seulement avec un profil validé de moins de 12 mois. */

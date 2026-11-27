@@ -34,6 +34,8 @@ export interface Profil {
 export interface EtatProfil {
   statut: Statut;
   profil: Profil | null;
+  /** D8 : premier prénom de la cliente (dossier d'ouverture), null s'il est absent. */
+  prenom?: string | null;
 }
 
 export const LIBELLES_STATUT: Record<Statut, string> = {

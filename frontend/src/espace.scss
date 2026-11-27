@@ -1,9 +1,12 @@
 // Styles de l'espace client (src/app/espace), d'après la maquette « Espace client Hi-Tech Bank ».
+// Lot 2 (PO, 27/11/2026) : système visuel unique de toutes les pages connectées (gabarit-espace.ts) : couleurs,
+// typographie, boutons, cartes, formulaires, tableaux, messages. Les pages n'écrivent plus ces styles elles-mêmes.
 // Fichier global car ils dépassent le budget de taille d'un composant (angular.json) ; tout est
 // rangé sous .espace pour ne pas toucher aux autres écrans.
 .espace {
   --ink: #0f1b33; --muted: #5d6887; --line: #e5eaf3; --soft: #f5f8fd; --white: #fff;
   --navy: #0b2545; --blue2: #163a66; --mint: #00b894; --r: 20px;
+  --erreur: #b42318; --succes: #067647; --champ: #8a97ad;
 
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color: var(--ink);
@@ -21,7 +24,8 @@
 
   /* Barre latérale */
   aside { position: sticky; top: 0; height: 100vh; overflow: auto; background: linear-gradient(180deg, #0b2545, #12335f); color: #dfe9fb; padding: 26px 16px; }
-  .logo { font-weight: 800; font-size: 20px; color: #fff; padding: 0 12px 26px; letter-spacing: -.01em; }
+  aside nav ul { list-style: none; margin: 0; padding: 0; }
+  .logo { display: block; text-decoration: none; font-weight: 800; font-size: 20px; color: #fff; padding: 0 12px 26px; letter-spacing: -.01em; }
   .logo span { color: #7fe3cc; }
   aside nav a { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px; color: #cdd9ee; text-decoration: none; font-size: 14.5px; margin-bottom: 3px; }
   aside nav a:hover { background: rgba(255, 255, 255, .08); color: #fff; }
@@ -174,17 +178,46 @@
 
   footer { padding: 30px 44px; font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 8px 24px; }
 
+  /* Fil d'Ariane et bouton retour */
+  .ariane-barre { display: flex; align-items: center; gap: 18px; padding: 16px 44px 0; font-size: 14px; color: var(--muted); }
+  .ariane ol { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; }
+  .ariane li + li::before { content: "›"; margin-right: 6px; }
+  .ariane a, .retour { color: var(--navy); font-weight: 700; }
+  .retour { text-decoration: none; white-space: nowrap; }
+
+  /* Pages : largeur maîtrisée, titres, liens */
+  .page { max-width: 1100px; margin: 0 auto; padding: 20px 44px 56px; line-height: 1.55; }
+  .page h1 { font-size: 34px; line-height: 1.15; letter-spacing: -.02em; color: var(--navy); margin: 8px 0 12px; }
+  .page h2 { color: var(--navy); }
+  .page a:not(.btn) { color: var(--navy); font-weight: 700; }
+  .page .lead { margin-bottom: 24px; }
+
+  /* Cartes, messages */
+  .carte { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 20px; line-height: 1.6; }
+  .erreur { color: var(--erreur); font-weight: 700; }
+  .succes { color: var(--succes); font-weight: 700; }
+  .btn:disabled, .btn[aria-disabled="true"] { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+  .lien { border: 0; background: none; padding: 0; color: var(--navy); text-decoration: underline; cursor: pointer; font: inherit; }
+
+  /* Formulaires (bordure contrastée, RGAA) */
+  .page label { font-weight: 700; }
+  .page input:not([type="radio"]):not([type="checkbox"]):not([type="file"]), .page select, .page textarea {
+    padding: 10px 12px; border: 1px solid var(--champ); border-radius: 10px; font: inherit; color: var(--ink); background: #fff; max-width: 100%;
+  }
+  .page fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 8px; }
+  .page legend { font-weight: 700; margin-bottom: 4px; }
+
+  /* Tableaux */
+  .page table { width: 100%; border-collapse: collapse; }
+  .page th, .page td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  .page th { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+
   .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: 24px; background: var(--navy); color: #fff; padding: 14px 20px; border-radius: 14px; box-shadow: 0 20px 50px rgba(11, 37, 69, .35); font-size: 14.5px; max-width: calc(100% - 32px); z-index: 20; }
 
-  .mnav { display: none; }
 
   @media (max-width: 980px) {
     grid-template-columns: 1fr;
     aside { display: none; }
-    .mnav { display: block; background: linear-gradient(180deg, #0b2545, #12335f); padding: 14px 0; position: sticky; top: 0; z-index: 6; }
-    .mnav .logo { padding: 0 16px 10px; font-size: 18px; }
-    .mnav .row { display: flex; gap: 8px; overflow-x: auto; padding: 0 16px; min-width: 0; }
-    .mnav a { flex: 0 0 auto; color: #dfe9fb; text-decoration: none; font-size: 14px; padding: 9px 13px; border-radius: 999px; background: rgba(255, 255, 255, .08); }
     .top { padding: 14px 20px; position: static; }
     .hero .wrap, .feature, .patri { grid-template-columns: 1fr; }
     .hero { padding: 60px 20px; }

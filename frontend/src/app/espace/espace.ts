@@ -1,10 +1,10 @@
 import { DOCUMENT } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CarteCompte } from '../comptes/carte-compte';
 import { Compte, ComptesService, formaterDate, libelleStatut, soldeAffichable } from '../comptes/comptes';
-import { SuiviSession, formaterRestant } from '../session/suivi-session';
+import { SuiviSession } from '../session/suivi-session';
 import { LIBELLES_STATUT, ProfilService } from '../profil/profil';
 import { SupportsService, TauxAffiche, tauxFondsEurosAv } from '../supports/supports';
 import { CREDITS, EPARGNE, Produit } from './produits';
@@ -63,10 +63,6 @@ export class Espace {
     return compte && this.solde() ? libelleStatut(compte.statut) : null;
   });
   protected readonly cloture = computed(() => this.compte()?.statut === 'CLOTURE');
-  protected readonly restant = computed(() => {
-    const secondes = this.suivi.restant();
-    return secondes === null ? null : formaterRestant(secondes);
-  });
 
   constructor() {
     inject(DestroyRef).onDestroy(() => {
@@ -76,16 +72,26 @@ export class Espace {
     this.suivi.ouvrir().subscribe({
       next: (session) => {
         this.identifiant.set(session.identifiant);
+        setTimeout(() => this.defiler());
         this.lireComptes();
         this.profils.lire().subscribe({ next: (etat) => this.statutProfil.set(LIBELLES_STATUT[etat.statut]), error: () => undefined });
         this.supports.parametresPublics().subscribe({ next: (p) => this.fondsEurosAv.set(tauxFondsEurosAv(p)), error: () => undefined });
       },
       error: () => undefined,
     });
+    // Lot 2 : les entrées du menu unique visent une rubrique de l'accueil (/espace#credits...), aussi depuis une autre page.
+    inject(ActivatedRoute).fragment.subscribe((fragment) => {
+      this.fragment = fragment;
+      this.defiler();
+    });
   }
 
-  protected deconnecter(): void {
-    this.suivi.deconnecter();
+  private fragment: string | null = null;
+
+  /** Rubrique demandée par le menu : affichée dès que la page est prête. */
+  private defiler(): void {
+    const cible = this.fragment ? this.document.getElementById(this.fragment) : null;
+    cible?.scrollIntoView?.({ behavior: 'smooth' });
   }
 
   /** Liens « #rubrique » du menu : défilement dans la page, sans quitter l'espace. */

@@ -8,7 +8,6 @@ import { sessionFermee } from '../session/session-fermee';
 import { Espace } from './espace';
 
 const ACTIVITE = '/api/backend/connexion/session/activite';
-const DECONNEXION = '/api/backend/connexion/deconnexion';
 const COMPTES = '/api/backend/comptes';
 const PROFIL = '/api/backend/profil';
 const PARAMETRES = '/api/backend/catalogue/parametres-publics';
@@ -69,8 +68,6 @@ describe('Espace', () => {
 
   it("affiche l'espace et le solde du compte quand la session est valide", async () => {
     const { page } = await ouvrir([COMPTE]);
-    expect(page.querySelector('.hello')?.textContent).toContain('ABC');
-    expect(page.querySelector('a[href="/comptes"]')).not.toBeNull();
     expect(page.querySelector('.solde')?.textContent).toBe(formaterSolde(124050));
     expect(page.querySelector('.float.a .v')?.textContent).toBe(formaterSolde(124050));
     expect(page.querySelector('.proof')?.textContent).toContain('05/11/2026');
@@ -138,28 +135,12 @@ describe('Espace', () => {
     );
   });
 
-  it('affiche le compte à rebours de la session', async () => {
-    const { page } = await ouvrir([COMPTE]);
-    expect(page.querySelector('.minuteur')?.textContent).toContain('10:00');
-  });
-
-  it('« Me déconnecter » révoque la session et renvoie vers la connexion (CU-17)', async () => {
-    const navigation = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-    const { fixture, page } = await ouvrir([COMPTE]);
-    page.querySelector<HTMLButtonElement>('button.deconnexion')!.click();
-    const deconnexion = http.expectOne({ method: 'POST', url: DECONNEXION });
-    expect(deconnexion.request.withCredentials).toBe(true);
-    deconnexion.flush(null, { status: 204, statusText: 'No Content' });
-    await fixture.whenStable();
-    expect(navigation).toHaveBeenCalledWith(['/connexion'], {});
-  });
-
-  it('fait défiler la page vers une rubrique du menu, sans quitter l’espace', async () => {
+  it('fait défiler la page vers une rubrique de l’accueil, sans quitter l’espace', async () => {
     const { page } = await ouvrir([COMPTE]);
     const rubrique = page.querySelector<HTMLElement>('#epargne')!;
     rubrique.scrollIntoView = vi.fn();
     const clic = new MouseEvent('click', { bubbles: true, cancelable: true });
-    page.querySelector('aside a[href="#epargne"]')!.dispatchEvent(clic);
+    page.querySelector('.hero a[href="#epargne"]')!.dispatchEvent(clic);
     expect(rubrique.scrollIntoView).toHaveBeenCalled();
     expect(clic.defaultPrevented).toBe(true);
   });

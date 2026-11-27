@@ -29,8 +29,7 @@ const pourcent = (valeur: number) => `${String(valeur).replace('.', ',')} %`;
   selector: 'app-gestion-page',
   imports: [RouterLink],
   template: `
-    <main class="gestion">
-      <a routerLink="/decouvrir" [queryParams]="{ produit }">← Découvrir {{ nomProduit }}</a>
+    <div class="page gestion">
       <h1>Choisir mon mode de gestion</h1>
       <p class="lead">{{ produit === 'PER' ? 'Plan d’épargne retraite' : 'Assurance vie' }} : changer de mode ou de profil est gratuit.</p>
 
@@ -172,34 +171,18 @@ const pourcent = (valeur: number) => `${String(valeur).replace('.', ',')} %`;
           }
         }
       }
-    </main>
+    </div>
   `,
   styles: `
-    .gestion { max-width: 900px; margin: 0 auto; padding: 40px 16px; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #0f1b33; }
-    a { color: #0b2545; font-weight: 700; }
-    h1, h2 { color: #0b2545; }
-    h1 { margin: 24px 0 8px; }
     h2 { margin: 0 0 8px; font-size: 18px; }
     .lead, .detail { line-height: 1.6; color: #5d6887; }
-    .carte { border: 1px solid #d9dee6; border-radius: 14px; padding: 16px; background: #fff; line-height: 1.6; margin-bottom: 16px; display: grid; gap: 8px; }
-    fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 8px; }
-    legend { font-weight: 700; margin-bottom: 4px; }
     .option { display: flex; gap: 8px; align-items: baseline; }
     .profil { display: grid; gap: 4px; font-weight: 700; max-width: 260px; }
-    select, input:not([type]), input[inputmode] { padding: 8px; border: 1px solid #d9dee6; border-radius: 8px; font: inherit; }
     .mandat { padding: 12px; border-radius: 10px; background: #f4f6fa; }
     .mandat p { margin: 0 0 4px; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #eef1f5; }
     .badge { margin-left: 6px; padding: 2px 8px; border-radius: 999px; background: #fff4e5; color: #8a4b00; font-size: 12px; font-weight: 700; }
     .versement { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
     .versement label { display: grid; gap: 4px; font-weight: 700; }
-    .btn { justify-self: start; padding: 10px 18px; border-radius: 999px; font-weight: 700; cursor: pointer; font: inherit; }
-    .btn.o { border: 1px solid #0b2545; background: #fff; color: #0b2545; }
-    .btn.p { border: 0; background: #0b2545; color: #fff; }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .erreur { color: #b42318; font-weight: 700; }
-    .succes { color: #067647; font-weight: 700; }
   `,
 })
 export class GestionPage {

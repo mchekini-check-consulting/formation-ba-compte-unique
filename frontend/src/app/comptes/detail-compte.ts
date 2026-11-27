@@ -3,17 +3,16 @@ import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CarteCompte } from './carte-compte';
 import { Compte, ComptesService } from './comptes';
-import { CadreEspace } from '../espace/cadre-espace';
 import { SuiviSession } from '../session/suivi-session';
 
-// CU-20 : un compte de la cliente, dans le cadre et le style de l'espace (CadreEspace). Tout refus
+// CU-20 : un compte de la cliente, dans le cadre et le style de l'espace (GabaritEspace). Tout refus
 // (autre cliente, compte inexistant, panne) affiche le même message, sans aucune information sur le
 // compte. Sans session, retour à la connexion.
 @Component({
   selector: 'app-detail-compte',
-  imports: [CadreEspace, CarteCompte, RouterLink],
+  imports: [CarteCompte, RouterLink],
   template: `
-    <app-cadre-espace page="comptes" [identifiant]="identifiant()">
+    <div class="page">
       <section class="block">
         <div class="wrap">
           <a class="go" routerLink="/comptes">← Mes comptes</a>
@@ -32,7 +31,7 @@ import { SuiviSession } from '../session/suivi-session';
           }
         </div>
       </section>
-    </app-cadre-espace>
+    </div>
   `,
   styles: `
     .refus { margin-top: 24px; }

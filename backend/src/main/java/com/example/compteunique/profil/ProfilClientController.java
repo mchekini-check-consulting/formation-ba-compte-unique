@@ -49,7 +49,8 @@ public class ProfilClientController {
 
 	}
 
-	public record EtatVue(Statut statut, ProfilVue profil) {
+	/** prenom : D8, null si absent. */
+	public record EtatVue(Statut statut, ProfilVue profil, String prenom) {
 	}
 
 	public record Questionnaire(Reponses reponses, Boolean consentement) {
@@ -61,7 +62,8 @@ public class ProfilClientController {
 	@GetMapping
 	public EtatVue etat(@CookieValue(name = COOKIE, required = false) String jetonSession) {
 		ProfilClientService.Etat etat = service.etat(jetonSession);
-		return new EtatVue(etat.statut(), etat.profil().map(ProfilVue::de).orElse(null));
+		return new EtatVue(etat.statut(), etat.profil().map(ProfilVue::de).orElse(null),
+				service.prenom(jetonSession).orElse(null));
 	}
 
 	@PostMapping

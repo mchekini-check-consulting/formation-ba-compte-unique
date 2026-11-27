@@ -1,5 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Observable } from 'rxjs';
 import { CodeDocument, DecouverteService, EtatDecouverte, Produit } from './decouverte';
 
@@ -49,10 +49,9 @@ const PRESENTATIONS: Record<Produit, Presentation> = {
 // reste désactivée tant qu'il n'est pas ouvert, et « Continuer » tant que les deux cases ne sont pas cochées.
 @Component({
   selector: 'app-decouverte-page',
-  imports: [RouterLink],
+  imports: [],
   template: `
-    <main class="decouverte">
-      <a routerLink="/espace" fragment="epargne">← Mon espace</a>
+    <div class="page decouverte">
       <h1>Découvrir {{ presentation.nom }}</h1>
       <p class="lead">{{ presentation.accroche }}</p>
 
@@ -107,17 +106,11 @@ const PRESENTATIONS: Record<Produit, Presentation> = {
           </button>
         }
       }
-    </main>
+    </div>
   `,
   styles: `
-    .decouverte { max-width: 900px; margin: 0 auto; padding: 40px 16px; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #0f1b33; }
-    a { color: #0b2545; font-weight: 700; }
-    h1, h2, h3 { color: #0b2545; }
-    h1 { margin: 24px 0 8px; }
     h3 { margin: 0; font-size: 17px; }
-    .lead { line-height: 1.6; color: #5d6887; }
     .regles { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 24px; }
-    .carte { border: 1px solid #d9dee6; border-radius: 14px; padding: 16px; background: #fff; line-height: 1.6; }
     .regles h2 { margin: 0 0 4px; font-size: 18px; }
     .document { margin-bottom: 16px; display: grid; gap: 12px; }
     .entete { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; align-items: baseline; }
@@ -125,11 +118,6 @@ const PRESENTATIONS: Record<Produit, Presentation> = {
     .contenu { margin: 0; padding: 12px; border-radius: 10px; background: #f4f6fa; }
     .case { display: flex; gap: 8px; align-items: center; font-weight: 700; }
     .case.inactive { color: #98a2b3; }
-    .btn { justify-self: start; padding: 10px 18px; border-radius: 999px; font-weight: 700; cursor: pointer; font: inherit; }
-    .btn.o { border: 1px solid #0b2545; background: #fff; color: #0b2545; }
-    .btn.p { border: 0; background: #0b2545; color: #fff; }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .erreur { color: #b42318; font-weight: 700; }
   `,
 })
 export class DecouvertePage {

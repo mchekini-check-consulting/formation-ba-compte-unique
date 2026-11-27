@@ -78,7 +78,6 @@ describe('MesBeneficiaires (CU-146)', () => {
   it('critère 11 : liste libellé, nom vérifié, IBAN masqué, date d’ajout et « vérifié », dans le menu', async () => {
     const { page } = await afficher();
     expect(page.querySelector('h1')?.textContent).toBe('Mes bénéficiaires');
-    expect(page.querySelector('aside a[aria-current="page"]')?.textContent).toContain('Mes bénéficiaires');
     const ligne = page.querySelector('.liste li')?.textContent ?? '';
     expect(ligne).toContain('Papa');
     expect(ligne).toContain('Test Cliente-B · •••• 0202');

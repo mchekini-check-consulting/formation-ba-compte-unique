@@ -1,53 +1,5 @@
 @if (identifiant()) {
-  <div class="espace" (click)="suivreAncre($event)">
-    <aside>
-      <div class="logo">Hi-Tech<span>Bank</span></div>
-      <nav aria-label="Mon espace">
-        <a href="#accueil" aria-current="page"><i></i>Accueil</a>
-        <div class="sep">Mes comptes</div>
-        <a href="#compte"><i></i>Compte courant</a>
-        <a routerLink="/comptes"><i></i>Mes comptes</a>
-        <a href="#epargne"><i></i>Épargne et placements</a>
-        <a href="#credits"><i></i>Crédits</a>
-        <a href="#patrimoine"><i></i>Mon patrimoine</a>
-        <div class="sep">Pour aller plus loin</div>
-        <a href="#optimisation"><i></i>Optimisation et conseil</a>
-        <a href="#simulateurs"><i></i>Simulateurs</a>
-        <a href="#documents"><i></i>Mes documents</a>
-        <a href="#infos"><i></i>Mes informations et sécurité</a>
-        <a href="#bientot"><i></i>Bientôt</a>
-      </nav>
-      <a class="cta" href="#epargne">Souscrire un produit</a>
-    </aside>
-
-    <div class="mnav">
-      <div class="logo">Hi-Tech<span>Bank</span></div>
-      <nav class="row" aria-label="Mon espace (mobile)">
-        <a href="#accueil">Accueil</a>
-        <a href="#compte">Compte courant</a>
-        <a href="#epargne">Épargne</a>
-        <a href="#credits">Crédits</a>
-        <a href="#patrimoine">Patrimoine</a>
-        <a href="#optimisation">Conseil</a>
-        <a href="#documents">Documents</a>
-        <a href="#infos">Informations</a>
-      </nav>
-    </div>
-
-    <main>
-      <div class="top">
-        <div class="hello">Bonjour, identifiant <b>{{ identifiant() }}</b></div>
-        <div class="right">
-          @if (restant(); as temps) {
-            <span class="minuteur" title="Repère indicatif : la session se ferme après 10 minutes sans activité">
-              Fermeture automatique dans <b>{{ temps }}</b>
-            </span>
-          }
-          <button class="btn o sm" type="button" (click)="annoncer('Messagerie : bientôt disponible.')">Messages</button>
-          <button class="btn p sm deconnexion" type="button" (click)="deconnecter()">Me déconnecter</button>
-        </div>
-      </div>
-
+  <div class="accueil" (click)="suivreAncre($event)">
       <!-- ACCUEIL -->
       <div id="accueil" class="hero">
         <div class="wrap">
@@ -328,13 +280,6 @@
           <a class="btn m" href="#epargne">Voir tous les produits</a>
         </div>
       </div>
-
-      <footer>
-        <a routerLink="/mentions-legales">Mentions légales</a>
-        <a routerLink="/protection-des-donnees">Politique de protection des données</a>
-        <a routerLink="/accessibilite">Accessibilité</a>
-      </footer>
-    </main>
 
     @if (annonce()) {
       <div class="toast" role="status">{{ annonce() }}</div>

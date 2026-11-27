@@ -13,8 +13,7 @@ const PRODUITS: Record<Produit, string> = { PER: 'PER', AV: 'assurance vie' };
   selector: 'app-supports-page',
   imports: [RouterLink],
   template: `
-    <main class="supports">
-      <a routerLink="/espace">← Mon espace</a>
+    <div class="page supports">
       <h1>Supports disponibles — {{ libelle(produit()) }}</h1>
       <div class="onglets" role="group" aria-label="Produit">
         @for (p of produits; track p) {
@@ -99,18 +98,14 @@ const PRODUITS: Record<Produit, string> = { PER: 'PER', AV: 'assurance vie' };
           }
         }
       }
-    </main>
+    </div>
   `,
   styles: `
-    .supports { max-width: 1100px; margin: 0 auto; padding: 40px 16px; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #0f1b33; }
-    a { color: #0b2545; font-weight: 700; }
-    h1 { color: #0b2545; margin: 24px 0 16px; }
     h2, h3 { margin: 8px 0; color: #0b2545; }
     h3 { font-size: 17px; }
     .onglets { display: flex; gap: 8px; margin-bottom: 24px; }
     .onglets button { padding: 10px 18px; border-radius: 999px; border: 1px solid #0b2545; background: #fff; color: #0b2545; font-weight: 700; cursor: pointer; }
     .onglets button.actif { background: #0b2545; color: #fff; }
-    .carte { border: 1px solid #d9dee6; border-radius: 14px; padding: 16px; background: #fff; }
     .euros { margin-bottom: 20px; background: #f4f6fa; }
     .liste { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
     .tags { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -124,11 +119,9 @@ const PRODUITS: Record<Produit, string> = { PER: 'PER', AV: 'assurance vie' };
     dd { margin: 0; font-weight: 700; text-align: right; }
     .filtres { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
     label { display: flex; flex-direction: column; gap: 6px; font-weight: 700; font-size: 14px; }
-    select { padding: 9px 12px; border: 1px solid #d9dee6; border-radius: 10px; font: inherit; font-weight: 400; }
     .frais { line-height: 1.6; }
     .avis { padding: 14px 16px; border-radius: 12px; background: #fffaeb; border: 1px solid #fedf89; line-height: 1.6; }
     .vide { color: #5d6887; }
-    .erreur { color: #b42318; font-weight: 700; }
   `,
 })
 export class SupportsPage {
