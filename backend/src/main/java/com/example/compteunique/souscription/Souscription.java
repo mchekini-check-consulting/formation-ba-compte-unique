@@ -41,7 +41,11 @@ public class Souscription {
 
 	private String originePrecision;
 
-	private short compartiment;
+	/** PER seulement (vide pour l'assurance vie). */
+	private Short compartiment;
+
+	/** Assurance vie : âge de la titulaire à la signature, donc au moment du versement initial. */
+	private Short ageTitulaire;
 
 	private String codeHache;
 
@@ -64,8 +68,20 @@ public class Souscription {
 		this.customerId = customerId;
 		this.produit = produit;
 		this.statut = EN_COURS;
-		this.compartiment = COMPARTIMENT_VOLONTAIRE;
+		this.compartiment = produit == Produit.PER ? COMPARTIMENT_VOLONTAIRE : null;
 		this.creeLe = le;
+	}
+
+	void ageTitulaire(int age) {
+		this.ageTitulaire = (short) age;
+	}
+
+	public Long getId() {
+		return id;
+	}
+
+	public Short getAgeTitulaire() {
+		return ageTitulaire;
 	}
 
 	/** Premier versement saisi ou modifié : un code déjà envoyé ne vaut plus pour ce nouveau montant. */
@@ -142,7 +158,7 @@ public class Souscription {
 		return originePrecision;
 	}
 
-	public short getCompartiment() {
+	public Short getCompartiment() {
 		return compartiment;
 	}
 
