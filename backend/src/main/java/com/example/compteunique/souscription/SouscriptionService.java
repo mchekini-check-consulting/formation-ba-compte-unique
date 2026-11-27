@@ -7,7 +7,6 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.Period;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -169,21 +168,9 @@ public class SouscriptionService {
 		Compte compte = comptes.compteCourant(jetonSession);
 		UUID cliente = compte.getCustomerId();
 		exigerProfilValide(cliente);
-		BigDecimal montant = demande.montant();
-		if (montant == null || montant.signum() <= 0 || montant.stripTrailingZeros().scale() > MONTANT_ECHELLE_MAX) {
-			throw new DemandeRefusee(HttpStatus.BAD_REQUEST, MONTANT_INVALIDE);
-		}
-		if (montant.compareTo(MINIMUM) < 0) {
-			throw new DemandeRefusee(HttpStatus.BAD_REQUEST, MESSAGE_MINIMUM.get(produit));
-		}
+		BigDecimal montant = montantValide(demande.montant(), produit);
 		String origine = demande.origineFonds();
-		if (origine == null || !ORIGINES.contains(origine)) {
-			throw new DemandeRefusee(HttpStatus.BAD_REQUEST, ORIGINE_REQUISE);
-		}
-		String precision = demande.originePrecision() == null ? "" : demande.originePrecision().strip();
-		if (AUTRE.equals(origine) && (precision.isEmpty() || precision.length() > PRECISION_LONGUEUR_MAX)) {
-			throw new DemandeRefusee(HttpStatus.BAD_REQUEST, PRECISION_REQUISE);
-		}
+		String precision = precisionValide(origine, demande.originePrecision());
 		List<Beneficiaire> beneficiaires = produit == Produit.AV ? beneficiaires(demande.beneficiaires()) : List.of();
 		if (centimes(montant) > compte.getSoldeCentimes()) {
 			throw new DemandeRefusee(HttpStatus.CONFLICT, SOLDE_INSUFFISANT);
@@ -194,7 +181,7 @@ public class SouscriptionService {
 		}
 		// CU-521 : le montant et l'origine sont renseignés avant le premier enregistrement (colonnes obligatoires).
 		Souscription souscription = existante.orElseGet(() -> new Souscription(cliente, produit, maintenant()));
-		souscription.versement(montant.setScale(MONTANT_ECHELLE_MAX), origine, AUTRE.equals(origine) ? precision : null);
+		souscription.versement(montant.setScale(MONTANT_ECHELLE_MAX), origine, precision);
 		Long id = souscriptions.saveAndFlush(souscription).getId();
 		clauses.supprimer(id);
 		for (int rang = 0; rang < beneficiaires.size(); rang++) {
@@ -283,25 +270,61 @@ public class SouscriptionService {
 		if (saisis.size() > BENEFICIAIRES_MAX) {
 			throw new DemandeRefusee(HttpStatus.BAD_REQUEST, TROP_DE_BENEFICIAIRES);
 		}
-		List<Beneficiaire> valides = new ArrayList<>();
-		BigDecimal total = BigDecimal.ZERO;
-		for (Beneficiaire b : saisis) {
-			String nom = b == null || b.nom() == null ? "" : b.nom().strip();
-			String prenom = b == null || b.prenom() == null ? "" : b.prenom().strip();
-			BigDecimal part = b == null ? null : b.quotePartPct();
-			if (nom.isEmpty() || prenom.isEmpty() || nom.length() > NOM_LONGUEUR_MAX
-					|| prenom.length() > NOM_LONGUEUR_MAX || b.dateNaissance() == null || part == null
-					|| part.signum() <= 0 || part.compareTo(CENT_POUR_CENT) > 0
-					|| part.stripTrailingZeros().scale() > MONTANT_ECHELLE_MAX) {
-				throw new DemandeRefusee(HttpStatus.BAD_REQUEST, BENEFICIAIRE_INCOMPLET);
-			}
-			total = total.add(part);
-			valides.add(new Beneficiaire(nom, prenom, b.dateNaissance(), part));
-		}
+		List<Beneficiaire> valides = saisis.stream().map(SouscriptionService::beneficiaire).toList();
+		BigDecimal total = valides.stream().map(Beneficiaire::quotePartPct).reduce(BigDecimal.ZERO, BigDecimal::add);
 		if (total.compareTo(CENT_POUR_CENT) != 0) {
 			throw new DemandeRefusee(HttpStatus.BAD_REQUEST, QUOTES_PARTS);
 		}
 		return valides;
+	}
+
+	/** Une ligne de la clause, noms sans espaces superflus ; refusée si incomplète ou hors limites. */
+	private static Beneficiaire beneficiaire(Beneficiaire b) {
+		if (b == null) {
+			throw new DemandeRefusee(HttpStatus.BAD_REQUEST, BENEFICIAIRE_INCOMPLET);
+		}
+		String nom = nomValide(b.nom());
+		String prenom = nomValide(b.prenom());
+		BigDecimal part = b.quotePartPct();
+		if (nom == null || prenom == null || b.dateNaissance() == null || !partValide(part)) {
+			throw new DemandeRefusee(HttpStatus.BAD_REQUEST, BENEFICIAIRE_INCOMPLET);
+		}
+		return new Beneficiaire(nom, prenom, b.dateNaissance(), part);
+	}
+
+	private static String nomValide(String saisi) {
+		String nom = saisi == null ? "" : saisi.strip();
+		return nom.isEmpty() || nom.length() > NOM_LONGUEUR_MAX ? null : nom;
+	}
+
+	private static boolean partValide(BigDecimal part) {
+		return part != null && part.signum() > 0 && part.compareTo(CENT_POUR_CENT) <= 0
+				&& part.stripTrailingZeros().scale() <= MONTANT_ECHELLE_MAX;
+	}
+
+	private static BigDecimal montantValide(BigDecimal montant, Produit produit) {
+		if (montant == null || montant.signum() <= 0 || montant.stripTrailingZeros().scale() > MONTANT_ECHELLE_MAX) {
+			throw new DemandeRefusee(HttpStatus.BAD_REQUEST, MONTANT_INVALIDE);
+		}
+		if (montant.compareTo(MINIMUM) < 0) {
+			throw new DemandeRefusee(HttpStatus.BAD_REQUEST, MESSAGE_MINIMUM.get(produit));
+		}
+		return montant;
+	}
+
+	/** Origine des fonds connue ; sa précision n'est exigée et conservée que pour « autre ». */
+	private static String precisionValide(String origine, String saisie) {
+		if (origine == null || !ORIGINES.contains(origine)) {
+			throw new DemandeRefusee(HttpStatus.BAD_REQUEST, ORIGINE_REQUISE);
+		}
+		if (!AUTRE.equals(origine)) {
+			return null;
+		}
+		String precision = saisie == null ? "" : saisie.strip();
+		if (precision.isEmpty() || precision.length() > PRECISION_LONGUEUR_MAX) {
+			throw new DemandeRefusee(HttpStatus.BAD_REQUEST, PRECISION_REQUISE);
+		}
+		return precision;
 	}
 
 	/** Âge de la titulaire (date de naissance du dossier d'ouverture) à la date de signature. */
