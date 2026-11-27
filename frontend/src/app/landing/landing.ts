@@ -6,10 +6,11 @@ import { EtapePiece } from '../identification/etape-piece';
 import { EtapeQuestions } from '../identification/etape-questions';
 import { EtapeSelfie } from '../identification/etape-selfie';
 import { Identite } from '../identification/regles';
-import { DETAIL_TAUX_LIVRET_A, LIVRET_A, TAUX_LIVRET_A, euros } from '../livret-a/parametres';
+import { DETAIL_TAUX_LIVRET_A, LIVRET_A, TAUX_LIVRET_A, euros, pourcentage } from '../livret-a/parametres';
 import { EtapeCompteOuvert } from '../ouverture/etape-compte-ouvert';
 import { EtapeSignature } from '../ouverture/etape-signature';
 import { OuvertureService, dossierEnSignature, memoriserDossierEnSignature } from '../ouverture/ouverture';
+import { SupportsService, TauxAffiche, tauxFondsEurosAv } from '../supports/supports';
 
 const DERNIERE_ETAPE = 6;
 const ETAPE_SIGNATURE = 5;
@@ -36,6 +37,10 @@ export class Landing {
     plafond: euros(LIVRET_A.plafond),
     minimum: euros(LIVRET_A.versementMinimum),
   };
+  /** D1 (PO, 27/11/2026) : frais des unités de compte de l'assurance vie lus dans le paramètre unique du backend. */
+  protected readonly fraisUcAv = signal<string | null>(null);
+  /** CU-24 : taux brut visé du fonds en euros (et sa date, son net s'ils sont renseignés), paramètres du backend. */
+  protected readonly fondsEurosAv = signal<TauxAffiche | null>(null);
   protected readonly parcoursOuvert = signal(false);
   protected readonly etape = signal(1);
   protected readonly totalEtapes = DERNIERE_ETAPE;
@@ -49,6 +54,17 @@ export class Landing {
   // Position de défilement de la landing au moment d'ouvrir le parcours (CUB-7 : le retour
   // au site ramène le visiteur là où il était).
   private positionDefilement = 0;
+
+  constructor() {
+    // Sans réponse du backend, la mention des frais n'est pas affichée (jamais de valeur écrite en dur).
+    inject(SupportsService).parametresPublics().subscribe({
+      next: (p) => {
+        this.fraisUcAv.set(p.fraisUcPct.AV == null ? null : pourcentage(p.fraisUcPct.AV));
+        this.fondsEurosAv.set(tauxFondsEurosAv(p));
+      },
+      error: () => undefined,
+    });
+  }
 
   protected ouvrirParcours(event: Event): void {
     event.preventDefault();

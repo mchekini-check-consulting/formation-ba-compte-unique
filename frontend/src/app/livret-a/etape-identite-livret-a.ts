@@ -2,7 +2,8 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, inject, input, output, signal } from '@angular/core';
 import { defer, retry } from 'rxjs';
 import { refusDe } from '../beneficiaires/beneficiaires';
-import { BouchonsIdentiteService, CasDeTest } from '../identification/bouchons-identite';
+import { BouchonsIdentiteService, CAS_SANCTIONS } from '../identification/bouchons-identite';
+import { scenarioChoisi } from '../outils-test/scenarios';
 import { emailValide } from '../identification/regles';
 import { ControleIdentite, Coordonnees, IdentiteLivretA, LivretAService, ResultatSanctions } from './livret-a';
 
@@ -166,11 +167,11 @@ export class EtapeIdentiteLivretA implements OnInit {
   readonly donnees = input.required<{ identite: IdentiteLivretA; controle: ControleIdentite | null }>();
   /** Nombre d'étapes du parcours (3 si une nouvelle pièce est demandée, CU-29). */
   readonly total = input(2);
-  /** Réponse choisie dans le cadre de test pour le bouchon sanctions/PPE. */
-  readonly casSanctions = input<CasDeTest>('CONFORME');
+  /** D4 : réponse du bouchon sanctions/PPE choisie sur /test/scenarios, lue à l'envoi (jamais affichée à la cliente). */
+  private readonly casSanctions = () => scenarioChoisi('livret-a.sanctions', CAS_SANCTIONS);
   /** Identité confirmée et contrôle validé : l'éligibilité peut commencer. */
   readonly validee = output<void>();
-  /** Contrôle en cours ou terminé (cadre de test : validation d'un responsable). */
+  /** Contrôle en cours ou terminé (la validation d'un responsable se simule sur /test/livret-a). */
   readonly controleChange = output<ControleIdentite>();
 
   protected readonly champs = CHAMPS;

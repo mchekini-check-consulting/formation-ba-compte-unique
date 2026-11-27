@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Subject, of, throwError } from 'rxjs';
 import { Mock, vi } from 'vitest';
 import { BouchonsIdentiteService, ControleSanctionsReponse } from '../identification/bouchons-identite';
+import { choisirScenario } from '../outils-test/scenarios';
 import {
   EMAIL_INVALIDE,
   EtapeIdentiteLivretA,
@@ -73,7 +74,7 @@ describe('EtapeIdentiteLivretA', () => {
   async function afficher(controle: ControleIdentite | null = null, cas = 'CONFORME') {
     fixture = TestBed.createComponent(EtapeIdentiteLivretA);
     fixture.componentRef.setInput('donnees', { identite: IDENTITE, controle });
-    fixture.componentRef.setInput('casSanctions', cas);
+    choisirScenario('livret-a.sanctions', cas);
     validee = vi.fn<() => void>();
     controles = [];
     fixture.componentInstance.validee.subscribe(validee);

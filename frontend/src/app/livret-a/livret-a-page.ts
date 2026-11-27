@@ -3,7 +3,11 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { refusDe } from '../beneficiaires/beneficiaires';
 import { CadreEspace } from '../espace/cadre-espace';
-import { BouchonsIdentiteService, CasDeTest, CasFiscal, ReponseFiscale } from '../identification/bouchons-identite';
+import { BouchonsIdentiteService, CAS_FISCAUX, ReponseFiscale } from '../identification/bouchons-identite';
+import { scenarioChoisi } from '../outils-test/scenarios';
+
+// D4 : listes des bouchons déplacées avec les choix de test (/test/scenarios) ; réexportées pour les tests existants.
+export { CAS_FISCAUX, CAS_SANCTIONS } from '../identification/bouchons-identite';
 import { refusFichier } from '../identification/regles';
 import { SuiviSession } from '../session/suivi-session';
 import { EtapeIdentiteLivretA } from './etape-identite-livret-a';
@@ -36,22 +40,6 @@ export const PIECE_EXPIREE = "Votre pièce d'identité a expiré : transmettez-e
 /** Message du backend quand l'éligibilité est demandée sans questionnaire rempli (CU-32). */
 export const SANS_QUESTIONNAIRE = "Répondez d'abord aux questions et acceptez le texte d'information sur vos données.";
 
-/** CU-28 : cas de test du bouchon sanctions/PPE (API Gels des avoirs). */
-export const CAS_SANCTIONS: { code: CasDeTest; libelle: string }[] = [
-  { code: 'CONFORME', libelle: 'Aucune correspondance' },
-  { code: 'SANCTIONNE', libelle: 'Gel des avoirs' },
-  { code: 'PEP', libelle: 'Personne politiquement exposée' },
-  { code: 'INDISPONIBLE', libelle: 'Sans réponse (5 s par essai)' },
-];
-
-/** CU-295 : cas de test du bouchon de l'administration fiscale. */
-export const CAS_FISCAUX: { code: CasFiscal; libelle: string }[] = [
-  { code: 'SANS_LIVRET_A', libelle: 'Aucun autre Livret A' },
-  { code: 'DETENU_AILLEURS', libelle: 'Livret A détenu ailleurs' },
-  { code: 'SANS_REPONSE', libelle: 'Sans réponse' },
-  { code: 'INDISPONIBLE', libelle: 'Service indisponible' },
-];
-
 const STATUTS: Record<DemandeLivretA['statut'], string> = {
   EN_COURS_DE_VERIFICATION: 'En cours de vérification',
   OUVERTURE_VALIDEE: 'Ouverture validée',
@@ -66,9 +54,6 @@ const STATUTS: Record<DemandeLivretA['statut'], string> = {
 export const SUITE_OBLIGATOIRE = 'Choisissez de clôturer vous-même votre ancien livret ou de renoncer à l’ouverture.';
 /** CU-296 : aucun fichier choisi. */
 export const CERTIFICAT_OBLIGATOIRE = 'Sélectionnez votre certificat de clôture.';
-/** CU-296 : motif proposé par défaut pour un refus simulé (environnement de test). */
-export const MOTIF_REFUS_TEST = 'Certificat illisible';
-
 // CU-31 (US-22) : étape « Éligibilité » de l'ouverture d'un Livret A par une cliente connectée. Information sur
 // l'interdiction de détenir plusieurs Livrets A et ses risques, attestation sur l'honneur obligatoire, choix de
 // partage du détail ; puis interrogation de l'administration fiscale (bouchon CU-295) et transmission de sa
@@ -190,7 +175,6 @@ export const MOTIF_REFUS_TEST = 'Certificat illisible';
                 <app-etape-identite-livret-a
                   [donnees]="etape"
                   [total]="totalEtapes()"
-                  [casSanctions]="casSanctions()"
                   (validee)="identiteValidee.set(true)"
                   (controleChange)="controleIdentite.set($event)"
                 />
@@ -243,74 +227,12 @@ export const MOTIF_REFUS_TEST = 'Certificat illisible';
               }
             }
           </div>
-
-          <section class="test" aria-labelledby="titre-test-fiscal">
-            <div class="tag">Environnement de test uniquement</div>
-            <h2 id="titre-test-sanctions">Bouchon du contrôle sanctions et PPE (CU-28)</h2>
-            <div class="cas" role="group" aria-labelledby="titre-test-sanctions">
-              @for (c of casSanctionsTest; track c.code) {
-                <label class="case">
-                  <input
-                    type="radio"
-                    name="cas-sanctions"
-                    [value]="c.code"
-                    [checked]="casSanctions() === c.code"
-                    (change)="casSanctions.set(c.code)"
-                  />
-                  {{ c.libelle }}
-                </label>
-              }
-            </div>
-            @if (controleIdentite(); as ci) {
-              @if (ci.statut === 'ATTENTE_RESPONSABLE') {
-                <button type="button" class="secondaire" [disabled]="envoi()" (click)="validerResponsable(ci.reference)">
-                  Simuler la validation du responsable
-                </button>
-              }
-            }
-            <h2 id="titre-test-fiscal">Bouchon de l’administration fiscale (CU-295)</h2>
-            <div class="cas" role="group" aria-label="Réponse de l'administration fiscale">
-              @for (c of casFiscaux; track c.code) {
-                <label class="case">
-                  <input type="radio" name="cas-fiscal" [value]="c.code" [checked]="cas() === c.code" (change)="cas.set(c.code)" />
-                  {{ c.libelle }}
-                </label>
-              }
-            </div>
-            @if (demande(); as d) {
-              @if (d.statut === 'EN_COURS_DE_VERIFICATION' && d.interrogationLe && !d.retard) {
-                <button type="button" class="secondaire" [disabled]="envoi()" (click)="expirerDelai(d)">
-                  Simuler l’expiration du délai
-                </button>
-              }
-              @if (d.statut === 'EN_ATTENTE_CERTIFICAT' || d.statut === 'CERTIFICAT_A_VERIFIER') {
-                <h2 id="titre-test-certificat">Certificat de clôture (CU-296)</h2>
-                @if (d.statut === 'CERTIFICAT_A_VERIFIER') {
-                  <button type="button" class="secondaire" [disabled]="envoi()" (click)="validerCertificat(d)">
-                    Simuler la validation du certificat par un conseiller
-                  </button>
-                  <div class="refus-test">
-                    <label for="motif-refus">Motif du refus</label>
-                    <input #motif id="motif-refus" type="text" [value]="motifRefusTest" />
-                    <button type="button" class="secondaire" [disabled]="envoi()" (click)="refuserCertificat(d, motif.value)">
-                      Simuler le refus du certificat par un conseiller
-                    </button>
-                  </div>
-                }
-                <p class="muted">
-                  Date limite et relance à J-15 : avancez la date du jour sur
-                  <a routerLink="/test/date-metier">la page Date métier</a>, puis revenez ici.
-                </p>
-              }
-            }
-          </section>
         </div>
       </section>
     </app-cadre-espace>
   `,
   styles: `
     .livret, .test { background: #fff; border: 1px solid #e5eaf3; border-radius: 20px; padding: 24px; display: grid; gap: 14px; }
-    .test { margin-top: 20px; border-style: dashed; }
     .tag { justify-self: start; font-size: 12px; color: #8a4b00; background: #fff3e0; border-radius: 6px; padding: 2px 8px; }
     h2 { color: #0b2545; font-size: 18px; margin: 0; }
     p { color: #5d6887; line-height: 1.6; margin: 0; }
@@ -338,8 +260,6 @@ export const MOTIF_REFUS_TEST = 'Certificat illisible';
     .choix-suite, .certificat { display: grid; gap: 10px; background: #f4f7fc; border-radius: 12px; padding: 14px; }
     .certificat label { color: #0f1b33; font-size: 14px; font-weight: 600; }
     .limite { color: #8a4b00; font-weight: 700; }
-    .refus-test { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-    .refus-test input { padding: 6px 8px; border: 1px solid #c9d3e6; border-radius: 6px; font: inherit; }
   `,
 })
 export class LivretAPage {
@@ -353,13 +273,13 @@ export class LivretAPage {
   protected readonly demande = signal<DemandeLivretA | null>(null);
   protected readonly detail = signal<ReponseFiscale['detail']>(null);
   protected readonly partage = signal<boolean | null>(null);
-  protected readonly cas = signal<CasFiscal>('SANS_LIVRET_A');
+  /** D4 : réponse simulée de l'administration fiscale choisie sur /test/scenarios, lue à l'envoi. */
+  private readonly cas = () => scenarioChoisi('livret-a.fiscal', CAS_FISCAUX);
   protected readonly envoi = signal(false);
   /** CU-28 : identité confirmée et contrôle sanctions/PPE validé ; l'éligibilité peut s'afficher. */
   protected readonly identiteValidee = signal(false);
   protected readonly etapeIdentite = signal<{ identite: IdentiteLivretA; controle: ControleIdentite | null } | null>(null);
   protected readonly controleIdentite = signal<ControleIdentite | null>(null);
-  protected readonly casSanctions = signal<CasDeTest>('CONFORME');
   /** CU-29 : pièce du dossier expirée ou non, et dernière vérification de nouvelle pièce. */
   protected readonly etapePiece = signal<EtapePiece | null>(null);
   protected readonly pieceValidee = signal(false);
@@ -370,13 +290,11 @@ export class LivretAPage {
   protected readonly questionsValidees = signal(false);
   /** 4 étapes si une nouvelle pièce est demandée, sinon 3 (identité, questions et données, éligibilité). */
   protected readonly totalEtapes = computed(() => (pieceAFournir(this.etapePiece()) ? 4 : 3));
-  protected readonly casSanctionsTest = CAS_SANCTIONS;
   protected readonly message = signal<Message | null>(null);
   /** CU-296 : choix de la suite, certificat choisi et son éventuel refus avant envoi. */
   protected readonly suite = signal<SuiteLivretAExistant | null>(null);
   protected readonly fichier = signal<File | null>(null);
   protected readonly erreurFichier = signal<string | null>(null);
-  protected readonly motifRefusTest = MOTIF_REFUS_TEST;
 
   constructor() {
     // CU-17 : ouvrir la page est une action de la cliente ; le suivi s'arrête quand elle la quitte.
@@ -531,28 +449,6 @@ export class LivretAPage {
     });
   }
 
-  /** CU-296 (test) : un conseiller valide le certificat ; l'ouverture reprend. */
-  protected validerCertificat(demande: DemandeLivretA): void {
-    this.verifierCertificat(this.service.simulerValidationCertificat(demande.reference));
-  }
-
-  /** CU-296 (test) : un conseiller refuse le certificat avec un motif ; la cliente peut en déposer un autre. */
-  protected refuserCertificat(demande: DemandeLivretA, motif: string): void {
-    this.verifierCertificat(this.service.simulerRefusCertificat(demande.reference, motif));
-  }
-
-  private verifierCertificat(appel: ReturnType<LivretAService['simulerValidationCertificat']>): void {
-    this.envoi.set(true);
-    this.message.set(null);
-    appel.subscribe({
-      next: (suite) => {
-        this.envoi.set(false);
-        this.demande.set(suite);
-      },
-      error: (erreur: HttpErrorResponse) => this.refus(erreur),
-    });
-  }
-
   // Attestation obligatoire et choix de partage (contrôlés aussi par le backend), puis interrogation.
   protected valider(evenement: Event, attestation: boolean): void {
     evenement.preventDefault();
@@ -617,19 +513,6 @@ export class LivretAPage {
     });
   }
 
-  // CU-295 critère 5 : la demande est traitée comme restée sans réponse au bout de 2 jours ouvrés.
-  protected expirerDelai(demande: DemandeLivretA): void {
-    this.envoi.set(true);
-    this.message.set(null);
-    this.service.simulerExpirationDelai(demande.reference).subscribe({
-      next: () => {
-        this.envoi.set(false);
-        this.charger();
-      },
-      error: (erreur: HttpErrorResponse) => this.refus(erreur),
-    });
-  }
-
   private refus(erreur: HttpErrorResponse): void {
     this.envoi.set(false);
     // 401 : retour à la connexion par l'intercepteur sessionFermee (CU-169).
@@ -655,19 +538,5 @@ export class LivretAPage {
     if (refus.termine) {
       this.charger();
     }
-  }
-
-  /** CU-28 critère 9 (test) : un responsable valide la démarche d'une personne politiquement exposée. */
-  protected validerResponsable(reference: string): void {
-    this.envoi.set(true);
-    this.message.set(null);
-    this.service.simulerValidationResponsable(reference).subscribe({
-      next: (controle) => {
-        this.envoi.set(false);
-        this.controleIdentite.set(controle);
-        this.identiteValidee.set(controle.statut === 'VALIDE' && controle.utilisable);
-      },
-      error: (erreur: HttpErrorResponse) => this.refus(erreur),
-    });
   }
 }

@@ -2,6 +2,7 @@ package com.example.compteunique.souscription;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -36,6 +37,7 @@ import com.example.compteunique.compte.CompteService;
 import com.example.compteunique.compte.Mouvement;
 import com.example.compteunique.compte.MouvementRepository;
 import com.example.compteunique.datemetier.DateMetier;
+import com.example.compteunique.decouverte.DocumentsProduits;
 import com.example.compteunique.dossier.Dossier;
 import com.example.compteunique.dossier.DossierRepository;
 import com.example.compteunique.gestion.ModeDeGestion;
@@ -70,13 +72,14 @@ class SouscriptionServiceTest {
 	private final DateMetier dateMetier = mock(DateMetier.class);
 	private final SouscriptionRepository souscriptions = mock(SouscriptionRepository.class);
 	private final BeneficiaireClauseRepository clauses = mock(BeneficiaireClauseRepository.class);
+	private final DocumentsProduits documents = mock(DocumentsProduits.class);
 	private final Compte compte = mock(Compte.class);
 	private final AtomicReference<ZonedDateTime> maintenant = new AtomicReference<>(DEBUT);
 	private final List<Souscription> base = new ArrayList<>();
 	private final List<BeneficiaireClause> baseClauses = new ArrayList<>();
 
 	private final SouscriptionService service = new SouscriptionService(comptes, comptesVerrouilles, mouvements,
-			dossiers, profils, gestion, codes, dateMetier, souscriptions, clauses);
+			dossiers, profils, gestion, codes, dateMetier, souscriptions, clauses, documents);
 
 	@BeforeEach
 	void cliente() {
@@ -117,6 +120,7 @@ class SouscriptionServiceTest {
 		when(clauses.findBySouscriptionIdOrderByRang(anyLong())).thenAnswer(appel -> baseClauses.stream()
 				.filter(b -> ReflectionTestUtils.getField(b, "souscriptionId").equals(appel.getArgument(0))).toList());
 		profilValide(true);
+		when(documents.peutContinuer(eq(CLIENTE), any())).thenReturn(true);
 	}
 
 	private Optional<Souscription> souscription(Produit produit) {
@@ -164,6 +168,24 @@ class SouscriptionServiceTest {
 			return refus;
 		}
 		throw new AssertionError("refus attendu");
+	}
+
+	@Test
+	@DisplayName("PER-02 / AV-02 : documents pas lus (adresse /souscrire tapée) : l'état le signale, le versement et la "
+			+ "signature sont refusés, rien n'est débité ni créé")
+	void documentsNonLus() {
+		Etat saisi = verser(AV, versement("500", "REVENUS", null));
+		assertThat(saisi.documentsLus()).isTrue();
+		service.envoyerCode(JETON, AV);
+		when(documents.peutContinuer(CLIENTE, DocumentsProduits.Produit.AV)).thenReturn(false);
+
+		assertThat(service.etat(JETON, AV).documentsLus()).isFalse();
+		assertThat(refus(() -> verser(AV, versement("500", "REVENUS", null))).getMessage())
+				.isEqualTo(SouscriptionService.DOCUMENTS_REQUIS);
+		assertThat(refus(() -> service.signer(JETON, AV, BON_CODE)).getMessage())
+				.isEqualTo(SouscriptionService.DOCUMENTS_REQUIS);
+		verify(compte, never()).debiter(anyLong(), any());
+		verify(gestion, never()).initialiser(any(), any(), any(), anyInt(), any());
 	}
 
 	@Test

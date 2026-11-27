@@ -6,18 +6,17 @@ import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { ComptesService } from '../comptes/comptes';
 import { BouchonsIdentiteService, ReponseFiscale } from '../identification/bouchons-identite';
+import { choisirScenario } from '../outils-test/scenarios';
 import { SuiviSession } from '../session/suivi-session';
 import { ControleIdentite, DemandeLivretA, EtapeQuestions, IdentiteLivretA, LivretAService } from './livret-a';
 import {
   ATTESTATION_OBLIGATOIRE,
-  CAS_SANCTIONS,
   CHOIX_OBLIGATOIRE,
   LivretAPage,
   PIECE_EXPIREE,
   SANS_IDENTITE_CONFIRMEE,
   SANS_QUESTIONNAIRE,
   CERTIFICAT_OBLIGATOIRE,
-  MOTIF_REFUS_TEST,
   SUITE_OBLIGATOIRE,
 } from './livret-a-page';
 
@@ -95,6 +94,7 @@ describe('LivretAPage (CU-31)', () => {
   };
 
   beforeEach(async () => {
+    localStorage.clear();
     for (const appel of [...Object.values(service), bouchons.interrogerAdministrationFiscale]) {
       appel.mockReset();
     }
@@ -153,11 +153,11 @@ describe('LivretAPage (CU-31)', () => {
     expect(service.demander).not.toHaveBeenCalled();
   });
 
-  it('enregistre la demande, interroge le bouchon fiscal puis transmet sa réponse au backend', async () => {
+  it('enregistre la demande, interroge le bouchon fiscal (réponse choisie sur /test/scenarios) puis transmet sa réponse', async () => {
+    choisirScenario('livret-a.fiscal', 'DETENU_AILLEURS');
     const { fixture, page } = await afficher();
     page.querySelector<HTMLInputElement>('input[name=attestation]')!.click();
     page.querySelector<HTMLInputElement>('input[name=partage][value=non]')!.click();
-    page.querySelector<HTMLInputElement>('input[name=cas-fiscal][value=DETENU_AILLEURS]')!.click();
     await valider(fixture, page);
 
     expect(service.demander).toHaveBeenCalledWith(true, false);
@@ -210,25 +210,18 @@ describe('LivretAPage (CU-31)', () => {
     expect(service.etat).toHaveBeenCalledTimes(2);
   });
 
-  it('demande en cours : relance de la vérification et expiration simulée du délai', async () => {
+  it('demande en cours : relance de la vérification, sans bouton de simulation (D4 : sur /test/livret-a)', async () => {
     service.etat.mockReturnValue(of({ demande: SANS_REPONSE }));
     service.transmettreReponse.mockReturnValue(of(SANS_REPONSE));
-    service.simulerExpirationDelai.mockReturnValue(of({ ...SANS_REPONSE, retard: true }));
     const { fixture, page } = await afficher();
     expect(page.querySelector('form.eligibilite')).toBeNull();
     expect(page.textContent).toContain('partage du détail autorisé le 12/11/2026 à 10:00');
+    expect(page.textContent).not.toContain('Simuler');
 
     const boutons = Array.from(page.querySelectorAll<HTMLButtonElement>('button.secondaire'));
     boutons.find((b) => b.textContent?.includes('Relancer'))!.click();
     await fixture.whenStable();
     expect(service.transmettreReponse).toHaveBeenCalledWith('ref-1', 'i-1', 'AUCUN_LIVRET_A', null);
-
-    fixture.detectChanges();
-    Array.from(page.querySelectorAll<HTMLButtonElement>('button.secondaire'))
-      .find((b) => b.textContent?.includes('expiration'))!
-      .click();
-    await fixture.whenStable();
-    expect(service.simulerExpirationDelai).toHaveBeenCalledWith('ref-1');
   });
 
   it('erreur de chargement, et session expirée sans message', async () => {
@@ -239,18 +232,6 @@ describe('LivretAPage (CU-31)', () => {
     service.etat.mockReturnValue(refus(401, null));
     const autre = await afficher();
     expect(autre.page.textContent).toContain('Chargement');
-  });
-
-  it('message par défaut quand l’expiration simulée échoue sans message', async () => {
-    service.etat.mockReturnValue(of({ demande: SANS_REPONSE }));
-    service.simulerExpirationDelai.mockReturnValue(refus(404, null));
-    const { fixture, page } = await afficher();
-    Array.from(page.querySelectorAll<HTMLButtonElement>('button.secondaire'))
-      .find((b) => b.textContent?.includes('expiration'))!
-      .click();
-    await fixture.whenStable();
-    fixture.detectChanges();
-    expect(page.querySelector('.message')?.textContent).toContain('momentanément indisponible');
   });
 
   // CU-28 : étape « Mon identité » avant l'éligibilité.
@@ -273,32 +254,18 @@ describe('LivretAPage (CU-31)', () => {
     expect(page.querySelector('[role=alert]')?.textContent).toContain('momentanément indisponible');
   });
 
-  it('PPE : « Simuler la validation du responsable » ouvre l’éligibilité', async () => {
+  it('PPE : démarche en attente du responsable, sans bouton de simulation ; validée, l’éligibilité s’ouvre', async () => {
     const attente: ControleIdentite = { ...IDENTITE_VALIDEE, statut: 'ATTENTE_RESPONSABLE', utilisable: false, message: 'En cours d’examen.' };
     service.identite.mockReturnValue(of({ identite: IDENTITE, controle: attente }));
-    service.simulerValidationResponsable.mockReturnValue(of(IDENTITE_VALIDEE));
-    const { fixture, page } = await afficher();
+    const { page } = await afficher();
     expect(page.querySelector('.identite .message')?.textContent).toBe('En cours d’examen.');
-    Array.from(page.querySelectorAll<HTMLButtonElement>('button.secondaire'))
-      .find((b) => b.textContent?.includes('responsable'))!
-      .click();
-    await fixture.whenStable();
-    fixture.detectChanges();
-    expect(service.simulerValidationResponsable).toHaveBeenCalledWith('ci-1');
-    expect(page.querySelector('form.eligibilite')).not.toBeNull();
-  });
+    expect(page.textContent).not.toContain('Simuler');
+    expect(page.querySelector('form.eligibilite')).toBeNull();
 
-  it('PPE : validation refusée, message affiché', async () => {
-    const attente: ControleIdentite = { ...IDENTITE_VALIDEE, statut: 'ATTENTE_RESPONSABLE', utilisable: false };
-    service.identite.mockReturnValue(of({ identite: IDENTITE, controle: attente }));
-    service.simulerValidationResponsable.mockReturnValue(refus(409, { message: 'Pas en attente.' }));
-    const { fixture, page } = await afficher();
-    Array.from(page.querySelectorAll<HTMLButtonElement>('button.secondaire'))
-      .find((b) => b.textContent?.includes('responsable'))!
-      .click();
-    await fixture.whenStable();
-    fixture.detectChanges();
-    expect(page.querySelector('.livret > .message')?.textContent).toBe('Pas en attente.');
+    // Validation simulée sur /test/livret-a, puis retour sur la page : contrôle validé.
+    service.identite.mockReturnValue(of({ identite: IDENTITE, controle: IDENTITE_VALIDEE }));
+    const retour = await afficher();
+    expect(retour.page.querySelector('form.eligibilite')).not.toBeNull();
   });
 
   it('éligibilité refusée faute d’identité confirmée : retour à l’étape « Mon identité »', async () => {
@@ -408,14 +375,12 @@ describe('LivretAPage (CU-31)', () => {
     expect(page.querySelector('[role=alert]')?.textContent).toContain('momentanément indisponible');
   });
 
-  it('le cadre de test choisit la réponse du contrôle sanctions/PPE', async () => {
+  it('D4 : aucun élément de test dans la page (cas des bouchons, simulations, liens /test)', async () => {
     service.identite.mockReturnValue(of({ identite: IDENTITE, controle: null }));
-    const { fixture, page } = await afficher();
-    const radios = page.querySelectorAll<HTMLInputElement>('input[name=cas-sanctions]');
-    expect(radios.length).toBe(CAS_SANCTIONS.length);
-    radios[2].click();
-    fixture.detectChanges();
-    expect(radios[2].checked).toBe(true);
+    const { page } = await afficher();
+    expect(page.querySelector('input[name=cas-sanctions], input[name=cas-fiscal], select[id^=scenario]')).toBeNull();
+    expect(page.textContent).not.toContain('Environnement de test');
+    expect(page.querySelector('a[href^="/test/"]')).toBeNull();
   });
 
   it('transmission refusée avec une session expirée : aucun message', async () => {
@@ -535,23 +500,12 @@ describe('LivretAPage (CU-31)', () => {
       expect(service.etat).toHaveBeenCalledTimes(2);
     });
 
-    it('boutons de test : refus puis validation du certificat par un conseiller', async () => {
+    it('certificat à vérifier : ni bouton de simulation ni lien de test (D4 : sur /test/livret-a)', async () => {
       service.etat.mockReturnValue(of({ demande: A_VERIFIER }));
-      service.simulerValidationCertificat.mockReturnValue(of({ ...VALIDEE, message: 'Certificat validé.' }));
-      service.simulerRefusCertificat.mockReturnValue(of(A_VERIFIER));
-      const { fixture, page } = await afficher();
-      expect(page.querySelector('a[href="/test/date-metier"]')).not.toBeNull();
-      const bouton = (texte: string) =>
-        Array.from(page.querySelectorAll<HTMLButtonElement>('button.secondaire')).find((b) => b.textContent?.includes(texte))!;
-
-      bouton('Simuler le refus').click();
-      await rafraichir(fixture);
-      expect(service.simulerRefusCertificat).toHaveBeenCalledWith('ref-1', MOTIF_REFUS_TEST);
-
-      bouton('Simuler la validation').click();
-      await rafraichir(fixture);
-      expect(service.simulerValidationCertificat).toHaveBeenCalledWith('ref-1');
-      expect(page.querySelector('.statut')?.textContent?.trim()).toBe('Ouverture validée');
+      const { page } = await afficher();
+      expect(page.textContent).toContain('certificat.pdf');
+      expect(page.textContent).not.toContain('Simuler');
+      expect(page.querySelector('a[href^="/test/"]')).toBeNull();
     });
 
     it('demande renoncée : nouvelle demande possible depuis l’étape « Mon identité »', async () => {

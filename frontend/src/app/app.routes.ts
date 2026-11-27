@@ -39,6 +39,12 @@ export const PAGES_PUBLIQUES: Routes = [
   { path: 'test/evenements', loadComponent: () => import('./evenements-test/evenements-test').then((m) => m.EvenementsTest) },
   // CU-376 : passer des ordres sur des contrats de test et enregistrer des positions de test ; absent en preprod et prod (404 du backend).
   { path: 'test/ordres', loadComponent: () => import('./ordres-test/ordres-test').then((m) => m.OrdresTest) },
+  // CU-314 / CU-338 : contrat de test PER ou assurance vie de la cliente connectée, sorti du parcours « Mon mode de gestion ».
+  { path: 'test/contrats', loadComponent: () => import('./outils-test/contrats-test').then((m) => m.ContratsTest) },
+  // D4 : choix des bouchons et simulations sortis des parcours de la cliente (ouverture de compte, Livret A, virements).
+  { path: 'test/scenarios', loadComponent: () => import('./outils-test/scenarios-test').then((m) => m.ScenariosTest) },
+  { path: 'test/livret-a', loadComponent: () => import('./outils-test/livret-a-test').then((m) => m.LivretATest) },
+  { path: 'test/virements', loadComponent: () => import('./outils-test/virements-test-page').then((m) => m.VirementsTestPage) },
   // CU-27 : présentation du Livret A, ouverte à toutes ; son bouton d'ouverture mène à /livret-a (protégée).
   { path: 'epargne/livret-a', loadComponent: () => import('./livret-a/presentation-livret-a').then((m) => m.PresentationLivretA) },
   { path: 'mentions-legales', component: PageInfo, data: { titre: 'Mentions légales' } },

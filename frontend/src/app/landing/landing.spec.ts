@@ -12,6 +12,7 @@ import { IDENTITE_EXEMPLE } from '../identification/exemple';
 import { EtapeCompteOuvert } from '../ouverture/etape-compte-ouvert';
 import { EtapeSignature } from '../ouverture/etape-signature';
 import { CLE_DOSSIER_EN_SIGNATURE } from '../ouverture/ouverture';
+import { tauxFondsEurosAv } from '../supports/supports';
 import { Landing } from './landing';
 
 // Étapes 1 à 6 branchées sur les backends : leurs écrans sont testés à part, ici on simule
@@ -68,6 +69,36 @@ describe('Landing', () => {
       expect(page.querySelector(`#${rubrique}`)).not.toBeNull();
     }
     expect(page.querySelector('.parcours')).toBeNull();
+  });
+
+  // D1 (PO, 27/11/2026) : 0,65 % sur les unités de compte de l'assurance vie, lu dans le paramètre unique (plus de 0,60 %).
+  it('frais de gestion de l’assurance vie lus dans le paramètre du backend, rien d’écrit en dur', async () => {
+    const http = TestBed.inject(HttpTestingController);
+    expect(page.textContent).not.toContain('0,60 %');
+    expect(page.querySelector('[data-test="frais-uc-av"]')).toBeNull();
+    expect(page.querySelector('[data-test="taux-fonds-euros-av"]')).toBeNull();
+    http.expectOne('/api/backend/catalogue/parametres-publics').flush({
+      fraisUcPct: { PER: 0.5, AV: 0.65 },
+      fondsEurosAv: { tauxBrutVisePct: 2.9, dateMiseAJour: '2026-01-01', fraisGestionPct: null },
+    });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(page.querySelector('[data-test="frais-uc-av"]')?.textContent).toBe('0,65 %');
+    expect(page.textContent).not.toContain('0,65 % par an sur le fonds en euros');
+    // CU-24 : taux brut visé lu dans le paramètre ; net retiré tant que les frais du fonds en euros ne sont pas fixés.
+    expect(page.querySelector('[data-test="taux-fonds-euros-av"]')?.textContent).toBe('Taux brut visé en 2026 : 2,90 % (mis à jour le 01/01/2026) sur le fonds en euros, non garanti');
+    expect(page.textContent).not.toContain('net après frais');
+  });
+
+  it('taux du fonds en euros : année et date tirées du paramètre ; net seulement si les frais sont fixés ; sans date, sans année', () => {
+    const p = (dateMiseAJour: string | null, fraisGestionPct: number | null) => ({ fraisUcPct: { PER: 0.5, AV: 0.65 }, fondsEurosAv: { tauxBrutVisePct: 2.9, dateMiseAJour, fraisGestionPct } });
+    expect(tauxFondsEurosAv(p('2027-01-01', 0.6))).toEqual({
+      avant: 'Taux brut visé en 2027 :',
+      taux: '2,90 %',
+      detail: '(mis à jour le 01/01/2027) sur le fonds en euros, soit 2,30 % net après frais, non garanti',
+    });
+    expect(tauxFondsEurosAv(p(null, null))).toEqual({ avant: 'Taux brut visé :', taux: '2,90 %', detail: 'sur le fonds en euros, non garanti' });
+    expect(tauxFondsEurosAv(null)).toBeNull();
   });
 
   // CU-83 : « Me connecter » mène à la page de connexion ; aucun lien vide (« # ») et chaque

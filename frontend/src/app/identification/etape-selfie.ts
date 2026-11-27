@@ -1,4 +1,5 @@
 import { Component, ElementRef, OnDestroy, effect, inject, input, output, signal, viewChild } from '@angular/core';
+import { scenarioChoisi } from '../outils-test/scenarios';
 import { BouchonsIdentiteService } from './bouchons-identite';
 import { MESSAGE_ANNULATION, MESSAGE_INDISPONIBLE } from './regles';
 
@@ -28,8 +29,8 @@ export class EtapeSelfie implements OnDestroy {
   readonly annule = output<string>();
   readonly retour = output<void>();
 
-  protected readonly scenarios = SCENARIOS_SELFIE;
-  protected readonly scenario = signal(SCENARIOS_SELFIE[0].code);
+  /** D4 : résultat simulé choisi sur /test/scenarios, lu à l'envoi (jamais affiché à la cliente). */
+  private readonly scenario = () => scenarioChoisi('ouverture.selfie', SCENARIOS_SELFIE);
   protected readonly etat = signal<Etat>('guidage');
   protected readonly message = signal<string | null>(null);
   protected readonly enCours = signal(false);
@@ -58,10 +59,6 @@ export class EtapeSelfie implements OnDestroy {
       // CUB-10 : ni annulation ni échec de contrôle, le dossier reste « En cours de vérification ».
       this.etat.set('refusee');
     }
-  }
-
-  protected changerScenario(event: Event): void {
-    this.scenario.set((event.target as HTMLSelectElement).value);
   }
 
   protected verifier(): void {

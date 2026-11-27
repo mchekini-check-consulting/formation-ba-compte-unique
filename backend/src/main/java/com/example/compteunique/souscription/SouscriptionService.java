@@ -28,6 +28,7 @@ import com.example.compteunique.compte.CompteService;
 import com.example.compteunique.compte.Mouvement;
 import com.example.compteunique.compte.MouvementRepository;
 import com.example.compteunique.datemetier.DateMetier;
+import com.example.compteunique.decouverte.DocumentsProduits;
 import com.example.compteunique.dossier.Dossier;
 import com.example.compteunique.dossier.DossierRepository;
 import com.example.compteunique.gestion.ModeDeGestion;
@@ -68,6 +69,8 @@ public class SouscriptionService {
 	static final int BENEFICIAIRES_MAX = 10;
 	private static final int MONTANT_ECHELLE_MAX = 2;
 
+	// Pas de message dans PER-02 / AV-02 : l'écran renvoie d'abord vers Découvrir ; refus du serveur si l'adresse est forcée.
+	static final String DOCUMENTS_REQUIS = "Ouvrez et lisez les deux documents avant de souscrire.";
 	static final String PROFIL_REQUIS = "Complétez ou revalidez votre profil investisseur avant de souscrire.";
 	static final Map<Produit, String> MESSAGE_MINIMUM = Map.of(Produit.PER, "Le premier versement minimum est de 100 €",
 			Produit.AV, "Le versement initial minimum est de 100 €");
@@ -111,7 +114,7 @@ public class SouscriptionService {
 	/** État du parcours, pour reprendre au même endroit. */
 	public record Etat(Produit produit, Statut profil, Etape etape, BigDecimal minimum, BigDecimal montant,
 			String origineFonds, String originePrecision, List<Beneficiaire> beneficiaires, OffsetDateTime codeEnvoyeLe,
-			OffsetDateTime bloqueeJusquAu, String numeroContrat) {
+			OffsetDateTime bloqueeJusquAu, String numeroContrat, boolean documentsLus) {
 	}
 
 	private final CompteService comptes;
@@ -124,12 +127,13 @@ public class SouscriptionService {
 	private final DateMetier dateMetier;
 	private final SouscriptionRepository souscriptions;
 	private final BeneficiaireClauseRepository clauses;
+	private final DocumentsProduits documents;
 
 	@SuppressWarnings("java:S107") // un service de module qui appelle plusieurs fonctions publiques (ADR-001)
 	public SouscriptionService(CompteService comptes, CompteRepository comptesVerrouilles,
 			MouvementRepository mouvements, DossierRepository dossiers, ProfilClientService profils,
 			ModeDeGestion gestion, CodesSms codes, DateMetier dateMetier, SouscriptionRepository souscriptions,
-			BeneficiaireClauseRepository clauses) {
+			BeneficiaireClauseRepository clauses, DocumentsProduits documents) {
 		this.comptes = comptes;
 		this.comptesVerrouilles = comptesVerrouilles;
 		this.mouvements = mouvements;
@@ -140,23 +144,25 @@ public class SouscriptionService {
 		this.dateMetier = dateMetier;
 		this.souscriptions = souscriptions;
 		this.clauses = clauses;
+		this.documents = documents;
 	}
 
 	@Transactional // la lecture du profil peut enregistrer « à revalider » (CU-415)
 	public Etat etat(String jetonSession, Produit produit) {
 		UUID cliente = comptes.compteCourant(jetonSession).getCustomerId();
 		Statut profil = profils.statut(cliente);
+		boolean documentsLus = documentsLus(cliente, produit);
 		Optional<Souscription> souscription = souscriptions.findByCustomerIdAndProduit(cliente, produit);
 		if (souscription.isEmpty()) {
 			String contratExistant = contratExistant(cliente, produit);
 			return new Etat(produit, profil, contratExistant == null ? Etape.VERSEMENT : Etape.SIGNEE, MINIMUM, null,
-					null, null, List.of(), null, null, contratExistant);
+					null, null, List.of(), null, null, contratExistant, documentsLus);
 		}
 		Souscription s = souscription.get();
 		return new Etat(produit, profil, s.estSignee() ? Etape.SIGNEE : Etape.SIGNATURE, MINIMUM, s.getMontant(),
 				s.getOrigineFonds(), s.getOriginePrecision(),
 				clauses.findBySouscriptionIdOrderByRang(s.getId()).stream().map(Beneficiaire::de).toList(),
-				s.getCodeEnvoyeLe(), s.getBloqueeJusquAu(), s.getNumeroContrat());
+				s.getCodeEnvoyeLe(), s.getBloqueeJusquAu(), s.getNumeroContrat(), documentsLus);
 	}
 
 	/**
@@ -167,6 +173,7 @@ public class SouscriptionService {
 	public Etat choisirVersement(String jetonSession, Produit produit, DemandeVersement demande) {
 		Compte compte = comptes.compteCourant(jetonSession);
 		UUID cliente = compte.getCustomerId();
+		exigerDocumentsLus(cliente, produit);
 		exigerProfilValide(cliente);
 		BigDecimal montant = montantValide(demande.montant(), produit);
 		String origine = demande.origineFonds();
@@ -238,6 +245,7 @@ public class SouscriptionService {
 			}
 		}
 		// Tous les contrôles avant la première écriture : un refus ici ne laisse ni débit ni contrat.
+		exigerDocumentsLus(cliente, produit);
 		ProfilKyc profil = exigerProfilValide(cliente);
 		Compte aDebiter = comptesVerrouilles.verrouiller(compte.getId()).orElseThrow(CompteInaccessibleException::new);
 		long centimes = centimes(souscription.getMontant());
@@ -346,6 +354,17 @@ public class SouscriptionService {
 	/** Contrat déjà ouvert pour ce produit (par exemple un contrat de test du module Gestion), vide sinon. */
 	private String contratExistant(UUID cliente, Produit produit) {
 		return gestion.numeroContrat(cliente, produit).orElse(null);
+	}
+
+	/** PER-02 / AV-02 : les deux documents du produit ouverts et cochés (fonction publique du module Découverte). */
+	private boolean documentsLus(UUID cliente, Produit produit) {
+		return documents.peutContinuer(cliente, DocumentsProduits.Produit.valueOf(produit.name()));
+	}
+
+	private void exigerDocumentsLus(UUID cliente, Produit produit) {
+		if (!documentsLus(cliente, produit)) {
+			throw new DemandeRefusee(HttpStatus.CONFLICT, DOCUMENTS_REQUIS);
+		}
 	}
 
 	private ProfilKyc exigerProfilValide(UUID cliente) {

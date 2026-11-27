@@ -1,5 +1,6 @@
 package com.example.compteunique.decouverte;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
@@ -8,6 +9,8 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.compteunique.catalogue.CatalogueService;
+import com.example.compteunique.catalogue.SupportsEligibles;
 import com.example.compteunique.compte.CompteService;
 import com.example.compteunique.datemetier.DateMetier;
 import com.example.compteunique.logging.Loggable;
@@ -52,7 +55,7 @@ public class DocumentsProduits {
 									+ "(achat de la résidence principale, accidents de la vie). Le capital investi en "
 									+ "unités de compte n'est pas garanti et peut baisser."),
 					new Presente(Document.FICHE_PRODUIT, "Fiche produit du PER", "FICHE-PER-2026-11",
-							"Document d'exemple. Frais d'entrée : 0 %. Frais de gestion : 0,50 % par an sur les "
+							"Document d'exemple. Frais d'entrée : 0 %. Frais de gestion : {fraisUc} % par an sur les "
 									+ "unités de compte. Les versements volontaires sont déductibles du revenu "
 									+ "imposable dans la limite du plafond indiqué sur l'avis d'imposition ; ils sont "
 									+ "imposés à la sortie.")),
@@ -63,19 +66,21 @@ public class DocumentsProduits {
 									+ "garanti. L'épargne reste disponible à tout moment par un rachat partiel ou "
 									+ "total."),
 					new Presente(Document.FICHE_PRODUIT, "Fiche produit de l'assurance vie", "FICHE-AV-2026-11",
-							"Document d'exemple. Frais d'entrée : 0 %. Frais de gestion : 0,65 % par an sur les "
+							"Document d'exemple. Frais d'entrée : 0 %. Frais de gestion : {fraisUc} % par an sur les "
 									+ "unités de compte. Fiscalité des rachats : les gains sont imposés, avec un "
 									+ "abattement annuel après 8 ans de détention.")));
 
 	private final CompteService comptes;
 	private final DateMetier dateMetier;
 	private final ConsultationDocumentRepository consultations;
+	private final SupportsEligibles catalogue;
 
 	public DocumentsProduits(CompteService comptes, DateMetier dateMetier,
-			ConsultationDocumentRepository consultations) {
+			ConsultationDocumentRepository consultations, SupportsEligibles catalogue) {
 		this.comptes = comptes;
 		this.dateMetier = dateMetier;
 		this.consultations = consultations;
+		this.catalogue = catalogue;
 	}
 
 	@Transactional(readOnly = true)
@@ -110,13 +115,19 @@ public class DocumentsProduits {
 
 	private Etat etat(UUID customerId, Produit produit) {
 		List<EtatDocument> documents = DOCUMENTS.get(produit).stream().map(d -> new EtatDocument(d.code(), d.titre(),
-				d.version(), d.contenu(),
+				d.version(), contenu(produit, d),
 				consultations.findFirstByCustomerIdAndProduitAndDocumentAndVersionDocumentOrderByIdDesc(customerId,
 						produit, d.code(), d.version()).isPresent(),
 				consultations.existsByCustomerIdAndProduitAndDocumentAndVersionDocumentAndCocheLeIsNotNull(customerId,
 						produit, d.code(), d.version())))
 				.toList();
 		return new Etat(produit, documents, documents.stream().allMatch(EtatDocument::lu));
+	}
+
+	/** Frais du contrat lus dans les paramètres du catalogue (une seule source, CU-412), jamais écrits en dur. */
+	private String contenu(Produit produit, Presente document) {
+		BigDecimal frais = catalogue.fraisContrat(CatalogueService.Produit.valueOf(produit.name()));
+		return document.contenu().replace("{fraisUc}", frais.toPlainString().replace('.', ','));
 	}
 
 	private static Presente presente(Produit produit, Document document) {

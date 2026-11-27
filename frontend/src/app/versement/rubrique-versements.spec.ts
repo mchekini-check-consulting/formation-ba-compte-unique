@@ -4,8 +4,6 @@ import { Observable, of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { ComptesService, RubriqueVersements as Rubrique } from '../comptes/comptes';
 import { RubriqueVersements } from './rubrique-versements';
-import { Execution, VirementsService } from './virements';
-import { ResultatSimulation, VirementsTestService } from './virements-test';
 
 // CU-147 : virement exécuté vers un bénéficiaire, puis recrédit après un refus de la banque destinataire.
 const VIREMENT_EXECUTE = {
@@ -61,20 +59,12 @@ const refus = (status: number, error: unknown) => throwError(() => new HttpError
 
 describe('RubriqueVersements', () => {
   let versements: ReturnType<typeof vi.fn<(id: string) => Observable<Rubrique>>>;
-  let disponible: ReturnType<typeof vi.fn<() => Observable<boolean>>>;
-  let simuler: ReturnType<typeof vi.fn<() => Observable<ResultatSimulation>>>;
-  let simulerRefus: ReturnType<typeof vi.fn<(id: number, motif: string) => Observable<Execution>>>;
 
   beforeEach(() => {
-    simulerRefus = vi.fn(() => of<Execution>({ message: 'Virement refusé : recrédité', soldeCentimes: 10000 }));
     versements = vi.fn(() => of(RUBRIQUE));
-    disponible = vi.fn(() => of(true));
-    simuler = vi.fn(() => of<ResultatSimulation>({ resultat: 'CREDITE', message: 'Virement reçu' }));
     TestBed.configureTestingModule({
       providers: [
         { provide: ComptesService, useValue: { versements } },
-        { provide: VirementsTestService, useValue: { disponible, simuler } },
-        { provide: VirementsService, useValue: { simulerRefus } },
       ],
     });
   });
@@ -82,24 +72,9 @@ describe('RubriqueVersements', () => {
   async function afficher() {
     const fixture = TestBed.createComponent(RubriqueVersements);
     fixture.componentRef.setInput('compteId', '5');
-    const credite = vi.fn();
-    fixture.componentInstance.credite.subscribe(credite);
     await fixture.whenStable();
     const page = fixture.nativeElement as HTMLElement;
-    return { fixture, page, credite };
-  }
-
-  async function remplirEtSimuler(fixture: { whenStable(): Promise<unknown> }, page: HTMLElement, montant: string) {
-    (page.querySelector('.test button') as HTMLButtonElement).click();
-    await fixture.whenStable();
-    const saisir = (id: string, valeur: string) => {
-      (page.querySelector(`#${id}`) as HTMLInputElement).value = valeur;
-    };
-    saisir('sim-montant', montant);
-    saisir('sim-emetteur', 'Emetteur Test');
-    saisir('sim-libelle', 'Premier versement');
-    page.querySelector('form')?.dispatchEvent(new Event('submit'));
-    await fixture.whenStable();
+    return { fixture, page };
   }
 
   it("affiche l'IBAN à communiquer et les mouvements du compte", async () => {
@@ -126,21 +101,12 @@ describe('RubriqueVersements', () => {
     expect(entrant.querySelector('.montant')?.textContent).toContain('+12,50');
   });
 
-  it('ne propose plus de virement sortant simulé : un virement sortant passe par un bénéficiaire', async () => {
+  it('D4 : aucune simulation dans la page (virement entrant, refus de la banque : sur /test/virements)', async () => {
+    versements.mockReturnValue(of({ ...RUBRIQUE, mouvements: [VIREMENT_EXECUTE] }));
     const { page } = await afficher();
-    expect(page.textContent).not.toContain('Simuler un virement sortant');
-    expect(page.querySelectorAll('.test .boutons button')).toHaveLength(1);
-  });
-
-  it('referme le formulaire ouvert par un second clic sur le même bouton', async () => {
-    const { fixture, page } = await afficher();
-    const entrant = page.querySelector('.test button') as HTMLButtonElement;
-    entrant.click();
-    await fixture.whenStable();
-    expect(page.querySelector('form')).not.toBeNull();
-    entrant.click();
-    await fixture.whenStable();
-    expect(page.querySelector('form')).toBeNull();
+    expect(page.textContent).not.toContain('Simuler');
+    expect(page.textContent).not.toContain('Environnement de test');
+    expect(page.querySelector('form, button.refus, a[href^="/test/"]')).toBeNull();
   });
 
   it("n'affiche pas d'IBAN pour un compte clôturé et indique l'absence de mouvement", async () => {
@@ -162,56 +128,8 @@ describe('RubriqueVersements', () => {
     expect(page.querySelector('[role=alert]')).toBeNull();
   });
 
-  it('masque le bouton de simulation hors environnement de test', async () => {
-    disponible.mockReturnValue(of(false));
-    const { page } = await afficher();
-    expect(page.textContent).not.toContain('Simuler un virement entrant');
-  });
-
-  it("simule un virement prérempli avec l'IBAN du compte, puis recharge les versements", async () => {
-    const { fixture, page, credite } = await afficher();
-    await remplirEtSimuler(fixture, page, '12,50');
-    expect(simuler).toHaveBeenCalledWith({
-      iban: RUBRIQUE.iban,
-      montantCentimes: 1250,
-      emetteur: 'Emetteur Test',
-      libelle: 'Premier versement',
-    });
-    expect(page.querySelector('[role=status]')?.textContent).toBe('Virement reçu');
-    expect(versements).toHaveBeenCalledTimes(2);
-    expect(credite).toHaveBeenCalledOnce();
-  });
-
-  it('refuse un montant nul ou négatif avec « Montant invalide » sans appeler le backend', async () => {
-    const { fixture, page } = await afficher();
-    await remplirEtSimuler(fixture, page, '-5');
-    expect(simuler).not.toHaveBeenCalled();
-    expect(page.querySelector('[role=alert]')?.textContent).toBe('Montant invalide');
-  });
-
-  it('affiche le renvoi à l’émetteur pour un compte clôturé, sans recharger le solde', async () => {
-    simuler.mockReturnValue(of<ResultatSimulation>({ resultat: 'RENVOYE', message: 'Virement renvoyé (AC04)' }));
-    const { fixture, page, credite } = await afficher();
-    await remplirEtSimuler(fixture, page, '10');
-    expect(page.querySelector('[role=alert]')?.textContent).toBe('Virement renvoyé (AC04)');
-    expect(credite).not.toHaveBeenCalled();
-  });
-
-  it('affiche le message du backend (« Compte introuvable ») ou un message générique', async () => {
-    simuler.mockReturnValue(refus(404, { message: 'Compte introuvable' }));
-    const { fixture, page } = await afficher();
-    await remplirEtSimuler(fixture, page, '10');
-    expect(page.querySelector('[role=alert]')?.textContent).toBe('Compte introuvable');
-
-    simuler.mockReturnValue(refus(0, null));
-    page.querySelector('form')?.dispatchEvent(new Event('submit'));
-    await fixture.whenStable();
-    expect(page.querySelector('[role=alert]')?.textContent).toBe('La simulation n’a pas pu aboutir. Veuillez réessayer.');
-  });
-
   it('CU-147 : affiche le virement exécuté avec son statut et l’IBAN masqué, et le recrédit avec son motif', async () => {
     versements.mockReturnValue(of({ ...RUBRIQUE, mouvements: [RECREDIT, VIREMENT_EXECUTE] }));
-    disponible.mockReturnValue(of(false));
     const { page } = await afficher();
     const [recredit, debit] = [...page.querySelectorAll('.mouvements li')];
     expect(debit.textContent).toContain('Vers Test Cliente-B · •••• 0202');
@@ -221,26 +139,6 @@ describe('RubriqueVersements', () => {
     expect(recredit.querySelector('.statut.refuse')?.textContent).toBe('refusé');
     expect(recredit.querySelector('.montant')?.textContent).toContain('+500,00');
     expect(page.querySelector('button.refus')).toBeNull();
-  });
-
-  it('CU-147 critère 14 : en test, simule un refus de la banque sur un virement exécuté puis recharge', async () => {
-    versements.mockReturnValue(of({ ...RUBRIQUE, mouvements: [VIREMENT_EXECUTE] }));
-    const { fixture, page, credite } = await afficher();
-    (page.querySelector('button.refus') as HTMLButtonElement).click();
-    await fixture.whenStable();
-    expect(simulerRefus).toHaveBeenCalledWith(21, 'Compte du bénéficiaire clôturé');
-    expect(page.querySelector('[role=status]')?.textContent).toBe('Virement refusé : recrédité');
-    expect(versements).toHaveBeenCalledTimes(2);
-    expect(credite).toHaveBeenCalledOnce();
-  });
-
-  it('CU-147 : affiche le refus du bouchon de la banque', async () => {
-    versements.mockReturnValue(of({ ...RUBRIQUE, mouvements: [VIREMENT_EXECUTE] }));
-    simulerRefus.mockReturnValue(refus(409, { message: 'Seul un virement exécuté peut être refusé' }));
-    const { fixture, page } = await afficher();
-    (page.querySelector('button.refus') as HTMLButtonElement).click();
-    await fixture.whenStable();
-    expect(page.querySelector('[role=alert]')?.textContent).toBe('Seul un virement exécuté peut être refusé');
   });
 
   describe('Historique des mouvements', () => {

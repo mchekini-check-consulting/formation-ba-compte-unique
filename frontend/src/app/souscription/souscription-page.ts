@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Observable } from 'rxjs';
 import { eurosAuCentime } from '../livret-a/parametres';
 import { Beneficiaire, EtatSouscription, ORIGINES, OrigineFonds, Produit, SouscriptionService } from './souscription';
@@ -181,6 +181,7 @@ const ligneComplete = (l: Ligne) =>
 })
 export class SouscriptionPage {
   private readonly service = inject(SouscriptionService);
+  private readonly router = inject(Router);
   protected readonly produit: Produit =
     inject(ActivatedRoute).snapshot.queryParamMap.get('produit') === 'AV' ? 'AV' : 'PER';
   protected readonly textes = TEXTES[this.produit];
@@ -224,11 +225,33 @@ export class SouscriptionPage {
   constructor() {
     this.service.etat(this.produit).subscribe({
       next: (donnees) => {
+        if (this.etapeSautee(donnees)) {
+          return;
+        }
         this.afficher(donnees);
         this.etat.set('affiche');
       },
       error: () => this.etat.set('indisponible'),
     });
+  }
+
+  /**
+   * Adresse /souscrire tapée sans avoir fait les étapes précédentes : retour à la bonne étape, le profil (CU-10,
+   * « redirigée vers le questionnaire ») puis les documents (PER-02, AV-02). Le backend refuse aussi la souscription.
+   */
+  private etapeSautee(donnees: EtatSouscription): boolean {
+    if (donnees.etape === 'SIGNEE') {
+      return false;
+    }
+    if (donnees.profil !== 'VALIDE') {
+      void this.router.navigate(['/profil'], { replaceUrl: true });
+      return true;
+    }
+    if (!donnees.documentsLus) {
+      void this.router.navigate(['/decouvrir'], { queryParams: { produit: this.produit }, replaceUrl: true });
+      return true;
+    }
+    return false;
   }
 
   protected valeur(event: Event): string {

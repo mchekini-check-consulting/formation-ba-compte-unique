@@ -91,7 +91,8 @@ describe('EtapeSignature (CU-12)', () => {
     backend.flush(signature('ENVOYEE'));
     await fixture.whenStable();
     expect(page.querySelector('#code-signature')).not.toBeNull();
-    expect(page.textContent).toContain('111111');
+    // D4 : les codes du bouchon Docusign sont rappelés sur /test/scenarios, plus dans l'écran.
+    expect(page.textContent).not.toContain('111111');
     expect(localStorage.getItem(CLE_DOSSIER_EN_SIGNATURE)).toBe('d1');
   });
 

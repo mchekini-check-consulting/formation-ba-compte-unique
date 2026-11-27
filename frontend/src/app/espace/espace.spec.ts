@@ -11,6 +11,8 @@ const ACTIVITE = '/api/backend/connexion/session/activite';
 const DECONNEXION = '/api/backend/connexion/deconnexion';
 const COMPTES = '/api/backend/comptes';
 const PROFIL = '/api/backend/profil';
+const PARAMETRES = '/api/backend/catalogue/parametres-publics';
+const PARAMETRES_PUBLICS = { fraisUcPct: { PER: 0.5, AV: 0.65 }, fondsEurosAv: { tauxBrutVisePct: 2.9, dateMiseAJour: '2026-01-01', fraisGestionPct: null } };
 const COMPTE = {
   id: 1,
   ibanMasque: 'FR76 •••• •••• 0105',
@@ -33,7 +35,7 @@ describe('Espace', () => {
 
   afterEach(() => http.verify());
 
-  async function ouvrir(reponse: unknown, options?: { status: number; statusText: string }) {
+  async function ouvrir(reponse: unknown, options?: { status: number; statusText: string }, parametres: unknown = PARAMETRES_PUBLICS) {
     const fixture = TestBed.createComponent(Espace);
     // CU-17 : ouvrir l'espace est une action de la cliente (le délai de 10 minutes repart).
     const session = http.expectOne({ method: 'POST', url: ACTIVITE });
@@ -43,9 +45,27 @@ describe('Espace', () => {
     expect(comptes.request.withCredentials).toBe(true);
     comptes.flush(reponse as never, options);
     http.expectOne(PROFIL).flush({ statut: 'A_COMPLETER', profil: null });
+    http.expectOne(PARAMETRES).flush(parametres as never);
     await fixture.whenStable();
     return { fixture, page: fixture.nativeElement as HTMLElement };
   }
+
+  // CU-24 : taux brut visé du fonds en euros lu dans les paramètres publics ; sans réponse, il n'est pas affiché.
+  it('carte assurance vie : taux brut visé du fonds en euros lu dans le paramètre, sans net (D1)', async () => {
+    const carte = (page: HTMLElement) => [...page.querySelectorAll('#epargne .produit')].find((c) => c.textContent?.includes('Assurance-vie'))!;
+    const { page } = await ouvrir([COMPTE]);
+    expect(carte(page).querySelector('.rate')?.textContent?.trim()).toBe('Taux brut visé en 2026 : 2,90 % (mis à jour le 01/01/2026) sur le fonds en euros, non garanti');
+    expect(carte(page).textContent).toContain('Frais de gestion détaillés avant signature');
+
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [Espace],
+      providers: [provideRouter([]), provideHttpClient(withInterceptors([sessionFermee])), provideHttpClientTesting()],
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+    const sansParametres = await ouvrir([COMPTE], undefined, { fraisUcPct: { PER: 0.5, AV: 0.65 }, fondsEurosAv: { tauxBrutVisePct: null, dateMiseAJour: null, fraisGestionPct: null } });
+    expect(carte(sansParametres.page).querySelector('.rate')).toBeNull();
+  });
 
   it("affiche l'espace et le solde du compte quand la session est valide", async () => {
     const { page } = await ouvrir([COMPTE]);

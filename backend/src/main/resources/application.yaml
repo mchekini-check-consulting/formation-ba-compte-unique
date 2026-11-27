@@ -106,6 +106,13 @@ app:
     frais-contrat:
       per: ${CATALOGUE_FRAIS_CONTRAT_PER:0.50}
       av: ${CATALOGUE_FRAIS_CONTRAT_AV:0.65}
+    # CU-24 (US-00), D1 et D7 du PO : fonds en euros de l'assurance vie, affiché par la page publique et l'espace.
+    # Vide = non renseigné, donc non affiché (jamais de valeur inventée). Date au format AAAA-MM-JJ.
+    fonds-euros-av:
+      taux-brut-vise: ${FONDS_EUROS_AV_TAUX_BRUT_VISE:2.90}
+      # PO (27/11/2026) : taux mis à jour chaque 1er janvier, par modification de ce paramètre (aucun changement automatique).
+      date-mise-a-jour: ${FONDS_EUROS_AV_DATE_MISE_A_JOUR:2026-01-01}
+      frais-gestion: ${FONDS_EUROS_AV_FRAIS_GESTION:}
   virements:
     # CU-147 critère 5 : plafond d'un virement en centimes, à valider avec la conformité. 0 = pas de plafond.
     plafond-centimes: ${VIREMENTS_PLAFOND_CENTIMES:0}

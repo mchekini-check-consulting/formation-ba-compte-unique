@@ -3,6 +3,7 @@ import { Component, OnInit, inject, input, output, signal } from '@angular/core'
 import { Observable, defer, map, retry, timeout } from 'rxjs';
 import { refusDe } from '../beneficiaires/beneficiaires';
 import { BouchonsIdentiteService } from '../identification/bouchons-identite';
+import { scenarioChoisi } from '../outils-test/scenarios';
 import { refusFichier, tailleLisible } from '../identification/regles';
 import { EtapePiece, LivretAService, NouvellePiece, ResultatDocument, TypePiece, VerificationPiece } from './livret-a';
 
@@ -126,14 +127,6 @@ export function avecRelances<T>(appel: () => Observable<T>, indisponible: (repon
             Prouvez que vous êtes bien la titulaire de la pièce : placez votre visage dans le cadre, puis tournez
             la tête quand cela vous est demandé. Votre visage est comparé à la photo de votre nouvelle pièce.
           </p>
-          <div class="bouchon">
-            <label for="scenario-selfie-livret-a">Environnement de test : résultat simulé du selfie (Stripe Identity)</label>
-            <select id="scenario-selfie-livret-a" [value]="scenarioSelfie()" (change)="scenarioSelfie.set($any($event.target).value)">
-              @for (s of scenariosSelfie; track s.code) {
-                <option [value]="s.code">{{ s.libelle }}</option>
-              }
-            </select>
-          </div>
           <button type="button" (click)="verifierSelfie()">Démarrer la vérification de présence</button>
         </div>
       } @else {
@@ -211,14 +204,6 @@ export function avecRelances<T>(appel: () => Observable<T>, indisponible: (repon
               <p class="erreur" id="err-piece-fichier">{{ e }}</p>
             }
           </div>
-          <div class="bouchon">
-            <label for="scenario-piece-livret-a">Environnement de test : résultat simulé de l'analyse (Stripe Identity)</label>
-            <select id="scenario-piece-livret-a" [value]="scenarioPiece()" (change)="scenarioPiece.set($any($event.target).value)">
-              @for (s of scenariosPiece; track s.code) {
-                <option [value]="s.code">{{ s.libelle }}</option>
-              }
-            </select>
-          </div>
           <button type="submit" [disabled]="envoi()">Envoyer ma pièce</button>
         </form>
       }
@@ -258,11 +243,10 @@ export class EtapePieceLivretA implements OnInit {
   readonly validee = output<void>();
 
   protected readonly types = TYPES_PIECE_LIVRET_A;
-  protected readonly scenariosPiece = SCENARIOS_PIECE_LIVRET_A;
-  protected readonly scenariosSelfie = SCENARIOS_SELFIE_LIVRET_A;
   protected readonly relances = RELANCES;
-  protected readonly scenarioPiece = signal(SCENARIOS_PIECE_LIVRET_A[0].code);
-  protected readonly scenarioSelfie = signal(SCENARIOS_SELFIE_LIVRET_A[0].code);
+  /** D4 : résultats simulés choisis sur /test/scenarios, lus à l'envoi (jamais affichés à la cliente). */
+  private readonly scenarioPiece = () => scenarioChoisi('livret-a.piece', SCENARIOS_PIECE_LIVRET_A);
+  private readonly scenarioSelfie = () => scenarioChoisi('livret-a.selfie', SCENARIOS_SELFIE_LIVRET_A);
   protected readonly saisie = signal<SaisiePiece>({ typePiece: '', numeroPiece: '', dateExpiration: '' });
   protected readonly fichier = signal<{ nom: string; taille: string; refus: string | null } | null>(null);
   protected readonly erreurs = signal<ErreursPiece>({});

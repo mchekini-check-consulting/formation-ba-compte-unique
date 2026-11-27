@@ -2,7 +2,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { AnnulationControles, EtapeIdentite } from './etape-identite';
+import { choisirScenario } from '../outils-test/scenarios';
+import { AnnulationControles, CAS_DE_TEST, EtapeIdentite } from './etape-identite';
 import { IDENTITE_EXEMPLE } from './exemple';
 import { Identite, MESSAGE_ANNULATION } from './regles';
 
@@ -43,10 +44,9 @@ describe('EtapeIdentite', () => {
     page.querySelector('form')!.dispatchEvent(new Event('submit'));
     await fixture.whenStable();
   };
+  // D4 : le cas du bouchon se choisit sur /test/scenarios (mémorisé dans le navigateur), plus dans l'écran.
   const choisirCas = async (libelle: string) => {
-    [...page.querySelectorAll<HTMLButtonElement>('.scenario-grid button')]
-      .find((b) => b.textContent?.trim() === libelle)!
-      .click();
+    choisirScenario('ouverture.identite', CAS_DE_TEST.find((c) => c.libelle === libelle)!.code);
     await fixture.whenStable();
   };
   /** Le dossier est enregistré, puis le contrôle sanctions/PEP est demandé au bouchon. */
@@ -56,6 +56,7 @@ describe('EtapeIdentite', () => {
   };
 
   beforeEach(async () => {
+    localStorage.clear();
     await TestBed.configureTestingModule({
       imports: [EtapeIdentite],
       providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],

@@ -152,3 +152,19 @@ export class BouchonsIdentiteService {
     );
   }
 }
+
+/** CU-28 : cas de test du bouchon sanctions/PPE (API Gels des avoirs). */
+export const CAS_SANCTIONS: { code: CasDeTest; libelle: string }[] = [
+  { code: 'CONFORME', libelle: 'Aucune correspondance' },
+  { code: 'SANCTIONNE', libelle: 'Gel des avoirs' },
+  { code: 'PEP', libelle: 'Personne politiquement exposée' },
+  { code: 'INDISPONIBLE', libelle: 'Sans réponse (5 s par essai)' },
+];
+
+/** CU-295 : cas de test du bouchon de l'administration fiscale. */
+export const CAS_FISCAUX: { code: CasFiscal; libelle: string }[] = [
+  { code: 'SANS_LIVRET_A', libelle: 'Aucun autre Livret A' },
+  { code: 'DETENU_AILLEURS', libelle: 'Livret A détenu ailleurs' },
+  { code: 'SANS_REPONSE', libelle: 'Sans réponse' },
+  { code: 'INDISPONIBLE', libelle: 'Service indisponible' },
+];

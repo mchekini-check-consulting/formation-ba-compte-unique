@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Subject, of, throwError } from 'rxjs';
 import { Mock, vi } from 'vitest';
+import { choisirScenario } from '../outils-test/scenarios';
 import {
   BouchonsIdentiteService,
   VerificationDocumentReponse,
@@ -98,6 +99,7 @@ describe('EtapePieceLivretA', () => {
   let validee: Mock<() => void>;
 
   beforeEach(() => {
+    localStorage.clear();
     for (const appel of [...Object.values(service), ...Object.values(bouchons)]) {
       appel.mockReset();
     }
@@ -124,7 +126,14 @@ describe('EtapePieceLivretA', () => {
     await fixture.whenStable();
   }
   const element = <T extends HTMLElement>(selecteur: string) => page.querySelector<T>(selecteur)!;
+  // D4 : résultats des bouchons choisis sur /test/scenarios (mémorisés), plus dans l'écran.
+  const SCENARIOS: Record<string, 'livret-a.piece' | 'livret-a.selfie'> = { 'scenario-piece-livret-a': 'livret-a.piece', 'scenario-selfie-livret-a': 'livret-a.selfie' };
   const choisir = (id: string, valeur: string) => {
+    if (SCENARIOS[id]) {
+      expect(page.querySelector(`#${id}`)).toBeNull();
+      choisirScenario(SCENARIOS[id], valeur);
+      return;
+    }
     const champ = element<HTMLSelectElement | HTMLInputElement>(`#${id}`);
     champ.value = valeur;
     champ.dispatchEvent(new Event(champ instanceof HTMLSelectElement ? 'change' : 'input'));

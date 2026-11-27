@@ -37,6 +37,7 @@ public class SessionObligatoire implements WebMvcConfigurer, HandlerInterceptor 
 			"/activation/**", // activation de l'espace (lien reçu par SMS)
 			"/reinitialisation/**", // mot de passe oublié
 			"/dossiers/**", // parcours d'ouverture de compte, avant toute session
+			"/catalogue/parametres-publics", // CU-24 : frais et taux publics des produits, lus par la page publique
 			"/test/**"), // pages de test (e-mails, SMS, journal) : vides hors environnement de test
 			// Swagger : description des adresses, absente en preprod et prod. Les essais lancés
 			// depuis Swagger restent soumis à la session comme toute autre demande.

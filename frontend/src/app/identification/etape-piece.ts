@@ -1,4 +1,5 @@
 import { Component, inject, input, output, signal } from '@angular/core';
+import { scenarioChoisi } from '../outils-test/scenarios';
 import { BouchonsIdentiteService } from './bouchons-identite';
 import {
   Identite,
@@ -42,8 +43,8 @@ export class EtapePiece {
   readonly annule = output<string>();
   readonly retour = output<void>();
 
-  protected readonly scenarios = SCENARIOS_PIECE;
-  protected readonly scenario = signal(SCENARIOS_PIECE[0].code);
+  /** D4 : résultat simulé choisi sur /test/scenarios, lu à l'envoi (jamais affiché à la cliente). */
+  private readonly scenario = () => scenarioChoisi('ouverture.piece', SCENARIOS_PIECE);
   protected readonly fichiers = signal<FichierChoisi[]>([]);
   protected readonly message = signal<{ type: 'err' | 'warn'; texte: string } | null>(null);
   protected readonly enCours = signal(false);
@@ -69,10 +70,6 @@ export class EtapePiece {
   protected survoler(event: DragEvent, actif: boolean): void {
     event.preventDefault();
     this.survol.set(actif);
-  }
-
-  protected changerScenario(event: Event): void {
-    this.scenario.set((event.target as HTMLSelectElement).value);
   }
 
   private ajouter(fichier: File | undefined): void {

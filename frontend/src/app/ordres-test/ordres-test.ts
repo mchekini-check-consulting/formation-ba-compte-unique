@@ -40,7 +40,8 @@ const STATUTS: Record<OrdreTest['statut'], string> = {
           <p class="vide">
             L’heure limite (12 h) suit la date métier. <a routerLink="/test/date-metier">Changer la date métier</a> ·
             <a routerLink="/test/evenements">Boîte d’envoi Kafka</a> ·
-            <a routerLink="/test/catalogue">Catalogue</a>
+            <a routerLink="/test/catalogue">Catalogue</a> ·
+            <a routerLink="/test/contrats">Créer un contrat de test</a>
           </p>
 
           @if (message()) {

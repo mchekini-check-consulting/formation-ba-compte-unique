@@ -33,14 +33,6 @@
         @if (message()) {
           <div class="notice err" role="alert">{{ message() }}</div>
         }
-        <div class="bouchon">
-          <span class="lab">Prototype : codes du bouchon Docusign</span>
-          <ul>
-            @for (c of codesDeTest; track c.code) {
-              <li><span class="mono">{{ c.code }}</span> : {{ c.libelle }}</li>
-            }
-          </ul>
-        </div>
         <div class="actions">
           <button type="button" class="pbtn ghost" [disabled]="enCours()" (click)="demanderAnnulation()">Annuler la signature</button>
           <button type="button" class="pbtn" [disabled]="enCours()" (click)="signer()">{{ enCours() ? 'Signature en cours…' : 'Signer' }}</button>
