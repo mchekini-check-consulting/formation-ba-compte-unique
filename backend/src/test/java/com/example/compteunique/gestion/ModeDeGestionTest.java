@@ -5,7 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -27,6 +29,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import com.example.compteunique.catalogue.Adequation;
+import com.example.compteunique.catalogue.Adequation.SupportInadapte;
 import com.example.compteunique.catalogue.CatalogueService;
 import com.example.compteunique.catalogue.CatalogueService.Produit;
 import com.example.compteunique.catalogue.CatalogueService.SupportUc;
@@ -71,6 +75,7 @@ class ModeDeGestionTest {
 	private final QuotaNonCoteAvRepository quotas = mock(QuotaNonCoteAvRepository.class);
 	private final ReequilibrageRepository reequilibrages = mock(ReequilibrageRepository.class);
 	private final SignalementNonCoteRepository signalements = mock(SignalementNonCoteRepository.class);
+	private final Adequation adequation = mock(Adequation.class);
 
 	private final List<ContratGestion> baseContrats = new ArrayList<>();
 	private final List<ChangementGestion> baseChangements = new ArrayList<>();
@@ -80,7 +85,7 @@ class ModeDeGestionTest {
 
 	private ModeDeGestion service(boolean contratsDeTest) {
 		return new ModeDeGestion(comptes, profils, dateMetier, supports, catalogue, positions, ordres, contrats, changements,
-				mandats, grille, quotas, reequilibrages, signalements, contratsDeTest);
+				mandats, grille, quotas, reequilibrages, signalements, adequation, contratsDeTest);
 	}
 
 	private final ModeDeGestion service = service(true);
@@ -470,6 +475,22 @@ class ModeDeGestionTest {
 		assertThatThrownBy(() -> service.verser(JETON, Produit.AV, UUID.randomUUID(), BigDecimal.TEN))
 				.isInstanceOf(VersementImpossible.class);
 		verify(ordres, never()).passer(any());
+	}
+
+	@Test
+	@DisplayName("CU-349 critère 3 : profil devenu prudent après le choix, un versement vers une UC qui n'est plus "
+			+ "adaptée est refusé avant tout ordre, contrôlé avec le profil en vigueur")
+	void versementVersUcInadaptee() {
+		profil("DYNAMIQUE", 2041);
+		creer(Produit.AV);
+		service.choisir(JETON, Produit.AV, ModeGestion.PILOTEE, ProfilGestion.DYNAMIQUE);
+		profil("PRUDENT", 2041);
+		doThrow(new SupportInadapte()).when(adequation).controler(eq(CLIENTE), eq(Produit.AV), eq("PRUDENT"),
+				anyString(), eq("VERSEMENT"));
+
+		assertThatThrownBy(() -> service.verser(JETON, Produit.AV, UUID.randomUUID(), new BigDecimal("1000.00")))
+				.isInstanceOf(SupportInadapte.class).hasMessage("Ce support ne correspond pas à votre profil");
+		verify(ordres, never()).passer(argThat(d -> d.type() == TypeOrdre.VERSEMENT));
 	}
 
 	@Test

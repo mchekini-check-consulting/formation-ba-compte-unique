@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.compteunique.catalogue.Adequation.SupportInadapte;
 import com.example.compteunique.catalogue.CatalogueService.Produit;
 import com.example.compteunique.compte.ClienteNonConnecteeException;
 import com.example.compteunique.compte.CompteInaccessibleException;
@@ -96,7 +97,7 @@ public class GestionController {
 				.body(service.verser(jetonSession, demande.produit(), demande.id(), demande.montant()));
 	}
 
-	@ExceptionHandler({ ChoixRefuse.class, AllocationImpossible.class })
+	@ExceptionHandler({ ChoixRefuse.class, AllocationImpossible.class, SupportInadapte.class })
 	public ResponseEntity<Refus> refuse(RuntimeException refus) {
 		return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT).body(new Refus(refus.getMessage()));
 	}

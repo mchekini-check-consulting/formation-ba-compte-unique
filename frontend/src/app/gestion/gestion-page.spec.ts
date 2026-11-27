@@ -255,4 +255,15 @@ describe('GestionPage (CU-314, CU-338)', () => {
     await rafraichir();
     expect(page.querySelector('[role="alert"]')?.textContent).toContain('n’a pas pu être enregistré');
   });
+
+  it('CU-349 : versement vers une UC devenue inadaptée au profil : le refus du backend est affiché', async () => {
+    const { http, page, rafraichir } = await ouvrirPage(etat());
+    const champ = page.querySelector<HTMLInputElement>('[data-test="versement"] input')!;
+    champ.value = '100';
+    champ.dispatchEvent(new Event('change'));
+    page.querySelector<HTMLFormElement>('[data-test="versement"]')!.dispatchEvent(new Event('submit'));
+    http.expectOne(`${URL}/versements`).flush({ message: 'Ce support ne correspond pas à votre profil' }, { status: 422, statusText: 'Refus' });
+    await rafraichir();
+    expect(page.querySelector('[role="alert"]')?.textContent).toContain('Ce support ne correspond pas à votre profil');
+  });
 });
