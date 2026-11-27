@@ -23,6 +23,7 @@ public class Mouvement {
 	public static final String VIREMENT_ENTRANT = "VIREMENT_ENTRANT";
 	public static final String VIREMENT_SORTANT = "VIREMENT_SORTANT";
 	public static final String RECREDIT_VIREMENT = "RECREDIT_VIREMENT";
+	public static final String VERSEMENT_EPARGNE = "VERSEMENT_EPARGNE";
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -107,6 +108,19 @@ public class Mouvement {
 		return mouvement;
 	}
 
+	/** CU-312 : débit du compte courant vers un contrat d'épargne (PER), au nom du contrat. */
+	public static Mouvement versementEpargne(Long compteId, long montantCentimes, String libelle, String contrat,
+			OffsetDateTime effectueLe) {
+		Mouvement mouvement = new Mouvement();
+		mouvement.compteId = compteId;
+		mouvement.type = VERSEMENT_EPARGNE;
+		mouvement.montantCentimes = montantCentimes;
+		mouvement.libelle = libelle;
+		mouvement.beneficiaire = contrat;
+		mouvement.effectueLe = effectueLe;
+		return mouvement;
+	}
+
 	/** CU-147 : débit d'un virement vers un bénéficiaire, relié à son virement. */
 	public Mouvement duVirement(Long id) {
 		this.virementId = id;
@@ -131,7 +145,7 @@ public class Mouvement {
 	}
 
 	public boolean isSortant() {
-		return VIREMENT_SORTANT.equals(type);
+		return VIREMENT_SORTANT.equals(type) || VERSEMENT_EPARGNE.equals(type);
 	}
 
 	public String getBeneficiaire() {

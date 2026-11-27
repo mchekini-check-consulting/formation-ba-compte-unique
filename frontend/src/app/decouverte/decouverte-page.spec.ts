@@ -86,13 +86,20 @@ describe('DecouvertePage (CU-311, CU-331)', () => {
     expect(page.querySelector<HTMLButtonElement>('[data-test="continuer"]')!.disabled).toBe(true);
   });
 
-  it('les deux documents ouverts et cochés : « Continuer » mène au choix du mode de gestion du produit', async () => {
+  it('PER, les deux documents ouverts et cochés : « Continuer » mène à la souscription (CU-312)', async () => {
     const { page } = await ouvrirPage(etat(doc('DIC', true, true), doc('FICHE_PRODUIT', true, true)));
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     const continuer = page.querySelector<HTMLButtonElement>('[data-test="continuer"]')!;
     expect(continuer.disabled).toBe(false);
     continuer.click();
-    expect(navigate).toHaveBeenCalledWith(['/gestion'], { queryParams: { produit: 'PER' } });
+    expect(navigate).toHaveBeenCalledWith(['/souscrire']);
+  });
+
+  it('assurance vie : « Continuer » mène encore au choix du mode de gestion', async () => {
+    const { page } = await ouvrirPage(etat(doc('DIC', true, true), doc('FICHE_PRODUIT', true, true), 'AV'), 'AV');
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    page.querySelector<HTMLButtonElement>('[data-test="continuer"]')!.click();
+    expect(navigate).toHaveBeenCalledWith(['/gestion'], { queryParams: { produit: 'AV' } });
   });
 
   it('une case refusée par le backend redevient décochée, avec un message', async () => {

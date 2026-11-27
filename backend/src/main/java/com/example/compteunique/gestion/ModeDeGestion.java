@@ -142,6 +142,12 @@ public class ModeDeGestion {
 		this.contratsDeTest = contratsDeTest;
 	}
 
+	/** CU-312 : numéro du contrat de la cliente pour ce produit, vide sans contrat. */
+	@Transactional(readOnly = true)
+	public Optional<String> numeroContrat(UUID customerId, Produit produit) {
+		return contrats.findByCustomerIdAndProduit(customerId, produit).map(ContratGestion::getNumeroContrat);
+	}
+
 	@Transactional
 	public Etat etat(String jetonSession, Produit produit) {
 		UUID cliente = customerId(jetonSession);
