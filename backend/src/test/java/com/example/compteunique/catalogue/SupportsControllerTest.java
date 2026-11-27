@@ -32,7 +32,8 @@ class SupportsControllerTest {
 
 	private final SupportsEligibles eligibles = mock(SupportsEligibles.class);
 	private final ProfilClientService profils = mock(ProfilClientService.class);
-	private final SupportsController routes = new SupportsController(eligibles, profils, new SimulationSupports());
+	private final Adequation adequation = mock(Adequation.class);
+	private final SupportsController routes = new SupportsController(eligibles, profils, new SimulationSupports(), adequation);
 
 	private void profil(Statut statut, String profilInvestisseur) {
 		ProfilKyc profil = mock(ProfilKyc.class);
@@ -55,6 +56,8 @@ class SupportsControllerTest {
 		assertThat(vue.fraisContratPct()).isEqualByComparingTo("0.50");
 		assertThat(vue.supports()).containsExactly(SCPI);
 		assertThat(vue.message()).isNull();
+		// CU-348 : la proposition est tracée dans un rapport d'adéquation (profil utilisé, supports proposés).
+		verify(adequation).rapporter(null, Produit.PER, "PRUDENT", List.of(SCPI));
 	}
 
 	@Test
@@ -80,7 +83,7 @@ class SupportsControllerTest {
 			+ "revenue disponible, elle répond normalement")
 	void serviceIndisponibleSimule() {
 		SimulationSupports simulation = new SimulationSupports();
-		SupportsController avecSimulation = new SupportsController(eligibles, profils, simulation);
+		SupportsController avecSimulation = new SupportsController(eligibles, profils, simulation, adequation);
 		profil(Statut.VALIDE, "PRUDENT");
 		when(eligibles.lister(Produit.PER, "PRUDENT")).thenReturn(List.of(SCPI));
 

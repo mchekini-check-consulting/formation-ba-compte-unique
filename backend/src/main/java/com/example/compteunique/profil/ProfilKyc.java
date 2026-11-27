@@ -57,6 +57,10 @@ public class ProfilKyc {
 		this.profilCalculeLe = valideLe;
 	}
 
+	public UUID getCustomerId() {
+		return customerId;
+	}
+
 	public int getVersion() {
 		return version;
 	}

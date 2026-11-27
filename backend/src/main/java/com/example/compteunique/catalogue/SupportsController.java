@@ -34,9 +34,12 @@ public class SupportsController {
 	private final SupportsEligibles eligibles;
 	private final ProfilClientService profils;
 	private final SimulationSupports simulation;
+	private final Adequation adequation;
 
-	public SupportsController(SupportsEligibles eligibles, ProfilClientService profils, SimulationSupports simulation) {
+	public SupportsController(SupportsEligibles eligibles, ProfilClientService profils, SimulationSupports simulation,
+			Adequation adequation) {
 		this.eligibles = eligibles;
+		this.adequation = adequation;
 		this.profils = profils;
 		this.simulation = simulation;
 	}
@@ -62,7 +65,10 @@ public class SupportsController {
 		if (etat.statut() != Statut.VALIDE) {
 			return new SupportsDisponibles(choisi, false, profil, frais, List.of(), PROFIL_A_VALIDER);
 		}
-		return new SupportsDisponibles(choisi, true, profil, frais, eligibles.lister(choisi, profil), null);
+		List<SupportEligible> proposes = eligibles.lister(choisi, profil);
+		// CU-348 : rapport d'adéquation de chaque proposition (le profil est présent quand il est validé).
+		adequation.rapporter(etat.profil().orElseThrow().getCustomerId(), choisi, profil, proposes);
+		return new SupportsDisponibles(choisi, true, profil, frais, proposes, null);
 	}
 
 	private static Produit produit(String produit) {

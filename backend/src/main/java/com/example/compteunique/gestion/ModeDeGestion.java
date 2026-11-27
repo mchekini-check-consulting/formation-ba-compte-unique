@@ -20,6 +20,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.compteunique.catalogue.Adequation;
 import com.example.compteunique.catalogue.CatalogueService;
 import com.example.compteunique.catalogue.CatalogueService.Produit;
 import com.example.compteunique.catalogue.SupportsEligibles;
@@ -112,6 +113,7 @@ public class ModeDeGestion {
 	private final QuotaNonCoteAvRepository quotas;
 	private final ReequilibrageRepository reequilibrages;
 	private final SignalementNonCoteRepository signalements;
+	private final Adequation adequation;
 	private final boolean contratsDeTest;
 
 	@Autowired
@@ -120,7 +122,7 @@ public class ModeDeGestion {
 			SupportsEligibles supports, CatalogueService catalogue, PositionsContrat positions, OrdresService ordres,
 			ContratGestionRepository contrats, ChangementGestionRepository changements,
 			ParametreMandatRepository mandats, GrilleHorizonPerRepository grille, QuotaNonCoteAvRepository quotas,
-			ReequilibrageRepository reequilibrages, SignalementNonCoteRepository signalements,
+			ReequilibrageRepository reequilibrages, SignalementNonCoteRepository signalements, Adequation adequation,
 			@Value("${app.test.ordres-simules:false}") boolean contratsDeTest) {
 		this.comptes = comptes;
 		this.profils = profils;
@@ -136,6 +138,7 @@ public class ModeDeGestion {
 		this.quotas = quotas;
 		this.reequilibrages = reequilibrages;
 		this.signalements = signalements;
+		this.adequation = adequation;
 		this.contratsDeTest = contratsDeTest;
 	}
 
@@ -239,6 +242,10 @@ public class ModeDeGestion {
 			throw new VersementImpossible();
 		}
 		List<Montant> repartition = allocation(contrat).repartir(montant);
+		String profilEnVigueur = profilInvestisseur(contrat);
+		for (Montant ligne : repartition) {
+			controlerAdequation(contrat, profilEnVigueur, ligne.codeIsin(), TypeOrdre.VERSEMENT);
+		}
 		for (int i = 0; i < repartition.size(); i++) {
 			Montant ligne = repartition.get(i);
 			UUID ordreId = UUID.nameUUIDFromBytes((id + ":" + i).getBytes(StandardCharsets.UTF_8));
@@ -328,9 +335,23 @@ public class ModeDeGestion {
 				acheteurs.add(new Ecart(isin, ecart.negate()));
 			}
 		}
+		String profilEnVigueur = profilInvestisseur(contrat);
+		for (Ecart acheteur : acheteurs) {
+			controlerAdequation(contrat, profilEnVigueur, acheteur.isin, TypeOrdre.ARBITRAGE);
+		}
 		Reequilibrage reequilibrage = new Reequilibrage(numero, le);
 		arbitrer(numero, vendeurs, acheteurs, reequilibrage);
 		reequilibrages.save(reequilibrage);
+	}
+
+	/** CU-349 : profil investisseur en vigueur à la date de validation (vide si aucun profil validé). */
+	private String profilInvestisseur(ContratGestion contrat) {
+		return profils.profilValide(contrat.getCustomerId()).map(ProfilKyc::getProfilInvestisseur).orElse(null);
+	}
+
+	/** CU-349 : chaque support acheté est contrôlé de nouveau avant le premier ordre ; un refus n'investit rien. */
+	private void controlerAdequation(ContratGestion contrat, String profil, String isin, TypeOrdre type) {
+		adequation.controler(contrat.getCustomerId(), contrat.getProduit(), profil, isin, type.name());
 	}
 
 	/** Un ordre d'arbitrage par paire vendeur → acheteur, jusqu'à épuiser l'un des deux côtés. */
