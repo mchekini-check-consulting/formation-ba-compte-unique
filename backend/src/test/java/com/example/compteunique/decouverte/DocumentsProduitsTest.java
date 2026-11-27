@@ -17,6 +17,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import com.example.compteunique.catalogue.CatalogueService;
+import com.example.compteunique.catalogue.SupportsEligibles;
 import com.example.compteunique.compte.ClienteNonConnecteeException;
 import com.example.compteunique.compte.Compte;
 import com.example.compteunique.compte.CompteService;
@@ -37,7 +39,8 @@ class DocumentsProduitsTest {
 	private final CompteService comptes = mock(CompteService.class);
 	private final DateMetier dateMetier = mock(DateMetier.class);
 	private final ConsultationDocumentRepository consultations = mock(ConsultationDocumentRepository.class);
-	private final DocumentsProduits service = new DocumentsProduits(comptes, dateMetier, consultations);
+	private final SupportsEligibles catalogue = mock(SupportsEligibles.class);
+	private final DocumentsProduits service = new DocumentsProduits(comptes, dateMetier, consultations, catalogue);
 	private final DecouverteController controller = new DecouverteController(service);
 	private final List<ConsultationDocument> base = new ArrayList<>();
 
@@ -47,6 +50,8 @@ class DocumentsProduitsTest {
 		when(compte.getCustomerId()).thenReturn(CLIENTE);
 		when(comptes.compteCourant("jeton")).thenReturn(compte);
 		when(dateMetier.maintenant()).thenReturn(LE);
+		when(catalogue.fraisContrat(CatalogueService.Produit.PER)).thenReturn(new java.math.BigDecimal("0.50"));
+		when(catalogue.fraisContrat(CatalogueService.Produit.AV)).thenReturn(new java.math.BigDecimal("0.65"));
 		when(consultations.save(any())).thenAnswer(appel -> {
 			ConsultationDocument c = appel.getArgument(0);
 			ReflectionTestUtils.setField(c, "id", (long) base.size() + 1);
@@ -77,6 +82,14 @@ class DocumentsProduitsTest {
 
 	private static EtatDocument document(Etat etat, Document code) {
 		return etat.documents().stream().filter(d -> d.code() == code).findFirst().orElseThrow();
+	}
+
+	@Test
+	void lesFraisDeLaFicheProduitViennentDuParametreDuCatalogue() {
+		assertThat(document(controller.etat("jeton", Produit.AV), Document.FICHE_PRODUIT).contenu())
+				.contains("Frais de gestion : 0,65 % par an sur les unités de compte");
+		assertThat(document(controller.etat("jeton", Produit.PER), Document.FICHE_PRODUIT).contenu())
+				.contains("Frais de gestion : 0,50 % par an sur les unités de compte").doesNotContain("{fraisUc}");
 	}
 
 	@Test

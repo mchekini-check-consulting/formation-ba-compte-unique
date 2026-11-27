@@ -34,6 +34,8 @@ export interface EtatSouscription {
   codeEnvoyeLe: string | null;
   bloqueeJusquAu: string | null;
   numeroContrat: string | null;
+  /** PER-02 / AV-02 : les deux documents du produit ont été ouverts et cochés. */
+  documentsLus: boolean;
 }
 
 export interface DemandeVersement {

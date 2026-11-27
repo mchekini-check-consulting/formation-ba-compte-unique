@@ -1,6 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { choisirScenario } from '../outils-test/scenarios';
 import { EtapePiece } from './etape-piece';
 import { IDENTITE_EXEMPLE } from './exemple';
 import { MESSAGE_ANNULATION, MESSAGE_INDISPONIBLE } from './regles';
@@ -35,6 +36,7 @@ describe('EtapePiece', () => {
   });
 
   beforeEach(async () => {
+    localStorage.clear();
     await TestBed.configureTestingModule({
       imports: [EtapePiece],
       providers: [provideHttpClient(), provideHttpClientTesting()],
@@ -77,10 +79,9 @@ describe('EtapePiece', () => {
     expect(validee).toBe(true);
   });
 
-  it('utilise le scénario de test choisi', async () => {
-    const select = page.querySelector<HTMLSelectElement>('#scenario-piece')!;
-    select.value = 'PIECE_EXPIREE';
-    select.dispatchEvent(new Event('change'));
+  it('utilise le scénario choisi sur /test/scenarios, sans choix affiché dans l’écran (D4)', async () => {
+    expect(page.querySelector('#scenario-piece')).toBeNull();
+    choisirScenario('ouverture.piece', 'PIECE_EXPIREE');
     await choisir(fichier('recto.png', 'image/png', 1000));
     await envoyer();
     const requete = http.expectOne(URL);

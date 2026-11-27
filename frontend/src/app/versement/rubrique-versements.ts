@@ -7,7 +7,6 @@ import {
   effect,
   inject,
   input,
-  output,
   signal,
   untracked,
   viewChild,
@@ -19,15 +18,11 @@ import {
   formaterDate,
   formaterSolde,
 } from '../comptes/comptes';
-import { VirementsService } from './virements';
-import { VirementsTestService, montantEnCentimes } from './virements-test';
-
-type Message = { texte: string; erreur: boolean };
 
 // CU-11 (US-06) : rubrique Versements de la page « Faire un virement » : IBAN complet à communiquer à l'émetteur
 // d'un virement instantané (compte actif) et derniers mouvements (date, libellé, émetteur, montant).
-// CU-143 (TECH-04) : en environnement de test seulement, bouton « Simuler un virement entrant », formulaire
-// prérempli avec l'IBAN du compte. Aucun virement réel n'est émis.
+// CU-143 (TECH-04) et CU-147 critère 14 : les simulations (virement entrant, refus de la banque destinataire) sont
+// sur la page /test/virements (D4 : aucun élément de test dans la page de la cliente).
 // Les virements sortants s'affichent en « − » avec leur bénéficiaire, et tout mouvement simulé porte la mention
 // « simulé ». Le bouchon « Simuler un virement sortant » (CU-144) a été retiré : un virement sortant ne part que
 // vers un bénéficiaire (CU-147, formulaire de la page).
@@ -97,42 +92,9 @@ type Message = { texte: string; erreur: boolean };
               <em class="statut" [class.refuse]="m.statut === 'refusé'">{{ m.statut }}</em>
             }
             <small>{{ contrepartie(m) }}</small>
-            @if (bouchon() && m.sortant && m.virementId && m.statut === 'exécuté') {
-              <button type="button" class="refus" [disabled]="envoi()" (click)="simulerRefus(m.virementId)">
-                Simuler un refus de la banque
-              </button>
-            }
           </span>
           <span class="montant" [class.debit]="m.sortant">{{ m.sortant ? '−' : '+' }}{{ montant(m.montantCentimes) }}</span>
         </ng-template>
-      }
-
-      @if (bouchon()) {
-        <div class="test">
-          <div class="boutons">
-            <button type="button" (click)="ouvrir('entrant')">Simuler un virement entrant</button>
-          </div>
-          <small>
-            Environnement de test : données factices, aucun virement réel.
-            <a href="/test/verification-beneficiaire">Bouchon Vérification du Bénéficiaire (VoP)</a>
-          </small>
-          @if (formulaire() === 'entrant') {
-            <form (submit)="simuler($event, iban.value, montantSaisi.value, emetteur.value, libelle.value)">
-              <label for="sim-iban">IBAN du compte</label>
-              <input #iban id="sim-iban" name="iban" [value]="rubrique()?.iban ?? ''" autocomplete="off" />
-              <label for="sim-montant">Montant (€)</label>
-              <input #montantSaisi id="sim-montant" name="montant" inputmode="decimal" autocomplete="off" />
-              <label for="sim-emetteur">Nom de l’émetteur</label>
-              <input #emetteur id="sim-emetteur" name="emetteur" maxlength="70" autocomplete="off" />
-              <label for="sim-libelle">Libellé</label>
-              <input #libelle id="sim-libelle" name="libelle" maxlength="140" autocomplete="off" />
-              <button type="submit" [disabled]="envoi()">Simuler</button>
-            </form>
-          }
-          @if (message(); as m) {
-            <p [class.ko]="m.erreur" [attr.role]="m.erreur ? 'alert' : 'status'">{{ m.texte }}</p>
-          }
-        </div>
       }
     </section>
   `,
@@ -161,16 +123,6 @@ type Message = { texte: string; erreur: boolean };
     .simule { font-style: normal; font-size: 12px; color: #8a5a00; background: #fff4d6; border-radius: 6px; padding: 1px 6px; margin-left: 6px; }
     .statut { font-style: normal; font-size: 12px; color: #0a7d63; background: #e3f6ef; border-radius: 6px; padding: 1px 6px; margin-left: 6px; }
     .statut.refuse { color: #b3261e; background: #fde7e5; }
-    button.refus { margin-top: 4px; padding: 4px 10px; font-size: 13px; background: #fff; color: #0b2545; border: 1px dashed #b7c3d9; }
-    .test { margin-top: 24px; padding: 16px; border: 1px dashed #b7c3d9; border-radius: 12px; }
-    .boutons { display: flex; flex-wrap: wrap; gap: 8px; }
-    .test small { display: block; color: #5d6887; margin-top: 6px; }
-    form { display: grid; gap: 6px; margin-top: 12px; max-width: 420px; }
-    label { font-size: 14px; color: #0f1b33; margin-top: 6px; }
-    input { padding: 8px 10px; border: 1px solid #b7c3d9; border-radius: 8px; font: inherit; }
-    button { justify-self: start; padding: 8px 14px; border-radius: 8px; border: 0; background: #0b2545; color: #fff; font: inherit; cursor: pointer; }
-    button[disabled] { opacity: .6; cursor: default; }
-    .ko { color: #b3261e; }
     @media (max-width: 600px) {
       .mouvements li { grid-template-columns: 1fr auto; }
       .date { grid-column: 1 / -1; }
@@ -181,16 +133,8 @@ export class RubriqueVersements implements OnInit {
   readonly compteId = input.required<string>();
   /** CU-147 : augmenté par la page après un virement exécuté ; les mouvements sont alors relus. */
   readonly actualisation = input(0);
-  /**
-   * Un virement simulé a été crédité (CU-143) ou recrédité après un refus de la banque (CU-147) : la page recharge le
-   * compte pour afficher le
-   * nouveau solde.
-   */
-  readonly credite = output<void>();
 
   private readonly comptes = inject(ComptesService);
-  private readonly virements = inject(VirementsTestService);
-  private readonly virementsBeneficiaires = inject(VirementsService);
 
   /** Nombre de mouvements affichés dans la rubrique ; « Voir tout » montre les autres dans la fenêtre. */
   protected readonly apercu = 5;
@@ -217,17 +161,12 @@ export class RubriqueVersements implements OnInit {
 
   protected readonly rubrique = signal<Rubrique | null>(null);
   protected readonly erreur = signal(false);
-  protected readonly bouchon = signal(false);
-  protected readonly formulaire = signal<'entrant' | null>(null);
-  protected readonly envoi = signal(false);
-  protected readonly message = signal<Message | null>(null);
 
   protected readonly date = formaterDate;
   protected readonly montant = formaterSolde;
 
   ngOnInit(): void {
     this.charger();
-    this.virements.disponible().subscribe((disponible) => this.bouchon.set(disponible));
   }
 
   private charger(): void {
@@ -255,57 +194,5 @@ export class RubriqueVersements implements OnInit {
       return `Recrédit : virement vers ${m.beneficiaire}${iban} refusé${m.motif ? ` (${m.motif})` : ''}`;
     }
     return m.sortant ? `Vers ${m.beneficiaire}${iban}` : (m.emetteur ?? '');
-  }
-
-  // CU-147 critère 14 (test) : la banque destinataire refuse un virement exécuté -> recrédit et motif.
-  protected simulerRefus(virementId: number): void {
-    this.envoi.set(true);
-    this.message.set(null);
-    this.virementsBeneficiaires.simulerRefus(virementId, 'Compte du bénéficiaire clôturé').subscribe({
-      next: (resultat) => {
-        this.envoi.set(false);
-        this.message.set({ texte: resultat.message, erreur: false });
-        this.charger();
-        this.credite.emit();
-      },
-      error: (erreur: HttpErrorResponse) => this.refus(erreur),
-    });
-  }
-
-  /** Ouvre le formulaire demandé, ou le referme s'il était déjà ouvert. */
-  protected ouvrir(sens: 'entrant'): void {
-    this.formulaire.set(this.formulaire() === sens ? null : sens);
-    this.message.set(null);
-  }
-
-  private refus(erreur: HttpErrorResponse): void {
-    this.envoi.set(false);
-    const texte: unknown = erreur.error?.message;
-    this.message.set({
-      texte: typeof texte === 'string' ? texte : 'La simulation n’a pas pu aboutir. Veuillez réessayer.',
-      erreur: true,
-    });
-  }
-
-  protected simuler(evenement: Event, iban: string, montant: string, emetteur: string, libelle: string): void {
-    evenement.preventDefault();
-    const montantCentimes = montantEnCentimes(montant);
-    if (montantCentimes === null) {
-      this.message.set({ texte: 'Montant invalide', erreur: true });
-      return;
-    }
-    this.envoi.set(true);
-    this.message.set(null);
-    this.virements.simuler({ iban, montantCentimes, emetteur, libelle }).subscribe({
-      next: (resultat) => {
-        this.envoi.set(false);
-        this.message.set({ texte: resultat.message, erreur: resultat.resultat !== 'CREDITE' });
-        if (resultat.resultat === 'CREDITE') {
-          this.charger();
-          this.credite.emit();
-        }
-      },
-      error: (erreur: HttpErrorResponse) => this.refus(erreur),
-    });
   }
 }

@@ -32,15 +32,6 @@
       <div class="notice err" role="alert">{{ message() }}</div>
     }
 
-    <div class="bouchon">
-      <label for="scenario-selfie">Prototype : résultat simulé par le bouchon Stripe Identity</label>
-      <select id="scenario-selfie" [value]="scenario()" (change)="changerScenario($event)">
-        @for (s of scenarios; track s.code) {
-          <option [value]="s.code">{{ s.libelle }}</option>
-        }
-      </select>
-    </div>
-
     <div class="actions">
       <button type="button" class="pbtn ghost" (click)="revenir()">Retour</button>
       @if (etat() === 'camera') {

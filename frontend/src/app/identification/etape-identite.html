@@ -145,17 +145,4 @@
     </div>
   </form>
 </section>
-
-<section class="ident carte" aria-labelledby="titre-cas-test">
-  <div class="tag">Environnement de test uniquement</div>
-  <h2 id="titre-cas-test">Choisir un cas de test</h2>
-  <p class="muted">Ces cas pilotent le bouchon US-B7. Ce panneau devra être masqué en production.</p>
-  <span class="badge test">Bouchon US-B7 (CUB-70)</span>
-  <div class="scenario-grid" role="group" aria-label="Cas de test">
-    @for (c of casDeTest; track c.code) {
-      <button type="button" [attr.aria-pressed]="cas() === c.code" (click)="cas.set(c.code)">{{ c.libelle }}</button>
-    }
-  </div>
-  <div class="design-note">Le cas choisi s'applique au prochain envoi du formulaire.</div>
-</section>
 }

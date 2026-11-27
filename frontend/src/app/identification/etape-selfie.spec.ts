@@ -1,6 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { choisirScenario } from '../outils-test/scenarios';
 import { EtapeSelfie } from './etape-selfie';
 import { MESSAGE_ANNULATION, MESSAGE_INDISPONIBLE } from './regles';
 
@@ -28,6 +29,7 @@ describe('EtapeSelfie', () => {
   });
 
   beforeEach(async () => {
+    localStorage.clear();
     arret.mockReset();
     getUserMedia.mockReset().mockResolvedValue({ getTracks: () => [{ stop: arret }] });
     Object.defineProperty(navigator, 'mediaDevices', { value: { getUserMedia }, configurable: true });
@@ -66,9 +68,8 @@ describe('EtapeSelfie', () => {
   });
 
   it('annule la demande si le selfie ne correspond pas', async () => {
-    const select = page.querySelector<HTMLSelectElement>('#scenario-selfie')!;
-    select.value = 'SELFIE_DIFFERENT';
-    select.dispatchEvent(new Event('change'));
+    expect(page.querySelector('#scenario-selfie')).toBeNull();
+    choisirScenario('ouverture.selfie', 'SELFIE_DIFFERENT');
     await cliquer('Démarrer la caméra');
     await cliquer('Vérifier mon selfie');
     const requete = http.expectOne(URL);

@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, input, linkedSignal, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { map, switchMap } from 'rxjs';
+import { scenarioChoisi } from '../outils-test/scenarios';
 import { BouchonsIdentiteService, CasDeTest } from './bouchons-identite';
 import { Controles, DossierService, RefusOuverture, RepriseOuverture, controlesDe } from './dossier';
 import {
@@ -79,7 +80,6 @@ export class EtapeIdentite {
   protected readonly nationalites = NATIONALITES;
   protected readonly typesPiece = TYPES_PIECE;
   protected readonly paysAdresse = PAYS_ADRESSE;
-  protected readonly casDeTest = CAS_DE_TEST;
 
   protected readonly identite = linkedSignal<Identite>(() => ({ ...(this.initiale() ?? VIDE) }));
   protected readonly erreurs = signal<Erreurs>({});
@@ -91,7 +91,8 @@ export class EtapeIdentite {
   protected readonly refus = signal<RefusOuverture | null>(null);
   /** Dossier sur lequel la saisie est enregistrée : celui du parcours, ou le dossier repris (CU-9). */
   private readonly reference = linkedSignal(() => this.dossierId());
-  protected readonly cas = signal<CasDeTest>('CONFORME');
+  /** D4 : cas du bouchon US-B7 choisi sur /test/scenarios, lu à l'envoi (jamais affiché à la cliente). */
+  private readonly cas = (): CasDeTest => scenarioChoisi('ouverture.identite', CAS_DE_TEST);
 
   protected maj(champ: ChampIdentite, event: Event): void {
     const valeur = (event.target as HTMLInputElement | HTMLSelectElement).value;

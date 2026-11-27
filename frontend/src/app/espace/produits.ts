@@ -9,6 +9,8 @@ export interface Produit {
   description: string;
   taux?: string;
   tauxDetail?: string;
+  /** Libellé placé avant le taux (« Taux brut visé en 2026 : »), facultatif. */
+  tauxAvant?: string;
   minimum?: string;
   note?: string;
 }
@@ -53,8 +55,7 @@ export const EPARGNE: Produit[] = [
     teinte: 'blue',
     description:
       "Un contrat de placement et de transmission, avec fonds en euros et unités de compte. Frais d'entrée de 0 %.",
-    taux: '2,90 %',
-    tauxDetail: 'brut visé en 2026 sur le fonds en euros, non garanti',
+    // CU-24 : taux brut visé du fonds en euros lu dans les paramètres publics du backend (espace.ts), jamais en dur.
     minimum: 'Versement minimum : 100 €',
     note: 'Frais de gestion détaillés avant signature',
   },

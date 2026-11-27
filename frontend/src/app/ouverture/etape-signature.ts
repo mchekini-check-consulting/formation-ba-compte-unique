@@ -4,7 +4,7 @@ import { BouchonsIdentiteService } from '../identification/bouchons-identite';
 import { MESSAGE_INDISPONIBLE } from '../identification/regles';
 import { OuvertureService, SignatureReponse, memoriserDossierEnSignature } from './ouverture';
 
-/** Codes de test du bouchon Docusign (CU-89), rappelés dans le panneau du prototype. */
+/** Codes de test du bouchon Docusign (CU-89), rappelés sur la page /test/scenarios (D4 : pas dans le parcours). */
 export const CODES_DE_TEST = [
   { code: '111111', libelle: 'signature valide' },
   { code: '000000', libelle: 'code faux' },
@@ -31,7 +31,6 @@ export class EtapeSignature implements OnInit {
   readonly annule = output<string>();
   readonly retour = output<void>();
 
-  protected readonly codesDeTest = CODES_DE_TEST;
   protected readonly signature = signal<SignatureReponse | null>(null);
   protected readonly code = signal('');
   protected readonly message = signal<string | null>(null);

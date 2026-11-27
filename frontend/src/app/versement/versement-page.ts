@@ -43,7 +43,6 @@ type Etat = { lu: false } | { lu: true; erreur: boolean; compte: Compte | null }
                   <app-rubrique-versements
                     [compteId]="'' + compte.id"
                     [actualisation]="actualisation()"
-                    (credite)="lireCompte()"
                   />
                 </div>
               </div>

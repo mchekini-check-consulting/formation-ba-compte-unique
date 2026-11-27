@@ -21,8 +21,8 @@ const LIBELLE_MODE: Record<ModeGestion, string> = { LIBRE: 'Libre', PILOTEE: 'Pi
 const pourcent = (valeur: number) => `${String(valeur).replace('.', ',')} %`;
 
 // CU-314 (PER-07) et CU-338 (AV-07) : choisir son mode de gestion (?produit=PER|AV), après « Continuer » sur la page
-// Découvrir. Sans vrai contrat (PER-04 et AV-01 à venir), la cliente crée un contrat de test en dev et qualif, en
-// gestion pilotée, au profil le moins risqué entre équilibré et son profil investisseur. Les conditions du mandat
+// Découvrir puis la souscription (PER-04, AV-01). Sans contrat, la page mène à la souscription ; le contrat de test
+// (dev et qualif) se crée sur la page /test/contrats, jamais ici (aucun élément de test visible). Les conditions du mandat
 // (taux tout compris, montant minimum) s'affichent dès que le
 // mandat est sélectionné, avant validation ; les refus viennent du backend avec leur message.
 @Component({
@@ -64,9 +64,6 @@ const pourcent = (valeur: number) => `${String(valeur).replace('.', ',')} %`;
               </p>
               <p class="detail">
                 Contrat {{ contrat.numeroContrat }} · encours {{ eurosAuCentime(contrat.encours) }}
-                @if (donnees()!.contratsDeTest) {
-                  (contrat de test : encours saisis sur <a routerLink="/test/ordres">la page des ordres</a>)
-                }
               </p>
             </section>
 
@@ -169,12 +166,8 @@ const pourcent = (valeur: number) => `${String(valeur).replace('.', ',')} %`;
             </section>
           } @else {
             <section class="carte" data-test="sans-contrat">
-              @if (donnees()!.contratsDeTest) {
-                <p>Vous n’avez pas encore de contrat {{ nomCourt }}. En attendant la souscription, créez un contrat de test : il démarre en gestion pilotée, profil équilibré (prudent si votre profil investisseur est prudent).</p>
-                <button class="btn p" type="button" data-test="creer" [disabled]="envoi() || !donnees()!.profilInvestisseur" (click)="creer()">Créer mon contrat de test</button>
-              } @else {
-                <p>La souscription {{ nomCourt }} sera bientôt disponible.</p>
-              }
+              <p>Vous n’avez pas encore de contrat {{ nomCourt }}. Votre contrat démarrera en gestion pilotée ; vous pourrez ensuite choisir votre mode de gestion ici.</p>
+              <a class="btn p" data-test="souscrire" routerLink="/decouvrir" [queryParams]="{ produit }">{{ produit === 'PER' ? 'Souscrire mon PER' : 'Souscrire mon assurance vie' }}</a>
             </section>
           }
         }
@@ -260,10 +253,6 @@ export class GestionPage {
 
   protected valeur(event: Event): string {
     return (event.target as HTMLInputElement | HTMLSelectElement).value;
-  }
-
-  protected creer(): void {
-    this.envoyer(this.service.creerContratDeTest(this.produit), 'Votre contrat de test est créé, en gestion pilotée.');
   }
 
   protected valider(event: Event): void {

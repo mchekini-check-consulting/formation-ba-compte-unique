@@ -28,6 +28,7 @@ import com.example.compteunique.compte.Compte;
 import com.example.compteunique.compte.CompteRepository;
 import com.example.compteunique.compte.CompteService;
 import com.example.compteunique.compte.MouvementRepository;
+import com.example.compteunique.decouverte.DocumentsProduits;
 import com.example.compteunique.dossier.Dossier;
 import com.example.compteunique.dossier.DossierRepository;
 import com.example.compteunique.gestion.ModeDeGestion;
@@ -81,6 +82,9 @@ class SouscriptionIT {
 	@MockitoBean
 	private CodesSms codes;
 
+	@MockitoBean
+	private DocumentsProduits documents;
+
 	@Test
 	void souscriptionsPerEtAssuranceVieEnregistreesEnBase() {
 		UUID cliente = UUID.randomUUID();
@@ -101,6 +105,7 @@ class SouscriptionIT {
 		when(kyc.getProfilInvestisseur()).thenReturn("EQUILIBRE");
 		when(profils.profilValide(cliente)).thenReturn(Optional.of(kyc));
 		when(gestion.numeroContrat(any(), any())).thenReturn(Optional.empty());
+		when(documents.peutContinuer(eq(cliente), any())).thenReturn(true);
 		when(codes.envoyer(eq(compte), any())).thenAnswer(appel -> CodesSms.hacher("123456"));
 
 		// CU-521 : la première saisie du PER (montant 500 €, salaire) est enregistrée sans erreur.

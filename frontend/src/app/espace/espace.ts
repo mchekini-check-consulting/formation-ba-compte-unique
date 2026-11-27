@@ -6,6 +6,7 @@ import { CarteCompte } from '../comptes/carte-compte';
 import { Compte, ComptesService, formaterDate, libelleStatut, soldeAffichable } from '../comptes/comptes';
 import { SuiviSession, formaterRestant } from '../session/suivi-session';
 import { LIBELLES_STATUT, ProfilService } from '../profil/profil';
+import { SupportsService, TauxAffiche, tauxFondsEurosAv } from '../supports/supports';
 import { CREDITS, EPARGNE, Produit } from './produits';
 
 type EtatComptes = { lu: false } | { lu: true; erreur: boolean; comptes: Compte[] };
@@ -26,11 +27,17 @@ export class Espace {
   private readonly document = inject(DOCUMENT);
   private readonly comptes = inject(ComptesService);
   private readonly profils = inject(ProfilService);
+  private readonly supports = inject(SupportsService);
   private readonly suivi = inject(SuiviSession);
   private readonly etat = signal<EtatComptes>({ lu: false });
   private minuteurAnnonce: ReturnType<typeof setTimeout> | null = null;
 
-  protected readonly epargne: Produit[] = EPARGNE;
+  /** CU-24 : taux du fonds en euros de l'assurance vie (paramètres publics) ; absent tant qu'il n'est pas lu. */
+  private readonly fondsEurosAv = signal<TauxAffiche | null>(null);
+  protected readonly epargne = computed<Produit[]>(() => {
+    const f = this.fondsEurosAv();
+    return EPARGNE.map((p) => (p.nom === 'Assurance-vie' && f ? { ...p, tauxAvant: f.avant, taux: f.taux, tauxDetail: f.detail } : p));
+  });
   protected readonly credits: Produit[] = CREDITS;
   protected readonly identifiant = signal('');
   protected readonly annonce = signal('');
@@ -71,6 +78,7 @@ export class Espace {
         this.identifiant.set(session.identifiant);
         this.lireComptes();
         this.profils.lire().subscribe({ next: (etat) => this.statutProfil.set(LIBELLES_STATUT[etat.statut]), error: () => undefined });
+        this.supports.parametresPublics().subscribe({ next: (p) => this.fondsEurosAv.set(tauxFondsEurosAv(p)), error: () => undefined });
       },
       error: () => undefined,
     });

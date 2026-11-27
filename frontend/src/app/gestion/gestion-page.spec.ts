@@ -81,30 +81,24 @@ describe('GestionPage (CU-314, CU-338)', () => {
     expect(page.querySelector('[role="alert"]')?.textContent).toContain('momentanément indisponible');
   });
 
-  it('sans contrat : la cliente crée son contrat de test, qui démarre en gestion pilotée équilibrée', async () => {
-    const { http, page, rafraichir } = await ouvrirPage(etat({ contrat: null }));
-    expect(page.querySelector('[data-test="sans-contrat"]')?.textContent).toContain('prudent si votre profil investisseur est prudent');
-    page.querySelector<HTMLButtonElement>('[data-test="creer"]')!.click();
-    const creation = http.expectOne(`${URL}/contrats`);
-    expect(creation.request.method).toBe('POST');
-    expect(creation.request.body).toEqual({ produit: 'AV' });
-    creation.flush(etat());
-    await rafraichir();
-    expect(page.querySelector('[data-test="actuelle"]')?.textContent).toContain('Pilotée');
-    expect(page.querySelector('[data-test="actuelle"]')?.textContent).toContain('Équilibré');
-    expect(page.querySelector('.succes')?.textContent).toContain('créé, en gestion pilotée');
-  });
-
-  it('sans profil validé : lien vers le profil et création impossible', async () => {
-    const { page } = await ouvrirPage(etat({ contrat: null, profilInvestisseur: null }));
-    expect(page.querySelector('[data-test="profil-requis"] a')?.getAttribute('href')).toBe('/profil');
-    expect(page.querySelector<HTMLButtonElement>('[data-test="creer"]')!.disabled).toBe(true);
-  });
-
-  it('hors environnement de test, sans contrat : la souscription est annoncée', async () => {
-    const { page } = await ouvrirPage(etat({ contrat: null, contratsDeTest: false }), 'PER');
+  it('sans contrat, même en environnement de test : la page mène à la souscription, sans contrat de test (AV-01)', async () => {
+    const { page } = await ouvrirPage(etat({ contrat: null, contratsDeTest: true }));
     expect(page.querySelector('[data-test="creer"]')).toBeNull();
-    expect(page.querySelector('[data-test="sans-contrat"]')?.textContent).toContain('bientôt disponible');
+    expect(page.textContent).not.toContain('contrat de test');
+    const souscrire = page.querySelector<HTMLAnchorElement>('[data-test="souscrire"]')!;
+    expect(souscrire.textContent).toContain('Souscrire mon assurance vie');
+    expect(souscrire.getAttribute('href')).toBe('/decouvrir?produit=AV');
+  });
+
+  it('PER sans contrat ni profil validé : lien vers le profil et vers la souscription du PER', async () => {
+    const { page } = await ouvrirPage(etat({ produit: 'PER', contrat: null, profilInvestisseur: null }), 'PER');
+    expect(page.querySelector('[data-test="profil-requis"] a')?.getAttribute('href')).toBe('/profil');
+    expect(page.querySelector('[data-test="souscrire"]')?.getAttribute('href')).toBe('/decouvrir?produit=PER');
+  });
+
+  it('contrat de test : aucun lien vers les pages de test', async () => {
+    const { page } = await ouvrirPage(etat());
+    expect(page.querySelector('a[href^="/test/"]')).toBeNull();
   });
 
   it('gestion sous mandat sélectionnée : taux tout compris et montant minimum affichés avant validation', async () => {

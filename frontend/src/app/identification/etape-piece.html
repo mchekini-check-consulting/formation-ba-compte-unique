@@ -30,15 +30,6 @@
     <div class="notice" [class.err]="m.type === 'err'" [class.warn]="m.type === 'warn'" role="alert">{{ m.texte }}</div>
   }
 
-  <div class="bouchon">
-    <label for="scenario-piece">Prototype : résultat simulé par le bouchon Stripe Identity</label>
-    <select id="scenario-piece" [value]="scenario()" (change)="changerScenario($event)">
-      @for (s of scenarios; track s.code) {
-        <option [value]="s.code">{{ s.libelle }}</option>
-      }
-    </select>
-  </div>
-
   <div class="actions">
     <button type="button" class="pbtn ghost" (click)="retour.emit()">Retour</button>
     <button type="button" class="pbtn" [disabled]="enCours() || !fichierValide()" (click)="envoyer()">{{ enCours() ? 'Vérification en cours…' : 'Envoyer ma pièce' }}</button>

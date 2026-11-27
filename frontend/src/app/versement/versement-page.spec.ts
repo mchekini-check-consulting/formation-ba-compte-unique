@@ -23,12 +23,11 @@ const COMPTE = {
 // La rubrique Versements est testée dans rubrique-versements.spec.ts.
 @Component({
   selector: 'app-rubrique-versements',
-  template: '<span class="compte-id">{{ compteId() }}</span><button class="credite" (click)="credite.emit()"></button>',
+  template: '<span class="compte-id">{{ compteId() }}</span>',
 })
 class RubriqueVersementsSimulee {
   readonly compteId = input.required<string>();
   readonly actualisation = input(0);
-  readonly credite = output<void>();
 }
 
 // Le formulaire de virement est testé dans formulaire-virement.spec.ts.
@@ -75,14 +74,6 @@ describe('VersementPage', () => {
     expect(page.querySelector('a[href="/espace"]')).not.toBeNull();
     expect(page.querySelector('app-carte-compte')).not.toBeNull();
     expect(page.querySelector('.compte-id')?.textContent).toBe('5');
-  });
-
-  it('relit le compte après un virement crédité pour afficher le nouveau solde', async () => {
-    const page = await ouvrir([COMPTE]);
-    (page.querySelector('.credite') as HTMLButtonElement).click();
-    http.expectOne(COMPTES).flush([{ ...COMPTE, soldeCentimes: 1250, premierVersementAttendu: false }]);
-    await TestBed.inject(ApplicationRef).whenStable();
-    expect(page.querySelector('.solde')?.textContent).toContain('12,50');
   });
 
   it('CU-147 : après un virement exécuté, relit le solde', async () => {

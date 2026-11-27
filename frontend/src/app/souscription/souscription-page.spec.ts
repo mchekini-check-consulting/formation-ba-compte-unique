@@ -1,7 +1,8 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
+import { vi } from 'vitest';
 import { EtatSouscription, Produit } from './souscription';
 import { SouscriptionPage, lireMontant } from './souscription-page';
 
@@ -20,6 +21,7 @@ function etat(modif: Partial<EtatSouscription> = {}): EtatSouscription {
     codeEnvoyeLe: null,
     bloqueeJusquAu: null,
     numeroContrat: null,
+    documentsLus: true,
     ...modif,
   };
 }
@@ -82,10 +84,28 @@ describe('SouscriptionPage (CU-312, CU-330)', () => {
     expect(page.querySelector('[role="alert"]')?.textContent).toContain('momentanément indisponible');
   });
 
-  it('profil à revalider : pas de formulaire, lien vers le questionnaire', async () => {
-    const { page } = await ouvrirPage(etat({ profil: 'A_REVALIDER' }));
-    expect(page.querySelector('[data-test="profil-requis"] a')?.getAttribute('href')).toBe('/profil');
+  it('profil à revalider (adresse tapée) : redirigée vers le questionnaire (CU-10), sans formulaire', async () => {
+    const navigate = vi.spyOn(Router.prototype, 'navigate').mockResolvedValue(true);
+    const { page } = await ouvrirPage(etat({ profil: 'A_REVALIDER', documentsLus: false }));
+    expect(navigate).toHaveBeenCalledWith(['/profil'], { replaceUrl: true });
     expect(page.querySelector('[data-test="versement"]')).toBeNull();
+    navigate.mockRestore();
+  });
+
+  it('documents pas lus (adresse tapée) : retour à Découvrir du même produit (PER-02, AV-02)', async () => {
+    const navigate = vi.spyOn(Router.prototype, 'navigate').mockResolvedValue(true);
+    const { page } = await ouvrirPage(etat({ produit: 'AV', documentsLus: false }), 'AV');
+    expect(navigate).toHaveBeenCalledWith(['/decouvrir'], { queryParams: { produit: 'AV' }, replaceUrl: true });
+    expect(page.querySelector('[data-test="versement"]')).toBeNull();
+    navigate.mockRestore();
+  });
+
+  it('contrat déjà signé : affiché même si les documents ne sont plus à lire', async () => {
+    const navigate = vi.spyOn(Router.prototype, 'navigate');
+    const { page } = await ouvrirPage(etat({ etape: 'SIGNEE', numeroContrat: 'PER-1', documentsLus: false }));
+    expect(navigate).not.toHaveBeenCalled();
+    expect(page.querySelector('[data-test="signee"]')).not.toBeNull();
+    navigate.mockRestore();
   });
 
   it('PER : « Continuer » désactivé sous 100 € (avec le message), sans origine, ou « autre » sans précision ; pas de clause', async () => {
