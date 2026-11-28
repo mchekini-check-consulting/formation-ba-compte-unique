@@ -1,3 +1,4 @@
+import { ViewportScroller } from '@angular/common';
 import { Component, Injector, afterNextRender, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Controles, DossierService, RepriseOuverture } from '../identification/dossier';
@@ -28,6 +29,7 @@ const ETAPE_SIGNATURE = 5;
 })
 export class Landing {
   private readonly injector = inject(Injector);
+  private readonly defilement = inject(ViewportScroller);
   private readonly ouvertures = inject(OuvertureService);
   private readonly dossiers = inject(DossierService);
   /** CU-27 critère 5 : fiche Livret A alimentée par les paramètres uniques du Livret A. */
@@ -56,6 +58,8 @@ export class Landing {
   private positionDefilement = 0;
 
   constructor() {
+    // Liens vers une rubrique (#epargne...) : la rubrique s'arrête sous la barre du haut au lieu d'être cachée dessous.
+    this.defilement.setOffset(() => [0, document.querySelector<HTMLElement>('.barre-site')?.offsetHeight ?? 0]);
     // Sans réponse du backend, la mention des frais n'est pas affichée (jamais de valeur écrite en dur).
     inject(SupportsService).parametresPublics().subscribe({
       next: (p) => {
@@ -117,7 +121,7 @@ export class Landing {
     event.preventDefault();
     const rubrique = lien.getAttribute('href')!.slice(1);
     this.parcoursOuvert.set(false);
-    afterNextRender(() => document.getElementById(rubrique)?.scrollIntoView?.(), { injector: this.injector });
+    afterNextRender(() => this.defilement.scrollToAnchor(rubrique), { injector: this.injector });
   }
 
   protected fermerParcours(event?: Event): void {

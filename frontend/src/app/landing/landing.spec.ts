@@ -123,7 +123,7 @@ describe('Landing', () => {
   it('pendant le parcours, un lien du menu ramène au site sur la rubrique', async () => {
     await cliquer('.cta');
     expect(page.querySelector('#compte')).toBeNull();
-    await cliquer('aside nav a[href="#compte"]');
+    await cliquer('.barre-site nav a[href="#compte"]');
     expect(page.querySelector('.parcours')).toBeNull();
     expect(page.querySelector('#compte')).not.toBeNull();
   });

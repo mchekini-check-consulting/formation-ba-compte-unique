@@ -221,7 +221,8 @@
   .tunnel { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 28px; align-items: start; }
   .tunnel-etapes { position: sticky; top: 72px; z-index: 2; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 12px 16px; margin-bottom: 16px; }
   .etape-courante { margin: 0 0 6px; font-weight: 800; color: var(--navy); }
-  .tunnel-etapes ol { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; padding-left: 18px; font-size: 13px; color: var(--muted); }
+  /* Numéros à l’intérieur : sinon, dans une ligne flex, le numéro d’une étape se colle au libellé de la précédente. */
+  .tunnel-etapes ol { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; padding-left: 0; list-style-position: inside; font-size: 13px; color: var(--muted); }
   .tunnel-etapes li.faite { color: var(--succes); }
   .tunnel-etapes li[aria-current="step"] { color: var(--navy); font-weight: 700; }
   .tunnel-conseiller { margin-top: 24px; }
