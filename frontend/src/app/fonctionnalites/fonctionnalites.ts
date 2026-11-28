@@ -34,6 +34,10 @@ export const FONCTIONNALITES = {
   'document-attestation-livret-a': { phrase: 'Consultez votre attestation en ligne : disponible prochainement.' },
   'contact-conseiller': { phrase: 'Écrivez à votre conseiller depuis votre espace : disponible prochainement.' },
   'changement-mot-de-passe': { phrase: 'Changez votre mot de passe depuis votre espace : disponible prochainement.' },
+  // Lot 4 : actions d'un contrat PER ou assurance vie et action rapide « Verser ».
+  'versement-libre': { phrase: 'Versez sur votre PER ou votre assurance vie : disponible prochainement.' },
+  'operations-contrat': { phrase: 'Suivez les opérations de votre contrat : disponible prochainement.' },
+  'suivi-contrat': { phrase: 'Suivez la valeur, les gains et les frais de votre contrat : disponible prochainement.' },
   // D4 : outils de test (dev et qualif), portés par l'entrée « Outils de test » du menu.
   'outils-test': { lien: '/test/fonctionnalites', phrase: 'Outils de test : réservés aux environnements de test.' },
 } satisfies Record<string, Fonctionnalite>;

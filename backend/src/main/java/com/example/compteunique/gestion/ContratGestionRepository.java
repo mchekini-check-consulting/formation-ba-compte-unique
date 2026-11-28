@@ -26,4 +26,7 @@ interface ContratGestionRepository extends JpaRepository<ContratGestion, Long> {
 
 	List<ContratGestion> findTop50ByOrderByIdDesc();
 
+	/** Lot 4 : contrats PER et assurance vie de la cliente, pour leurs lignes dans l'espace. */
+	List<ContratGestion> findByCustomerIdOrderByProduit(UUID customerId);
+
 }

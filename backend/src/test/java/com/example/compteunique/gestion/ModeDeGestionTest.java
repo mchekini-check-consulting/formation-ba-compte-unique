@@ -103,6 +103,7 @@ class ModeDeGestionTest {
 			return appel.getArgument(0);
 		});
 		when(contrats.findByCustomerIdAndProduit(any(), any())).thenAnswer(appel -> contrat(appel.getArgument(1)));
+		when(contrats.findByCustomerIdOrderByProduit(CLIENTE)).thenAnswer(appel -> baseContrats);
 		when(contrats.findWithLockByCustomerIdAndProduit(any(), any()))
 				.thenAnswer(appel -> contrat(appel.getArgument(1)));
 		when(changements.save(any())).thenAnswer(appel -> {
@@ -157,6 +158,24 @@ class ModeDeGestionTest {
 
 	private Etat creer(Produit produit) {
 		return service.creerContratDeTest(JETON, produit);
+	}
+
+	@Test
+	@DisplayName("Lot 4 : une ligne par contrat de la cliente (produit, numéro, date d'ouverture, mode, profil), sans "
+			+ "valorisation ; aucune ligne sans contrat")
+	void lignesDesContrats() {
+		assertThat(service.contrats(JETON)).isEmpty();
+		Etat per = creer(Produit.PER);
+		creer(Produit.AV);
+
+		var lignes = service.contrats(JETON);
+
+		assertThat(lignes).extracting(ModeDeGestion.LigneContrat::produit).containsExactly(Produit.PER, Produit.AV);
+		var ligne = lignes.get(0);
+		assertThat(ligne.numeroContrat()).isEqualTo(per.contrat().numeroContrat());
+		assertThat(ligne.ouvertLe()).isEqualTo(LE.toOffsetDateTime());
+		assertThat(ligne.mode()).isEqualTo(ModeGestion.PILOTEE);
+		assertThat(ligne.profil()).isEqualTo(ProfilGestion.EQUILIBRE);
 	}
 
 	@Test

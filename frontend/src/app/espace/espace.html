@@ -1,11 +1,103 @@
 @if (identifiant()) {
   <div class="accueil" (click)="suivreAncre($event)">
+      <!-- Lot 4 : synthèse, à faire, contrats et actions rapides, en haut de l'espace. -->
+      <section class="block synthese" id="synthese" aria-labelledby="titre-synthese">
+        <div class="wrap">
+          <h1 id="titre-synthese" class="titre">Ma synthèse</h1>
+          @if (profilValide() === false) {
+            <!-- CU-10 : profil requis avant un PER ou une assurance vie. -->
+            <div class="a-faire" data-test="a-faire">
+              <span class="tag t-amber">À faire</span>
+              <p>Complétez votre profil investisseur pour pouvoir souscrire un PER ou une assurance vie.</p>
+              <a class="btn p sm" routerLink="/profil">Compléter mon profil</a>
+            </div>
+          }
+          <div class="synthese-grille">
+            <div class="carte" data-test="synthese-compte">
+              <h2>Compte courant</h2>
+              @if (sansCompte()) {
+                <p>Pas encore de compte courant.</p>
+              } @else if (lu()) {
+                @if (solde(); as montant) {
+                  <p class="montant">{{ montant }}</p>
+                  @if (miseAJour(); as date) {
+                    <p class="detail">Mis à jour le {{ date }}</p>
+                  }
+                } @else {
+                  <p class="erreur">Votre solde est momentanément indisponible</p>
+                }
+              }
+              <a routerLink="/comptes">Mes comptes</a>
+            </div>
+            <div class="carte" data-test="synthese-livrets">
+              <h2>Livrets</h2>
+              @if (demandeLivretA(); as demande) {
+                <p>Livret A : {{ libelleDemande(demande) }}</p>
+                <a routerLink="/livret-a">Mon Livret A</a>
+              } @else {
+                <p>Aucun livret pour le moment.</p>
+                <a routerLink="/livret-a">Ouvrir mon Livret A</a>
+              }
+            </div>
+          </div>
+
+          <h2>Mes contrats</h2>
+          @if (contrats(); as liste) {
+            @if (liste.length === 0) {
+              <p class="detail" data-test="sans-contrat">Aucun contrat PER ou assurance vie pour le moment.</p>
+            } @else {
+              <table class="contrats" data-test="contrats">
+                <thead>
+                  <tr>
+                    <th scope="col">Contrat</th>
+                    <th scope="col">Numéro</th>
+                    <th scope="col">Ouvert le</th>
+                    <th scope="col">Statut</th>
+                    <th scope="col">Gestion</th>
+                    <th scope="col">Valorisation</th>
+                    <th scope="col"><span class="visuellement-cache">Actions</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (c of liste; track c.numeroContrat) {
+                    <tr>
+                      <td>{{ libelleProduit(c.produit) }}</td>
+                      <td>{{ c.numeroContrat }}</td>
+                      <td>{{ jour(c.ouvertLe) }}</td>
+                      <td>Ouvert</td>
+                      <td>{{ gestion(c) }}</td>
+                      <td>Valorisation : bientôt disponible</td>
+                      <td class="actions-contrat">
+                        <a routerLink="/gestion" [queryParams]="{ produit: c.produit }">Mon mode de gestion</a>
+                        <a routerLink="/supports" [queryParams]="{ produit: c.produit }">Supports disponibles</a>
+                        <app-bouton-fonctionnalite cle="versement-libre" classe="lien" [phraseVisible]="false">Verser</app-bouton-fonctionnalite>
+                        <app-bouton-fonctionnalite cle="operations-contrat" classe="lien" [phraseVisible]="false">Mes opérations</app-bouton-fonctionnalite>
+                        <app-bouton-fonctionnalite cle="suivi-contrat" classe="lien" [phraseVisible]="false">Suivre mon contrat</app-bouton-fonctionnalite>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          } @else if (erreurContrats()) {
+            <p class="erreur" role="alert">Vos contrats sont momentanément indisponibles.</p>
+          }
+
+          <h2>Actions rapides</h2>
+          <div class="actions-rapides">
+            <a class="btn m" routerLink="/versement">Faire un virement</a>
+            <app-bouton-fonctionnalite cle="versement-libre" classe="btn o">Verser</app-bouton-fonctionnalite>
+            <a class="btn o" href="#epargne">Souscrire</a>
+          </div>
+        </div>
+      </section>
+
       <!-- ACCUEIL -->
       <div id="accueil" class="hero">
         <div class="wrap">
           <div>
             <div class="eyebrow">Mon espace</div>
-            <h1>Bonjour, tout votre argent au même endroit.</h1>
+            <h2 class="titre-hero">Bonjour, tout votre argent au même endroit.</h2>
             <p>
               Votre compte, votre épargne, vos placements et vos crédits. Vous voyez votre situation et pouvez souscrire un
               nouveau produit en quelques minutes.
@@ -123,6 +215,13 @@
                   <span class="tag" [class]="'tag t-' + produit.teinte">{{ produit.categorie }}</span>
                   <h3>{{ produit.nom }}</h3>
                   <p>{{ produit.description }}</p>
+                  @if (fraisUc(produit); as frais) {
+                    <!-- PO (27/11/2026), lot 4 : frais des unités de compte des nouvelles souscriptions, lus dans le paramètre. -->
+                    <span class="min" data-test="frais-uc">Frais de gestion des unités de compte : {{ frais }} par an</span>
+                  }
+                  @if (placement(produit) && profilValide() === false) {
+                    <p class="avis-profil" data-test="profil-requis-carte">Profil investisseur à compléter avant de souscrire. <a routerLink="/profil">Compléter mon profil</a></p>
+                  }
                   @if (produit.taux) {
                     <span class="rate">@if (produit.tauxAvant) { {{ produit.tauxAvant }} }<b>{{ produit.taux }}</b> {{ produit.tauxDetail }}</span>
                   }
@@ -185,7 +284,7 @@
           <div class="donut-box">
             <div class="legend">
               <div><span><i class="navy"></i>Épargne</span><b>Aucun produit</b></div>
-              <div><span><i class="mint"></i>Placements</span><b>Aucun produit</b></div>
+              <div><span><i class="mint"></i>Placements</span><b>{{ contrats()?.length ? contrats()!.length + ' contrat(s) · valorisation bientôt disponible' : 'Aucun produit' }}</b></div>
               <div><span><i class="amber"></i>Compte courant</span><b>{{ sansCompte() ? 'Aucun compte' : (solde() ?? '—') }}</b></div>
               <div class="total"><span>Crédit restant dû</span><b>Aucun crédit</b></div>
             </div>

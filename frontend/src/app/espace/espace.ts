@@ -8,6 +8,9 @@ import { SuiviSession } from '../session/suivi-session';
 import { LIBELLES_STATUT, ProfilService } from '../profil/profil';
 import { SupportsService, TauxAffiche, tauxFondsEurosAv } from '../supports/supports';
 import { BoutonFonctionnalite } from '../fonctionnalites/bouton-fonctionnalite';
+import { GestionService, LIBELLE_MODE, LigneContrat, PROFILS } from '../gestion/gestion';
+import { pourcentage } from '../livret-a/parametres';
+import { DemandeLivretA, LIBELLES_DEMANDE, LivretAService } from '../livret-a/livret-a';
 import { CREDITS, EPARGNE, Produit } from './produits';
 
 type EtatComptes = { lu: false } | { lu: true; erreur: boolean; comptes: Compte[] };
@@ -27,6 +30,8 @@ export class Espace {
   private readonly comptes = inject(ComptesService);
   private readonly profils = inject(ProfilService);
   private readonly supports = inject(SupportsService);
+  private readonly gestions = inject(GestionService);
+  private readonly livrets = inject(LivretAService);
   private readonly suivi = inject(SuiviSession);
   private readonly etat = signal<EtatComptes>({ lu: false });
 
@@ -37,6 +42,15 @@ export class Espace {
     return EPARGNE.map((p) => (p.nom === 'Assurance-vie' && f ? { ...p, tauxAvant: f.avant, taux: f.taux, tauxDetail: f.detail } : p));
   });
   protected readonly credits: Produit[] = CREDITS;
+  /** Lot 4 : contrats PER et assurance vie de la cliente (null tant qu'ils ne sont pas lus). */
+  protected readonly contrats = signal<LigneContrat[] | null>(null);
+  protected readonly erreurContrats = signal(false);
+  /** Lot 4 : demande de Livret A en cours ou aboutie (null sans demande). */
+  protected readonly demandeLivretA = signal<DemandeLivretA | null>(null);
+  /** CU-10 : profil validé (true), à compléter ou à revalider (false), pas encore lu (null). */
+  protected readonly profilValide = signal<boolean | null>(null);
+  /** PO, lot 4 : frais des unités de compte des nouvelles souscriptions (« 0,65 % »), lus dans le paramètre. */
+  private readonly fraisUcPct = signal<Record<string, number>>({});
   protected readonly identifiant = signal('');
   /** CU-10 : statut du profil client (« À compléter »...), vide tant qu'il n'est pas lu. */
   protected readonly statutProfil = signal('');
@@ -68,8 +82,22 @@ export class Espace {
         this.identifiant.set(session.identifiant);
         setTimeout(() => this.defiler());
         this.lireComptes();
-        this.profils.lire().subscribe({ next: (etat) => this.statutProfil.set(LIBELLES_STATUT[etat.statut]), error: () => undefined });
-        this.supports.parametresPublics().subscribe({ next: (p) => this.fondsEurosAv.set(tauxFondsEurosAv(p)), error: () => undefined });
+        this.profils.lire().subscribe({
+          next: (etat) => {
+            this.statutProfil.set(LIBELLES_STATUT[etat.statut]);
+            this.profilValide.set(etat.statut === 'VALIDE');
+          },
+          error: () => undefined,
+        });
+        this.supports.parametresPublics().subscribe({
+          next: (p) => {
+            this.fondsEurosAv.set(tauxFondsEurosAv(p));
+            this.fraisUcPct.set(p.fraisUcPct ?? {});
+          },
+          error: () => undefined,
+        });
+        this.gestions.contrats().subscribe({ next: (c) => this.contrats.set(c), error: () => this.erreurContrats.set(true) });
+        this.livrets.etat().subscribe({ next: (e) => this.demandeLivretA.set(e.demande), error: () => undefined });
       },
       error: () => undefined,
     });
@@ -81,6 +109,34 @@ export class Espace {
   }
 
   private fragment: string | null = null;
+
+  protected placement(produit: Produit): boolean {
+    return produit.nom === 'PER' || produit.nom === 'Assurance-vie';
+  }
+
+  /** « 0,65 % » pour la carte PER ou assurance vie ; rien pour les autres produits ou sans paramètre. */
+  protected fraisUc(produit: Produit): string | null {
+    const cle = produit.nom === 'PER' ? 'PER' : produit.nom === 'Assurance-vie' ? 'AV' : null;
+    const frais = cle ? this.fraisUcPct()[cle] : undefined;
+    return frais == null ? null : pourcentage(frais);
+  }
+
+  protected libelleProduit(produit: string): string {
+    return produit === 'PER' ? 'PER' : 'Assurance vie';
+  }
+
+  protected libelleDemande(demande: DemandeLivretA): string {
+    return LIBELLES_DEMANDE[demande.statut];
+  }
+
+  protected gestion(c: LigneContrat): string {
+    return `${LIBELLE_MODE[c.mode]} · profil ${PROFILS[c.profil]}`;
+  }
+
+  /** Date d'ouverture du contrat, à Paris : « 28/11/2026 ». */
+  protected jour(iso: string): string {
+    return new Date(iso).toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris' });
+  }
 
   /** Rubrique demandée par le menu : affichée dès que la page est prête. */
   private defiler(): void {

@@ -145,4 +145,13 @@ class GestionControllersTest {
 		assertThat(condition.havingValue()).isEqualTo("true");
 	}
 
+	@Test
+	@DisplayName("Lot 4 : GET /gestion/contrats renvoie les lignes des contrats de la cliente connectée")
+	void lignesDesContrats() {
+		var ligne = new ModeDeGestion.LigneContrat(Produit.AV, "AV-1", LE, ModeGestion.PILOTEE, ProfilGestion.EQUILIBRE);
+		when(service.contrats("jeton")).thenReturn(List.of(ligne));
+
+		assertThat(routes.contrats("jeton")).containsExactly(ligne);
+	}
+
 }

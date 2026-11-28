@@ -4,7 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Observable } from 'rxjs';
 import { afficherDate } from '../date-metier-test/date-metier';
 import { euros, eurosAuCentime } from '../livret-a/parametres';
-import { EtatGestion, GestionService, ModeGestion, Produit, ProfilGestion, Versement } from './gestion';
+import { EtatGestion, GestionService, ModeGestion, Produit, ProfilGestion, Versement, LIBELLE_MODE, PROFILS } from './gestion';
 
 type Etat = 'chargement' | 'affiche' | 'indisponible';
 
@@ -14,9 +14,7 @@ export const MODES: { code: ModeGestion; titre: string; texte: string }[] = [
   { code: 'MANDAT', titre: 'Gestion sous mandat', texte: 'Un gérant décide pour vous, dans le cadre de votre profil.' },
 ];
 
-export const PROFILS: Record<ProfilGestion, string> = { PRUDENT: 'Prudent', EQUILIBRE: 'Équilibré', DYNAMIQUE: 'Dynamique' };
-
-const LIBELLE_MODE: Record<ModeGestion, string> = { LIBRE: 'Libre', PILOTEE: 'Pilotée', MANDAT: 'Sous mandat' };
+export { PROFILS } from './gestion';
 
 const pourcent = (valeur: number) => `${String(valeur).replace('.', ',')} %`;
 

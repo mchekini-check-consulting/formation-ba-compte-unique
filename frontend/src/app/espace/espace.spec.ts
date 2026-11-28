@@ -34,7 +34,12 @@ describe('Espace', () => {
 
   afterEach(() => http.verify());
 
-  async function ouvrir(reponse: unknown, options?: { status: number; statusText: string }, parametres: unknown = PARAMETRES_PUBLICS) {
+  async function ouvrir(
+    reponse: unknown,
+    options?: { status: number; statusText: string },
+    parametres: unknown = PARAMETRES_PUBLICS,
+    lot4: { profil?: string; contrats?: unknown; demande?: unknown } = {},
+  ) {
     const fixture = TestBed.createComponent(Espace);
     // CU-17 : ouvrir l'espace est une action de la cliente (le délai de 10 minutes repart).
     const session = http.expectOne({ method: 'POST', url: ACTIVITE });
@@ -43,15 +48,78 @@ describe('Espace', () => {
     const comptes = http.expectOne(COMPTES);
     expect(comptes.request.withCredentials).toBe(true);
     comptes.flush(reponse as never, options);
-    http.expectOne(PROFIL).flush({ statut: 'A_COMPLETER', profil: null });
+    http.expectOne(PROFIL).flush({ statut: lot4.profil ?? 'A_COMPLETER', profil: null });
     http.expectOne(PARAMETRES).flush(parametres as never);
     await fixture.whenStable();
     // Lot 3 : interrupteurs des boutons de fonctionnalité, tous désactivés (« Bientôt »).
     http.match('/api/backend/fonctionnalites').forEach((r) => r.flush({}));
+    // Lot 4 : contrats et demande de Livret A de la cliente.
+    http.match('/api/backend/gestion/contrats').forEach((r) => r.flush((lot4.contrats ?? []) as never));
+    http.match('/api/backend/livret-a/demande').forEach((r) => r.flush({ demande: lot4.demande ?? null }));
     fixture.detectChanges();
     await fixture.whenStable();
     return { fixture, page: fixture.nativeElement as HTMLElement };
   }
+
+  // Lot 4 (PO, 27/11/2026) : synthèse en haut de l'espace.
+  it('synthèse : compte courant, livrets, contrats sans valorisation et leurs actions ; actions rapides', async () => {
+    const contrats = [{ produit: 'AV', numeroContrat: 'AV-1A2B3C4D', ouvertLe: '2026-11-27T22:30:00Z', mode: 'PILOTEE', profil: 'EQUILIBRE' }];
+    const { page } = await ouvrir([COMPTE], undefined, PARAMETRES_PUBLICS, { profil: 'VALIDE', contrats, demande: { statut: 'OUVERTURE_VALIDEE' } });
+    const synthese = page.querySelector('#synthese')!;
+    expect(synthese.querySelector('h1')?.textContent).toBe('Ma synthèse');
+    expect(synthese.querySelector('[data-test="synthese-compte"] .montant')?.textContent).toBe(formaterSolde(124050));
+    expect(synthese.querySelector('[data-test="synthese-livrets"]')?.textContent).toContain('Livret A : Ouverture validée');
+    expect(synthese.querySelector('[data-test="a-faire"]')).toBeNull();
+    const ligne = [...synthese.querySelectorAll('[data-test="contrats"] tbody td')].map((td) => td.textContent?.trim());
+    expect(ligne.slice(0, 6)).toEqual(['Assurance vie', 'AV-1A2B3C4D', '27/11/2026', 'Ouvert', 'Pilotée · profil Équilibré', 'Valorisation : bientôt disponible']);
+    const actions = synthese.querySelector('.actions-contrat')!;
+    expect(actions.querySelector('a[href="/gestion?produit=AV"]')?.textContent).toBe('Mon mode de gestion');
+    expect(actions.querySelector('a[href="/supports?produit=AV"]')?.textContent).toBe('Supports disponibles');
+    for (const cle of ['versement-libre', 'operations-contrat', 'suivi-contrat']) {
+      expect(actions.querySelector(`[data-fonctionnalite="${cle}"]`)?.getAttribute('data-etat'), cle).toBe('bientot');
+    }
+    const rapides = synthese.querySelector('.actions-rapides')!;
+    expect(rapides.querySelector('a[href="/versement"]')?.textContent).toBe('Faire un virement');
+    expect(rapides.querySelector('[data-fonctionnalite="versement-libre"]')?.getAttribute('aria-disabled')).toBe('true');
+    expect(rapides.querySelector('a[href="#epargne"]')?.textContent).toBe('Souscrire');
+    expect(page.querySelector('#patrimoine')?.textContent).toContain('1 contrat(s) · valorisation bientôt disponible');
+  });
+
+  it('profil à compléter : bloc « À faire » vers le profil, cartes PER et assurance vie prévenues avant le parcours (CU-10)', async () => {
+    const { page } = await ouvrir([COMPTE]);
+    const aFaire = page.querySelector('[data-test="a-faire"]')!;
+    expect(aFaire.textContent).toContain('Complétez votre profil investisseur pour pouvoir souscrire un PER ou une assurance vie.');
+    expect(aFaire.querySelector('a')?.getAttribute('href')).toBe('/profil');
+    expect(page.querySelectorAll('[data-test="profil-requis-carte"]')).toHaveLength(2);
+    expect(page.querySelector('[data-test="sans-contrat"]')?.textContent).toContain('Aucun contrat');
+    expect(page.querySelector('[data-test="synthese-livrets"]')?.textContent).toContain('Aucun livret');
+  });
+
+  it('cartes PER et assurance vie : frais des unités de compte lus dans le paramètre ; « détaillés avant signature » gardé', async () => {
+    const { page } = await ouvrir([COMPTE]);
+    const carte = (nom: string) => [...page.querySelectorAll('#epargne .produit')].find((c) => c.querySelector('h3')?.textContent === nom)!;
+    expect(carte('PER').querySelector('[data-test="frais-uc"]')?.textContent).toBe('Frais de gestion des unités de compte : 0,50 % par an');
+    expect(carte('Assurance-vie').querySelector('[data-test="frais-uc"]')?.textContent).toBe('Frais de gestion des unités de compte : 0,65 % par an');
+    expect(carte('Assurance-vie').textContent).toContain('Frais de gestion détaillés avant signature');
+    expect(carte('LDDS').querySelector('[data-test="frais-uc"]')).toBeNull();
+  });
+
+  it('contrats illisibles : message, le reste de l’espace s’affiche', async () => {
+    TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(Espace);
+    http.expectOne({ method: 'POST', url: ACTIVITE }).flush({ identifiant: 'ABC', expireDansSecondes: 600 });
+    http.expectOne(COMPTES).flush([COMPTE]);
+    http.expectOne(PROFIL).flush({ statut: 'VALIDE', profil: null });
+    http.expectOne(PARAMETRES).flush(PARAMETRES_PUBLICS);
+    http.expectOne('/api/backend/gestion/contrats').flush(null, { status: 500, statusText: 'Erreur' });
+    http.expectOne('/api/backend/livret-a/demande').flush({ demande: null });
+    await fixture.whenStable();
+    http.match('/api/backend/fonctionnalites').forEach((r) => r.flush({}));
+    fixture.detectChanges();
+    const page = fixture.nativeElement as HTMLElement;
+    expect(page.querySelector('#synthese [role="alert"]')?.textContent).toContain('Vos contrats sont momentanément indisponibles.');
+    expect(page.querySelector('.solde')?.textContent).toBe(formaterSolde(124050));
+  });
 
   // CU-24 : taux brut visé du fonds en euros lu dans les paramètres publics ; sans réponse, il n'est pas affiché.
   it('carte assurance vie : taux brut visé du fonds en euros lu dans le paramètre, sans net (D1)', async () => {
@@ -82,7 +150,7 @@ describe('Espace', () => {
   it('affiche le statut du profil investisseur et un lien vers /profil (CU-10)', async () => {
     const { page } = await ouvrir([COMPTE]);
     expect(page.querySelector('.statut-profil')?.textContent).toBe('À compléter');
-    expect(page.querySelector('a[href="/profil"]')?.textContent).toContain('Voir mon profil');
+    expect(page.querySelector('#infos a[href="/profil"]')?.textContent).toContain('Voir mon profil');
   });
 
   it('affiche tous les produits ouverts à la souscription, épargne et crédits', async () => {
@@ -128,12 +196,12 @@ describe('Espace', () => {
     expect(liens).toEqual(['/livret-a', '/decouvrir?produit=AV', '/decouvrir?produit=PER']);
   });
 
-  it('les deux boutons « Faire un virement » ouvrent la page de virement (CU-11)', async () => {
+  it('les boutons « Faire un virement » (accueil, compte courant, actions rapides) ouvrent la page de virement (CU-11)', async () => {
     const { page } = await ouvrir([COMPTE]);
     const boutons = Array.from(page.querySelectorAll('a')).filter((lien) =>
       lien.textContent?.includes('Faire un virement'),
     );
-    expect(boutons).toHaveLength(2);
+    expect(boutons).toHaveLength(3);
     for (const bouton of boutons) {
       expect(bouton.getAttribute('href')).toBe('/versement');
     }

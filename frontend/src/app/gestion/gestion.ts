@@ -7,6 +7,18 @@ export type Produit = 'PER' | 'AV';
 export type ModeGestion = 'LIBRE' | 'PILOTEE' | 'MANDAT';
 export type ProfilGestion = 'PRUDENT' | 'EQUILIBRE' | 'DYNAMIQUE';
 
+export const PROFILS: Record<ProfilGestion, string> = { PRUDENT: 'Prudent', EQUILIBRE: 'Équilibré', DYNAMIQUE: 'Dynamique' };
+export const LIBELLE_MODE: Record<ModeGestion, string> = { LIBRE: 'Libre', PILOTEE: 'Pilotée', MANDAT: 'Sous mandat' };
+
+/** Lot 4 : un contrat PER ou assurance vie de la cliente (données en base, sans valorisation). */
+export interface LigneContrat {
+  produit: Produit;
+  numeroContrat: string;
+  ouvertLe: string;
+  mode: ModeGestion;
+  profil: ProfilGestion;
+}
+
 export interface LigneAllocation {
   codeIsin: string;
   nom: string;
@@ -75,6 +87,11 @@ export class GestionService {
   // withCredentials : le cookie de session part vers le gateway (autre adresse que l'écran, CU-417).
   etat(produit: Produit): Observable<EtatGestion> {
     return this.http.get<EtatGestion>(this.url, { params: { produit }, withCredentials: true });
+  }
+
+  /** Lot 4 : contrats de la cliente connectée, pour leurs lignes dans l'espace. */
+  contrats(): Observable<LigneContrat[]> {
+    return this.http.get<LigneContrat[]>(`${this.url}/contrats`, { withCredentials: true });
   }
 
   creerContratDeTest(produit: Produit): Observable<EtatGestion> {

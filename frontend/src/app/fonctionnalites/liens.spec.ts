@@ -46,7 +46,7 @@ describe('Liens et boutons des pages connectées (lot 3)', () => {
         expect(pageDefinie(f.lien), cle).toBe(true);
       }
     }
-    expect(SANS_PAGE).toHaveLength(17);
+    expect(SANS_PAGE).toHaveLength(20);
   });
 
   describe('accueil de l’espace', () => {
@@ -61,6 +61,8 @@ describe('Liens et boutons des pages connectées (lot 3)', () => {
       http.expectOne('/api/backend/comptes').flush([]);
       http.expectOne('/api/backend/profil').flush({ statut: 'VALIDE', profil: null });
       http.expectOne('/api/backend/catalogue/parametres-publics').flush({ fraisUcPct: {}, fondsEurosAv: { tauxBrutVisePct: null, dateMiseAJour: null, fraisGestionPct: null } });
+      http.expectOne('/api/backend/gestion/contrats').flush([{ produit: 'PER', numeroContrat: 'PER-1', ouvertLe: '2026-11-27T10:00:00Z', mode: 'PILOTEE', profil: 'PRUDENT' }]);
+      http.expectOne('/api/backend/livret-a/demande').flush({ demande: null });
       fixture.detectChanges();
       await fixture.whenStable();
       http.expectOne('/api/backend/fonctionnalites').flush(etats);
@@ -88,7 +90,7 @@ describe('Liens et boutons des pages connectées (lot 3)', () => {
     it('interrupteurs désactivés : tous les boutons de fonctionnalité sont « Bientôt », désactivés, sans lien', async () => {
       const page = await ouvrir({});
       const boutons = [...page.querySelectorAll<HTMLElement>('[data-fonctionnalite]')];
-      expect(boutons.length).toBeGreaterThanOrEqual(17);
+      expect(boutons.length).toBeGreaterThanOrEqual(20);
       for (const b of boutons) {
         expect(b.getAttribute('data-etat'), b.getAttribute('data-fonctionnalite')!).toBe('bientot');
         expect(b.getAttribute('aria-disabled')).toBe('true');

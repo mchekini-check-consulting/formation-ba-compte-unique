@@ -155,6 +155,15 @@ applications:
       # Changer mon mot de passe (D2, story à créer par le PO).
       - key: FONCTIONNALITE_CHANGEMENT_MOT_DE_PASSE
         value: "false"
+      # Verser sur un PER ou une assurance vie (PER-08, AV-03).
+      - key: FONCTIONNALITE_VERSEMENT_LIBRE
+        value: "false"
+      # Mes opérations d’un contrat (PER-14).
+      - key: FONCTIONNALITE_OPERATIONS_CONTRAT
+        value: "false"
+      # Suivre mon contrat : valeur, gains et frais (PER-09, AV-09).
+      - key: FONCTIONNALITE_SUIVI_CONTRAT
+        value: "false"
       # D4 : entrée « Outils de test » et pages /test/... en dev et qualif seulement.
       - key: FONCTIONNALITE_OUTILS_TEST
         value: {dev: "true", qualif: "true", preprod: "false", prod: "false"}
