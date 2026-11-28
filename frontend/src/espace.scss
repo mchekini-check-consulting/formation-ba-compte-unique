@@ -292,6 +292,7 @@
   .onglets { display: flex; gap: 8px; margin-bottom: 24px; }
   .onglets button { padding: 10px 18px; border-radius: 999px; border: 1px solid var(--navy); background: #fff; color: var(--navy); font-weight: 700; cursor: pointer; }
   .onglets button.actif { background: var(--navy); color: #fff; }
+  .ma-repartition { margin-bottom: 20px; }
   .euros { margin-bottom: 24px; background: var(--soft); border-left: 4px solid var(--navy); }
   .euros h2 { margin: 6px 0 10px; }
   .euros dl, .ls-fiche dl, .ls-cartes dl { display: grid; gap: 6px; margin: 0; font-size: 14px; }
@@ -301,7 +302,8 @@
   .tag.non-cote { background: #fee4e2; color: var(--erreur); }
   .tag.label { background: #d1fadf; color: var(--succes); }
 
-  .liste-supports { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 20px; align-items: start; }
+  .liste-supports { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 16px; align-items: start; }
+  app-liste-supports { display: block; }
   .ls-filtres { position: sticky; top: 90px; display: grid; gap: 14px; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: #fff; }
   .ls-filtres label { display: grid; gap: 6px; font-weight: 700; font-size: 14px; }
   .ls-filtres input, .ls-filtres select { width: 100%; padding: 9px 10px; border: 1px solid var(--champ); border-radius: 10px; font: inherit; font-weight: 400; }
@@ -311,14 +313,16 @@
   .ls-vues button[aria-pressed="true"] { background: var(--navy); color: #fff; border-color: var(--navy); }
   .ls-tableau { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; }
   .ls-tableau table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
-  .ls-tableau th, .ls-tableau td { padding: 10px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
-  .ls-tableau th { background: var(--soft); white-space: nowrap; }
+  .ls-tableau th, .ls-tableau td { padding: 9px 8px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .ls-tableau th { background: var(--soft); white-space: nowrap; color: var(--navy); font-weight: 800; font-size: 13.5px; letter-spacing: 0; text-transform: none; }
   .ls-tableau tr:last-child td { border-bottom: 0; }
   .ls-tri { border: 0; background: none; padding: 0; font-weight: 800; color: var(--navy); cursor: pointer; }
   th[aria-sort="ascending"] .ls-tri::after { content: " ▲"; }
   th[aria-sort="descending"] .ls-tri::after { content: " ▼"; }
   .ls-nom { border: 0; background: none; padding: 0; text-align: left; font-weight: 800; color: var(--navy); text-decoration: underline; cursor: pointer; }
   .ls-isin { display: block; color: var(--muted); font-size: 12px; }
+  .ls-frais span, .ls-frais strong { display: block; white-space: nowrap; }
+  .ls-frais span { color: var(--muted); font-size: 12.5px; }
   .ls-cartes { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
   .ls-cartes .ls-nom { font-size: 16px; margin: 8px 0; display: block; }
   .ls-tags { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -347,6 +351,12 @@
   .ls-courbe table { width: 100%; border-collapse: collapse; margin-top: 6px; }
   .ls-courbe td, .ls-courbe th { padding: 4px 6px; border-bottom: 1px solid var(--line); text-align: left; }
   .ls-document { margin-top: 20px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  /* Sous 1200 px (1024 compris) : filtres en bandeau au-dessus de la liste, pour garder le tableau entier. */
+  @media (max-width: 1199px) {
+    .liste-supports { grid-template-columns: minmax(0, 1fr); }
+    .ls-filtres { position: static; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); align-items: end; }
+  }
 
   /* Lot 6 : part de chaque ligne de la gestion pilotée (barre exacte, sans regroupement). */
   .rp-part { white-space: nowrap; }
