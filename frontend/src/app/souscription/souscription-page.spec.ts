@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { vi } from 'vitest';
-import { EtatSouscription, Produit } from './souscription';
+import { DOCUMENTS_NON_LUS, EtatSouscription, Produit } from './souscription';
 import { SouscriptionPage, lireMontant } from './souscription-page';
 
 const URL = '/api/backend/souscriptions';
@@ -234,6 +234,19 @@ describe('SouscriptionPage (CU-312, CU-330)', () => {
     );
     await rafraichir();
     expect(page.querySelector('[role="alert"]')?.textContent).toContain('bloquée jusqu\'à 10 h 30');
+  });
+
+  it('PO 28/11 : refus du serveur « documents non lus » : retour à l’étape « Mes documents » avec le message (PER-02, AV-02)', async () => {
+    const navigate = vi.spyOn(Router.prototype, 'navigate').mockResolvedValue(true);
+    const { http, page, rafraichir, base } = await ouvrirPage(enSignature({ codeEnvoyeLe: '2026-11-27T10:00:00+01:00' }));
+    saisir(page.querySelector<HTMLInputElement>('[data-test="formulaire-code"] input')!, '111111');
+    await rafraichir();
+    page.querySelector<HTMLFormElement>('[data-test="formulaire-code"]')!.dispatchEvent(new Event('submit'));
+    http.expectOne(`${base}/signature`).flush({ message: DOCUMENTS_NON_LUS }, { status: 409, statusText: 'Conflict' });
+    await rafraichir();
+    expect(navigate).toHaveBeenCalledWith(['/decouvrir'], { queryParams: { produit: 'PER' }, state: { refus: DOCUMENTS_NON_LUS } });
+    expect(DOCUMENTS_NON_LUS).toBe("Vous devez ouvrir et lire les documents d'information avant de souscrire.");
+    navigate.mockRestore();
   });
 
   it('« Modifier » revient au versement, pré-rempli avec la clause ; refus sans message : texte par défaut', async () => {

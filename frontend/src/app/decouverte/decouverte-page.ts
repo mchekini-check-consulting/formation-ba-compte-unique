@@ -135,7 +135,8 @@ export class DecouvertePage {
   /** Documents dont le contenu est affiché dans cette visite (chaque ouverture est enregistrée). */
   protected readonly ouverts = signal<CodeDocument[]>([]);
   protected readonly envoi = signal(false);
-  protected readonly erreur = signal('');
+  /** PO 28/11 : souscription refusée par le serveur faute de documents lus : le message suit la cliente ici. */
+  protected readonly erreur = signal<string>((typeof history !== 'undefined' && history.state?.refus) || '');
 
   constructor() {
     this.service.etat(this.produit).subscribe({

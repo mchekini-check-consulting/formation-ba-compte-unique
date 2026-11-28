@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, computed } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CAS_FISCAUX, CAS_SANCTIONS } from '../identification/bouchons-identite';
 import { CAS_DE_TEST } from '../identification/etape-identite';
@@ -6,7 +6,7 @@ import { SCENARIOS_PIECE } from '../identification/etape-piece';
 import { SCENARIOS_SELFIE } from '../identification/etape-selfie';
 import { SCENARIOS_PIECE_LIVRET_A, SCENARIOS_SELFIE_LIVRET_A } from '../livret-a/etape-piece-livret-a';
 import { CODES_DE_TEST } from '../ouverture/etape-signature';
-import { CleScenario, choisirScenario, scenarioChoisi } from './scenarios';
+import { CleScenario, choisirScenario, scenarioChoisi, versionScenarios } from './scenarios';
 
 interface Groupe {
   cle: CleScenario;
@@ -90,12 +90,12 @@ export const GROUPES: { parcours: string; ancre: string; groupes: Groupe[] }[] =
 export class ScenariosTest {
   protected readonly parcours = GROUPES;
   protected readonly codesDocusign = CODES_DE_TEST;
-  protected readonly choix = signal<Record<string, string>>(
-    Object.fromEntries(GROUPES.flatMap((p) => p.groupes).map((g) => [g.cle, scenarioChoisi(g.cle, g.liste)])),
-  );
+  protected readonly choix = computed<Record<string, string>>(() => {
+    versionScenarios();
+    return Object.fromEntries(GROUPES.flatMap((p) => p.groupes).map((g) => [g.cle, scenarioChoisi(g.cle, g.liste)]));
+  });
 
   protected choisir(cle: CleScenario, code: string): void {
     choisirScenario(cle, code);
-    this.choix.update((c) => ({ ...c, [cle]: code }));
   }
 }
