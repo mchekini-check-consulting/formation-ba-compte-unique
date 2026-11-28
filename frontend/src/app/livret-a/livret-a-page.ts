@@ -19,6 +19,7 @@ import {
   EtapePiece,
   EtapeQuestions,
   IdentiteLivretA,
+  LIBELLES_DEMANDE,
   LivretAService,
   SuiteLivretAExistant,
   demandeTerminee,
@@ -38,16 +39,6 @@ export const SANS_IDENTITE_CONFIRMEE = "Confirmez d'abord votre identité.";
 export const PIECE_EXPIREE = "Votre pièce d'identité a expiré : transmettez-en une nouvelle avant de continuer.";
 /** Message du backend quand l'éligibilité est demandée sans questionnaire rempli (CU-32). */
 export const SANS_QUESTIONNAIRE = "Répondez d'abord aux questions et acceptez le texte d'information sur vos données.";
-
-const STATUTS: Record<DemandeLivretA['statut'], string> = {
-  EN_COURS_DE_VERIFICATION: 'En cours de vérification',
-  OUVERTURE_VALIDEE: 'Ouverture validée',
-  LIVRET_A_EXISTANT: 'Livret A existant dans un autre établissement',
-  EN_ATTENTE_CERTIFICAT: 'En attente du certificat de clôture',
-  CERTIFICAT_A_VERIFIER: 'Certificat à vérifier',
-  ANNULEE: 'Demande annulée',
-  RENONCEE: 'Demande annulée (renonciation)',
-};
 
 /** CU-296 : choix à confirmer avant l'envoi. */
 export const SUITE_OBLIGATOIRE = 'Choisissez de clôturer vous-même votre ancien livret ou de renoncer à l’ouverture.';
@@ -308,7 +299,7 @@ export class LivretAPage {
   }
 
   protected statut(demande: DemandeLivretA): string {
-    return STATUTS[demande.statut];
+    return LIBELLES_DEMANDE[demande.statut];
   }
 
   protected terminee(demande: DemandeLivretA): boolean {

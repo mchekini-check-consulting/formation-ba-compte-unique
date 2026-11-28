@@ -1,6 +1,7 @@
 package com.example.compteunique.gestion;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -66,6 +67,13 @@ public class GestionController {
 	public Etat etat(@CookieValue(name = COOKIE, required = false) String jetonSession,
 			@RequestParam("produit") Produit produit) {
 		return service.etat(jetonSession, produit);
+	}
+
+	/** Lot 4 : lignes des contrats de la cliente connectée (lecture seule). */
+	@GetMapping("/contrats")
+	public List<ModeDeGestion.LigneContrat> contrats(
+			@CookieValue(name = COOKIE, required = false) String jetonSession) {
+		return service.contrats(jetonSession);
 	}
 
 	@PostMapping("/contrats")

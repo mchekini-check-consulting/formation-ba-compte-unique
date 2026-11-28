@@ -142,6 +142,22 @@ public class ModeDeGestion {
 		this.contratsDeTest = contratsDeTest;
 	}
 
+	/**
+	 * Lot 4 (PO, 27/11/2026) : une ligne par contrat PER ou assurance vie de la cliente, avec les seules données déjà en
+	 * base (produit, numéro, date d'ouverture, mode et profil de gestion). Pas de valorisation (PER-09, AV-09).
+	 */
+	public record LigneContrat(Produit produit, String numeroContrat, OffsetDateTime ouvertLe, ModeGestion mode,
+			ProfilGestion profil) {
+	}
+
+	@Transactional(readOnly = true)
+	public List<LigneContrat> contrats(String jetonSession) {
+		return contrats.findByCustomerIdOrderByProduit(customerId(jetonSession)).stream()
+				.map(c -> new LigneContrat(c.getProduit(), c.getNumeroContrat(), c.getCreeLe(), c.getMode(),
+						c.getProfil()))
+				.toList();
+	}
+
 	/** CU-312 : numéro du contrat de la cliente pour ce produit, vide sans contrat. */
 	@Transactional(readOnly = true)
 	public Optional<String> numeroContrat(UUID customerId, Produit produit) {

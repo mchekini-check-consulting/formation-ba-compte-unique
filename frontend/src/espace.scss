@@ -198,6 +198,25 @@
   .erreur { color: var(--erreur); font-weight: 700; }
   .succes { color: var(--succes); font-weight: 700; }
   .btn:disabled, .btn[aria-disabled="true"] { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+  /* Lot 4 : synthèse de l'espace (compte courant, livrets, contrats, à faire, actions rapides) */
+  .synthese .titre { margin-top: 0; }
+  .synthese h2 { font-size: 22px; margin: 28px 0 12px; }
+  .synthese .carte h2 { font-size: 17px; margin: 0 0 8px; }
+  .synthese-grille { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .synthese .montant { font-size: 28px; font-weight: 800; color: var(--navy); margin: 4px 0; font-variant-numeric: tabular-nums; }
+  .synthese .detail { color: var(--muted); font-size: 14px; margin: 0 0 8px; }
+  .synthese .carte a { color: var(--navy); font-weight: 700; }
+  .a-faire { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: center; background: #fffaeb; border: 1px solid #fedf89; border-radius: 16px; padding: 16px 20px; margin-bottom: 16px; }
+  .a-faire p { margin: 0; flex: 1 1 320px; }
+  table.contrats { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+  table.contrats th, table.contrats td { text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--line); font-size: 14.5px; vertical-align: top; }
+  table.contrats th { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .actions-contrat { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+  .actions-contrat a { color: var(--navy); font-weight: 700; }
+  .actions-rapides { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; }
+  .avis-profil { font-size: 13px; color: #8a5300; background: #fff3dc; border-radius: 10px; padding: 8px 10px; }
+  .titre-hero { font-size: 52px; line-height: 1.06; letter-spacing: -.03em; margin: 16px 0 20px; color: #fff; text-wrap: balance; }
+
   /* Lot 3 : bouton de fonctionnalité « Bientôt » (désactivé, badge et phrase courte), contraste conservé */
   .bientot { cursor: not-allowed; }
   .bientot:hover { transform: none; box-shadow: none; }

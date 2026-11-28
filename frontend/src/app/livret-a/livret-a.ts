@@ -47,6 +47,17 @@ export interface Transmission {
 }
 
 // CU-31 : demande d'ouverture de Livret A telle qu'affichée. message : texte à montrer à la cliente.
+/** Statut d'une demande de Livret A, tel qu'affiché (page Livret A et synthèse de l'espace). */
+export const LIBELLES_DEMANDE: Record<DemandeLivretA['statut'], string> = {
+  EN_COURS_DE_VERIFICATION: 'En cours de vérification',
+  OUVERTURE_VALIDEE: 'Ouverture validée',
+  LIVRET_A_EXISTANT: 'Livret A existant dans un autre établissement',
+  EN_ATTENTE_CERTIFICAT: 'En attente du certificat de clôture',
+  CERTIFICAT_A_VERIFIER: 'Certificat à vérifier',
+  ANNULEE: 'Demande annulée',
+  RENONCEE: 'Demande annulée (renonciation)',
+};
+
 export interface DemandeLivretA {
   reference: string;
   statut: StatutDemande;
