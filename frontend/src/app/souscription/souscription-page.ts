@@ -9,6 +9,7 @@ import { Observable } from 'rxjs';
 import { eurosAuCentime } from '../livret-a/parametres';
 import { Beneficiaire, DOCUMENTS_NON_LUS, EtatSouscription, ORIGINES, OrigineFonds, Produit, SouscriptionService } from './souscription';
 
+type ZoneErreur = 'page' | 'versement' | 'code';
 type Etat = 'chargement' | 'affiche' | 'indisponible';
 
 const TEXTES: Record<Produit, { titre: string; nom: string; versement: string; minimum: string; compartiment: string }> = {
@@ -62,7 +63,7 @@ const ligneComplete = (l: Ligne) =>
       @if (message()) {
         <p class="succes" role="status">{{ message() }}</p>
       }
-      @if (erreur()) {
+      @if (erreur() && zoneErreur() === 'page') {
         <p class="erreur" role="alert">{{ erreur() }}</p>
       }
 
@@ -98,10 +99,11 @@ const ligneComplete = (l: Ligne) =>
               <h2>{{ textes.versement }}</h2>
               <p>Prélevé sur votre compte courant Hi-Tech Bank à la signature{{ textes.compartiment }}.</p>
               <label>Montant (€)
-                <input data-test="montant" inputmode="decimal" [value]="montant()" (input)="montant.set(valeur($event))" />
+                <input data-test="montant" inputmode="decimal" [value]="montant()" (input)="montant.set(valeur($event))"
+                  [attr.aria-invalid]="sousLeMinimum()" [attr.aria-describedby]="sousLeMinimum() ? 'erreur-minimum' : null" />
               </label>
               @if (sousLeMinimum()) {
-                <p class="erreur" data-test="minimum">{{ textes.minimum }}</p>
+                <p class="erreur champ-erreur" id="erreur-minimum" role="alert" data-test="minimum">{{ textes.minimum }}</p>
               }
               <fieldset>
                 <legend>Origine des fonds</legend>
@@ -138,7 +140,7 @@ const ligneComplete = (l: Ligne) =>
                   @if (lignes().length === 0) {
                     <p>Sans bénéficiaire désigné, le capital entrera dans votre succession.</p>
                   } @else if (!totalCent()) {
-                    <p class="erreur" data-test="quotes-parts">{{ quotesParts }}</p>
+                    <p class="erreur champ-erreur" role="alert" data-test="quotes-parts">{{ quotesParts }}</p>
                   }
                 </fieldset>
               }
@@ -149,7 +151,11 @@ const ligneComplete = (l: Ligne) =>
               <p>
                 <app-bouton-fonctionnalite cle="versements-programmes" classe="lien">Programmer des versements</app-bouton-fonctionnalite>
               </p>
-              <button class="btn p" type="submit" data-test="continuer" [disabled]="!peutContinuer() || envoi()">Continuer</button>
+              @if (erreur() && zoneErreur() === 'versement') {
+                <p class="erreur champ-erreur" id="erreur-versement" role="alert" data-test="erreur-versement">{{ erreur() }}</p>
+              }
+              <button class="btn p" type="submit" data-test="continuer" [disabled]="!peutContinuer() || envoi()"
+                [attr.aria-describedby]="erreur() && zoneErreur() === 'versement' ? 'erreur-versement' : null">Continuer</button>
             </form>
           } @else {
             <section class="carte" data-test="signature">
@@ -167,11 +173,15 @@ const ligneComplete = (l: Ligne) =>
               @if (donnees()!.codeEnvoyeLe) {
                 <form class="code" data-test="formulaire-code" (submit)="signer($event)">
                   <label>Code reçu par SMS
-                    <input inputmode="numeric" maxlength="6" autocomplete="one-time-code" [value]="code()"
+                    <input inputmode="numeric" maxlength="6" autocomplete="one-time-code" [value]="code()" [attr.aria-invalid]="!!erreur() && zoneErreur() === 'code'"
+                      [attr.aria-describedby]="erreur() && zoneErreur() === 'code' ? 'erreur-code' : null"
                       (input)="code.set(valeur($event))" />
                   </label>
                   <button class="btn p" type="submit" [disabled]="code().length !== 6 || envoi()">Signer</button>
                 </form>
+              }
+              @if (erreur() && zoneErreur() === 'code') {
+                <p class="erreur champ-erreur" id="erreur-code" role="alert" data-test="erreur-code">{{ erreur() }}</p>
               }
             </section>
           }
@@ -210,6 +220,8 @@ export class SouscriptionPage {
   protected readonly etat = signal<Etat>('chargement');
   protected readonly donnees = signal<EtatSouscription | null>(null);
   protected readonly modification = signal(false);
+  /** Lot 7 : où afficher le refus du serveur : à côté du formulaire du versement, du code SMS, ou en haut. */
+  protected readonly zoneErreur = signal<ZoneErreur>('page');
   protected readonly montant = signal('');
   protected readonly origineFonds = signal<OrigineFonds | null>(null);
   protected readonly precision = signal('');
@@ -316,21 +328,23 @@ export class SouscriptionPage {
     this.appeler(this.service.versement(this.produit, {
       montant: lireMontant(this.montant()), origineFonds: this.origineFonds()!, originePrecision: this.precision().trim(),
       beneficiaires,
-    }), '');
+    }), '', 'versement');
   }
 
   protected envoyerCode(): void {
     this.code.set('');
-    this.appeler(this.service.envoyerCode(this.produit), 'Un code vous a été envoyé par SMS.');
+    this.appeler(this.service.envoyerCode(this.produit), 'Un code vous a été envoyé par SMS.', 'code');
   }
 
   protected signer(event: Event): void {
     event.preventDefault();
     this.appeler(this.service.signer(this.produit, this.code()),
-      'Votre contrat est souscrit et votre premier versement est enregistré.');
+      'Votre contrat est souscrit et votre premier versement est enregistré.', 'code');
   }
 
-  private appeler(appel: Observable<EtatSouscription>, texte: string): void {
+  /** Lot 7 : le refus du serveur s'affiche à côté de ce qui a été envoyé (versement ou code SMS), mot pour mot. */
+  private appeler(appel: Observable<EtatSouscription>, texte: string, zone: ZoneErreur): void {
+    this.zoneErreur.set(zone);
     this.envoi.set(true);
     this.erreur.set('');
     this.message.set('');

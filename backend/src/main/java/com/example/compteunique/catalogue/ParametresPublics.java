@@ -2,12 +2,16 @@ package com.example.compteunique.catalogue;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.StandardEnvironment;
 import org.springframework.stereotype.Service;
 
 import com.example.compteunique.catalogue.CatalogueService.Produit;
@@ -29,13 +33,20 @@ public class ParametresPublics {
 
 	/** Seuls champs exposés sans connexion (aucune donnée de cliente). */
 	public record Vue(Map<Produit, BigDecimal> fraisUcPct, FondsEuros fondsEurosAv, FondsEuros fondsEurosPer,
-			Map<String, String> famillesCategories) {
+			Map<String, String> famillesCategories, Map<Produit, BigDecimal> fraisEntreePct,
+			Map<String, String> mentions) {
 	}
+
+	/** Lot 7 : mentions réglementaires (app.mentions.*, variables MENTION_* de helm.yaml). */
+	static final List<String> MENTIONS = List.of("taux-non-garanti", "capital-garanti-fonds-euros",
+			"perte-capital-uc", "performances-passees", "non-cote");
 
 	private final SupportsEligibles eligibles;
 	private final FondsEuros fondsEurosAv;
 	private final FondsEuros fondsEurosPer;
 	private final Map<String, String> familles;
+	private final Map<Produit, BigDecimal> fraisEntree = new EnumMap<>(Produit.class);
+	private final Map<String, String> mentions = new LinkedHashMap<>();
 
 	@Autowired
 	public ParametresPublics(SupportsEligibles eligibles,
@@ -47,16 +58,24 @@ public class ParametresPublics {
 			@Value("${app.catalogue.fonds-euros-per.date-mise-a-jour:}") String dateMiseAJourPer,
 			@Value("${app.catalogue.fonds-euros-per.frais-gestion:}") String fraisGestionPer,
 			@Value("${app.catalogue.fonds-euros-per.taux-servi:}") String tauxServiPer,
-			@Value("${app.catalogue.familles:}") String familles) {
+			@Value("${app.catalogue.familles:}") String familles, Environment configuration) {
 		this.eligibles = eligibles;
 		this.fondsEurosAv = fonds(tauxBrutVise, dateMiseAJour, fraisGestion, tauxServi);
 		this.fondsEurosPer = fonds(tauxBrutVisePer, dateMiseAJourPer, fraisGestionPer, tauxServiPer);
 		this.familles = familles(familles);
+		this.fraisEntree.put(Produit.PER, nombre(configuration.getProperty("app.catalogue.frais-entree.per", "")));
+		this.fraisEntree.put(Produit.AV, nombre(configuration.getProperty("app.catalogue.frais-entree.av", "")));
+		for (String cle : MENTIONS) {
+			String texte = configuration.getProperty("app.mentions." + cle, "").strip();
+			if (!texte.isEmpty()) {
+				this.mentions.put(cle, texte);
+			}
+		}
 	}
 
 	/** Fonds en euros de l'assurance vie seul (les autres paramètres vides). */
 	ParametresPublics(SupportsEligibles eligibles, String tauxBrutVise, String dateMiseAJour, String fraisGestion) {
-		this(eligibles, tauxBrutVise, dateMiseAJour, fraisGestion, "", "", "", "", "", "");
+		this(eligibles, tauxBrutVise, dateMiseAJour, fraisGestion, "", "", "", "", "", "", new StandardEnvironment());
 	}
 
 	public Vue lire() {
@@ -64,7 +83,8 @@ public class ParametresPublics {
 		for (Produit p : Produit.values()) {
 			frais.put(p, eligibles.fraisContrat(p));
 		}
-		return new Vue(frais, fondsEurosAv, fondsEurosPer, familles);
+		return new Vue(frais, fondsEurosAv, fondsEurosPer, familles, Collections.unmodifiableMap(fraisEntree),
+				Collections.unmodifiableMap(mentions));
 	}
 
 	private static FondsEuros fonds(String tauxBrutVise, String date, String frais, String tauxServi) {

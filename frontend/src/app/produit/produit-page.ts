@@ -5,8 +5,10 @@ import { map } from 'rxjs';
 import { PRESENTATIONS } from '../decouverte/decouverte-page';
 import { pourcentage } from '../livret-a/parametres';
 import { ProfilService } from '../profil/profil';
-import { SupportsService, tauxFondsEurosAv } from '../supports/supports';
+import { SupportsService } from '../supports/supports';
+import { TauxFondsEuros } from '../supports/taux-fonds-euros';
 import { Produit } from '../souscription/souscription';
+import { Mention } from '../pedagogie/mention';
 
 // Lot 5 (PO, 27/11/2026) : page d'entrée du tunnel de souscription (?produit=PER|AV) : présentation (règles de
 // CU-311 / CU-331), frais des unités de compte et fonds en euros lus dans les paramètres publics, puis « Ouvrir mon
@@ -14,6 +16,7 @@ import { Produit } from '../souscription/souscription';
 // passe aux documents ; sinon le questionnaire s'ouvre dans le tunnel, puis elle revient aux documents.
 @Component({
   selector: 'app-produit-page',
+  imports: [Mention, TauxFondsEuros],
   template: `
     <div class="page produit-page">
       <div class="eyebrow">Épargne et placements</div>
@@ -35,11 +38,13 @@ import { Produit } from '../souscription/souscription';
           @if (p.fraisUc) {
             <p>Frais de gestion des unités de compte : <strong>{{ p.fraisUc }} par an</strong>.</p>
           }
-          @if (p.fondsEuros; as f) {
-            <p data-test="fonds-euros">Fonds en euros : {{ f.avant }} <strong>{{ f.taux }}</strong> {{ f.detail }}.</p>
+          @if (p.fraisFondsEuros) {
+            <p data-test="frais-fonds-euros">Frais de gestion du fonds en euros : <strong>{{ p.fraisFondsEuros }} par an</strong>.</p>
           }
         }
+        <app-taux-fonds-euros [produit]="produit" />
         <p>Frais de gestion détaillés avant signature.</p>
+        <app-mention cle="perte-capital-uc" />
       </section>
 
       @if (erreur()) {
@@ -71,7 +76,11 @@ export class ProduitPage {
       .pipe(
         map((p) => ({
           fraisUc: p.fraisUcPct?.[this.produit] == null ? null : pourcentage(p.fraisUcPct[this.produit]),
-          fondsEuros: this.produit === 'AV' ? tauxFondsEurosAv(p) : null,
+          // D1 : frais du fonds en euros du PER (PER-09) ; ceux de l'assurance vie restent vides (CU-530).
+          fraisFondsEuros: (() => {
+            const frais = (this.produit === 'AV' ? p.fondsEurosAv : p.fondsEurosPer)?.fraisGestionPct;
+            return frais == null ? null : pourcentage(frais);
+          })(),
         })),
       ),
     { initialValue: null },

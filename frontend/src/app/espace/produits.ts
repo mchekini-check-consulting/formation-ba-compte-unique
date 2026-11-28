@@ -10,6 +10,8 @@ export interface Produit {
   description: string;
   taux?: string;
   tauxDetail?: string;
+  /** PO 28/11 : garantie du capital du fonds en euros, sur la ligne sous le taux (paramètre). */
+  tauxGarantie?: string;
   /** Libellé placé avant le taux (« Taux brut visé en 2026 : »), facultatif. */
   tauxAvant?: string;
   minimum?: string;

@@ -11,7 +11,7 @@ import { DETAIL_TAUX_LIVRET_A, LIVRET_A, TAUX_LIVRET_A, euros, pourcentage } fro
 import { EtapeCompteOuvert } from '../ouverture/etape-compte-ouvert';
 import { EtapeSignature } from '../ouverture/etape-signature';
 import { OuvertureService, dossierEnSignature, memoriserDossierEnSignature } from '../ouverture/ouverture';
-import { SupportsService, TauxAffiche, tauxFondsEurosAv } from '../supports/supports';
+import { SupportsService, TauxAffiche, tauxFondsEurosAv, tauxFondsEurosPer } from '../supports/supports';
 
 const DERNIERE_ETAPE = 6;
 const ETAPE_SIGNATURE = 5;
@@ -41,8 +41,12 @@ export class Landing {
   };
   /** D1 (PO, 27/11/2026) : frais des unités de compte de l'assurance vie lus dans le paramètre unique du backend. */
   protected readonly fraisUcAv = signal<string | null>(null);
+  /** Lot 7 : frais d'entrée de l'assurance vie, paramètre (CATALOGUE_FRAIS_ENTREE_AV) ; vide : non affichés. */
+  protected readonly fraisEntreeAv = signal<string | null>(null);
   /** CU-24 : taux brut visé du fonds en euros (et sa date, son net s'ils sont renseignés), paramètres du backend. */
   protected readonly fondsEurosAv = signal<TauxAffiche | null>(null);
+  /** PO 28/11 : taux du fonds en euros du PER (paramètres), même affichage que l'assurance vie. */
+  protected readonly fondsEurosPer = signal<TauxAffiche | null>(null);
   protected readonly parcoursOuvert = signal(false);
   protected readonly etape = signal(1);
   protected readonly totalEtapes = DERNIERE_ETAPE;
@@ -65,6 +69,10 @@ export class Landing {
       next: (p) => {
         this.fraisUcAv.set(p.fraisUcPct.AV == null ? null : pourcentage(p.fraisUcPct.AV));
         this.fondsEurosAv.set(tauxFondsEurosAv(p));
+        this.fondsEurosPer.set(tauxFondsEurosPer(p));
+        const entree = p.fraisEntreePct?.AV;
+        // « 0 % », comme le texte d'origine de la carte (pas « 0,00 % »).
+        this.fraisEntreeAv.set(entree == null ? null : `${entree.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} %`);
       },
       error: () => undefined,
     });

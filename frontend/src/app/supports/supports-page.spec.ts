@@ -13,8 +13,13 @@ const VIDE = { tauxBrutVisePct: null, dateMiseAJour: null, fraisGestionPct: null
 const PARAMS: ParametresPublics = {
   fraisUcPct: { PER: 0.5, AV: 0.65 },
   fondsEurosAv: { ...VIDE, tauxBrutVisePct: 2.9, dateMiseAJour: '2026-01-01' },
-  fondsEurosPer: { ...VIDE, fraisGestionPct: 0.65 },
+  fondsEurosPer: { ...VIDE, tauxBrutVisePct: 2.9, dateMiseAJour: '2026-01-01', fraisGestionPct: 0.65 },
   famillesCategories: {},
+  mentions: {
+    'taux-non-garanti': 'Taux non garanti.',
+    'capital-garanti-fonds-euros': 'Le capital net investi sur le fonds en euros est garanti par l’assureur.',
+    'perte-capital-uc': 'Les unités de compte présentent un risque de perte en capital.',
+  },
 };
 
 function support(nom: string, categorie: string, niveauRisque: number, autres: Partial<SupportEligible> = {}): SupportEligible {
@@ -180,20 +185,39 @@ describe('SupportsPage (CU-412)', () => {
   });
 
   describe('lot 6 : fonds en euros, liste et fiche', () => {
-    it('fonds en euros : socle du contrat ; frais du PER 0,65 % ; taux servi vide non affiché', async () => {
+    it('PO 28/11 : PER avec frais du fonds en euros à 0,65 % : taux net 2,25 %, « Taux non garanti. » sur la ligne du taux, garantie du capital dessous', async () => {
       const { page } = await pagePrete(reponse([SCPI], { produit: 'PER', fraisContratPct: 0.5 }), 'PER');
       const bloc = page.querySelector('[data-test="fonds-euros"]')!;
-      expect(bloc.textContent).toContain('Capital garanti');
+      expect(bloc.querySelector('[data-test="taux-vise"]')!.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+        'Taux brut visé en 2026 : 2,90 % (mis à jour le 01/01/2026), soit 2,25 % net de frais de gestion. Taux non garanti.',
+      );
+      const garantie = bloc.querySelector('[data-test="garantie"]')!;
+      expect(garantie.textContent).toBe('Le capital net investi sur le fonds en euros est garanti par l’assureur.');
+      expect(garantie.previousElementSibling?.getAttribute('data-test')).toBe('taux-vise');
       expect(bloc.querySelector('[data-test="frais-fonds-euros"]')!.textContent).toContain('0,65 % par an');
-      expect(bloc.querySelector('[data-test="taux-vise"]')).toBeNull();
       expect(bloc.querySelector('[data-test="taux-servi"]')).toBeNull();
+      // La perte en capital reste réservée aux unités de compte, jamais dans le bloc du fonds en euros.
+      expect(bloc.textContent).not.toContain('perte en capital');
+      expect(page.querySelector('[data-mention="perte-capital-uc"]')?.closest('[data-test="fonds-euros"]')).toBeNull();
     });
 
-    it('fonds en euros de l’assurance vie : taux brut visé affiché, frais non fixés non affichés (D1)', async () => {
+    it('PO 28/11 : assurance vie avec frais du fonds en euros vides (CU-530) : taux et garantie, aucun taux net', async () => {
       const { page } = await pagePrete(reponse([SCPI]));
       const bloc = page.querySelector('[data-test="fonds-euros"]')!;
-      expect(bloc.querySelector('[data-test="taux-vise"]')!.textContent).toContain('2,90 %');
+      expect(bloc.querySelector('[data-test="taux-vise"]')!.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+        'Taux brut visé en 2026 : 2,90 % (mis à jour le 01/01/2026). Taux non garanti.',
+      );
+      expect(bloc.textContent).not.toContain('net de frais');
+      expect(bloc.querySelector('[data-test="garantie"]')).not.toBeNull();
       expect(bloc.querySelector('[data-test="frais-fonds-euros"]')).toBeNull();
+    });
+
+    it('PO 28/11 : taux brut visé et date changés dans les paramètres : l’affichage suit, sans modification du code', async () => {
+      const parametres = { ...PARAMS, fondsEurosPer: { ...PARAMS.fondsEurosPer, tauxBrutVisePct: 3.1, dateMiseAJour: '2027-01-01' } };
+      const { page } = await pagePrete(reponse([SCPI], { produit: 'PER', fraisContratPct: 0.5 }), 'PER', parametres);
+      expect(page.querySelector('[data-test="taux-vise"]')!.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+        'Taux brut visé en 2027 : 3,10 % (mis à jour le 01/01/2027), soit 2,45 % net de frais de gestion. Taux non garanti.',
+      );
     });
 
     it('recherche par nom ou code ISIN, tri par colonne, total annuel des frais', async () => {

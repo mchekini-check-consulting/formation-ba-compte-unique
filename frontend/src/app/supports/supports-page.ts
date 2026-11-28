@@ -4,6 +4,8 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { catchError, of } from 'rxjs';
 import { BoutonFonctionnalite } from '../fonctionnalites/bouton-fonctionnalite';
 import { Tunnel } from '../tunnel/tunnel';
+import { InfoBulle } from '../pedagogie/info-bulle';
+import { Mention } from '../pedagogie/mention';
 import { ListeSupports } from './liste-supports';
 import { ParametresPublics, Produit, SupportsDisponibles, SupportsService, tauxFondsEuros } from './supports';
 
@@ -21,7 +23,7 @@ const pourcent = (taux: number) =>
 // lien vers le questionnaire ; le fonds en euros reste affiché.
 @Component({
   selector: 'app-supports-page',
-  imports: [RouterLink, ListeSupports, Tunnel, BoutonFonctionnalite],
+  imports: [RouterLink, ListeSupports, Tunnel, BoutonFonctionnalite, InfoBulle, Mention],
   template: `
     <div class="page supports">
       <!-- PO 28/11 : ouverte depuis « Ma gestion » en gestion libre, la page est l'étape « Mes supports » du tunnel, en
@@ -53,16 +55,19 @@ const pourcent = (taux: number) =>
         @case ('affiche') {
           <section class="carte euros" data-test="fonds-euros">
             <span class="tag">Fonds en euros</span>
-            <h2>Fonds en euros, le socle de votre contrat</h2>
+            <h2>Fonds en euros, le socle de votre contrat <app-info terme="fonds-euros" /></h2>
+            <!-- PO 28/11 : le taux et « Taux non garanti. » sur une ligne, la garantie du capital (paramètre) juste dessous. -->
+            @if (tauxVise(); as t) {
+              <p class="fe-taux" data-test="taux-vise">{{ t.avant }} <strong>{{ t.taux }}</strong> {{ t.detail }}</p>
+              @if (t.garantie) {
+                <p class="fe-garantie" data-test="garantie">{{ t.garantie }}</p>
+              }
+            }
             <dl>
-              <div><dt>Garantie</dt><dd>Capital garanti</dd></div>
               <div><dt>Intérêts</dt><dd>Crédités une fois par an</dd></div>
               <div><dt>Disponibilité</dt><dd>Toujours disponible, quel que soit votre profil</dd></div>
               @if (fondsEuros()?.fraisGestionPct != null) {
                 <div data-test="frais-fonds-euros"><dt>Frais de gestion</dt><dd>{{ pourcent(fondsEuros()!.fraisGestionPct!) }} par an</dd></div>
-              }
-              @if (tauxVise(); as t) {
-                <div data-test="taux-vise"><dt>Taux</dt><dd>{{ t.avant }} <strong>{{ t.taux }}</strong> {{ t.detail }}</dd></div>
               }
               @if (fondsEuros()?.tauxServiPct != null) {
                 <div data-test="taux-servi"><dt>Taux servi</dt><dd>{{ pourcent(fondsEuros()!.tauxServiPct!) }}</dd></div>
@@ -76,11 +81,12 @@ const pourcent = (taux: number) =>
               <a routerLink="/profil">Compléter mon questionnaire</a>
             </p>
           } @else {
-            <h2>Unités de compte</h2>
+            <h2>Unités de compte <app-info terme="unite-de-compte" /></h2>
             <p class="frais" data-test="frais-contrat">
               Frais de gestion du contrat sur les unités de compte : <strong>{{ pourcent(donnees()!.fraisContratPct) }} par an</strong>,
               en plus des frais propres à chaque support.
             </p>
+            <app-mention cle="perte-capital-uc" />
             <app-liste-supports [supports]="donnees()!.supports" [fraisContratPct]="donnees()!.fraisContratPct" [famillesCategories]="familles()" />
           }
         }
@@ -106,7 +112,7 @@ export class SupportsPage {
     const p = this.parametres();
     return p ? (this.produit() === 'PER' ? p.fondsEurosPer : p.fondsEurosAv) : null;
   });
-  protected readonly tauxVise = computed(() => tauxFondsEuros(this.fondsEuros()));
+  protected readonly tauxVise = computed(() => tauxFondsEuros(this.fondsEuros(), this.parametres()?.mentions));
   protected readonly familles = computed(() => this.parametres()?.famillesCategories ?? {});
   protected readonly pourcent = pourcent;
 

@@ -115,7 +115,12 @@ describe('ProduitPage (entrée du tunnel)', () => {
           provide: SupportsService,
           useValue: {
             parametresPublics: () =>
-              of({ fraisUcPct: { PER: 0.5, AV: 0.65 }, fondsEurosAv: { tauxBrutVisePct: 2.9, dateMiseAJour: '2026-01-01', fraisGestionPct: null } }),
+              of({
+                fraisUcPct: { PER: 0.5, AV: 0.65 },
+                fondsEurosAv: { tauxBrutVisePct: 2.9, dateMiseAJour: '2026-01-01', fraisGestionPct: null },
+                fondsEurosPer: { tauxBrutVisePct: 2.9, dateMiseAJour: '2026-01-01', fraisGestionPct: 0.65 },
+                mentions: { 'taux-non-garanti': 'Taux non garanti.', 'capital-garanti-fonds-euros': 'Le capital net investi sur le fonds en euros est garanti par l’assureur.' },
+              }),
           },
         },
       ],
@@ -132,8 +137,19 @@ describe('ProduitPage (entrée du tunnel)', () => {
     expect(page.querySelector('h1')?.textContent).toBe('L’assurance vie');
     expect(page.textContent).toContain('Rachat');
     expect(page.querySelector('[data-test="frais"]')?.textContent).toContain('Frais de gestion des unités de compte : 0,65 % par an');
-    expect(page.querySelector('[data-test="fonds-euros"]')?.textContent).toContain('Taux brut visé en 2026 : 2,90 %');
+    expect(page.querySelector('[data-test="taux-fonds-euros-AV"]')?.textContent).toContain('Taux brut visé en 2026 : 2,90 %');
     expect(page.querySelector('[data-test="ouvrir"]')?.textContent?.trim()).toBe('Ouvrir mon assurance vie');
+  });
+
+  it('PO 28/11 : PER : taux du fonds en euros, net de ses frais (2,25 %), garantie du capital ; perte en capital réservée aux UC', async () => {
+    const { page } = await afficher('PER');
+    const taux = page.querySelector('[data-test="taux-fonds-euros-PER"]')!;
+    expect(taux.querySelector('.tfe-ligne')?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      'Fonds en euros : Taux brut visé en 2026 : 2,90 % (mis à jour le 01/01/2026), soit 2,25 % net de frais de gestion. Taux non garanti.',
+    );
+    // La garantie du capital sur la ligne suivante, pour ne pas lire « non garanti » comme portant sur le capital.
+    expect(taux.querySelector('.tfe-garantie')?.textContent).toBe('Le capital net investi sur le fonds en euros est garanti par l’assureur.');
+    expect(taux.textContent).not.toContain('perte en capital');
   });
 
   it('« Ouvrir mon PER » : profil validé, documents (étape 2) ; sinon questionnaire dans le tunnel (étape 1)', async () => {

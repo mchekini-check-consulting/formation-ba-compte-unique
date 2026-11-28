@@ -12,6 +12,7 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.mock.env.MockEnvironment;
 
 import com.example.compteunique.catalogue.CatalogueService.Produit;
 
@@ -45,7 +46,7 @@ class ParametresPublicsTest {
 		JsonNode json = JsonMapper.builder().build().valueToTree(reponse.getBody());
 
 		assertThat(champs(json)).containsExactlyInAnyOrder("fraisUcPct", "fondsEurosAv", "fondsEurosPer",
-				"famillesCategories");
+				"famillesCategories", "fraisEntreePct", "mentions");
 		assertThat(champs(json.get("fraisUcPct"))).containsExactlyInAnyOrder("PER", "AV");
 		assertThat(champs(json.get("fondsEurosAv"))).containsExactlyInAnyOrder("tauxBrutVisePct", "dateMiseAJour",
 				"fraisGestionPct", "tauxServiPct");
@@ -70,7 +71,7 @@ class ParametresPublicsTest {
 	@Test
 	@DisplayName("Lot 6 : fonds en euros du PER (frais 0,65 %, D1), taux servi et familles vides par défaut")
 	void fondsEurosPerEtFamilles() {
-		var vue = new ParametresPublics(eligibles, "2.90", "2026-01-01", "", "", "", "", "0.65", "", "").lire();
+		var vue = new ParametresPublics(eligibles, "2.90", "2026-01-01", "", "", "", "", "0.65", "", "", new MockEnvironment()).lire();
 
 		assertThat(vue.fondsEurosPer().fraisGestionPct()).isEqualByComparingTo("0.65");
 		assertThat(vue.fondsEurosPer().tauxBrutVisePct()).isNull();
@@ -83,6 +84,19 @@ class ParametresPublicsTest {
 	void familles() {
 		assertThat(ParametresPublics.familles("SCPI:Immobilier; OPCVM actions : Actions;bancal;:x"))
 				.containsOnly(java.util.Map.entry("SCPI", "Immobilier"), java.util.Map.entry("OPCVM actions", "Actions"));
+	}
+
+
+	@Test
+	@DisplayName("Lot 7 : mentions réglementaires et frais d'entrée lus dans la configuration ; mention vide non transmise")
+	void mentionsEtFraisEntree() {
+		var configuration = new MockEnvironment().withProperty("app.mentions.taux-non-garanti", "Taux non garanti.")
+				.withProperty("app.mentions.non-cote", "  ").withProperty("app.catalogue.frais-entree.av", "0");
+		var vue = new ParametresPublics(eligibles, "2.90", "", "", "", "", "", "", "", "", configuration).lire();
+
+		assertThat(vue.mentions()).containsOnly(java.util.Map.entry("taux-non-garanti", "Taux non garanti."));
+		assertThat(vue.fraisEntreePct().get(Produit.AV)).isEqualByComparingTo("0");
+		assertThat(vue.fraisEntreePct().get(Produit.PER)).isNull();
 	}
 
 }

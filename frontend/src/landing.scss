@@ -85,6 +85,7 @@ html {
   .card p { margin: 0; color: var(--muted); font-size: 14.5px; line-height: 1.55; flex: 1; }
   .card .min { font-size: 13px; font-weight: 700; color: var(--navy); margin-top: 6px; }
   .card .rate { font-size: 13px; color: #00775f; font-weight: 800; margin-top: 4px; }
+  .card .rate-garantie { display: block; font-size: 12.5px; color: var(--ink); font-weight: 700; margin-top: 2px; }
   .card .rate b { font-size: 22px; letter-spacing: -.01em; }
   .card .go { font-size: 14px; font-weight: 800; color: var(--blue); margin-top: 6px; }
   .card .note { font-size: 13px; color: var(--muted); font-style: italic; margin-top: 6px; }

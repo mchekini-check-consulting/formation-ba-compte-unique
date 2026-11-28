@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Tunnel, pageSuivante } from '../tunnel/tunnel';
+import { TauxFondsEuros } from '../supports/taux-fonds-euros';
 import { Observable } from 'rxjs';
 import { CodeDocument, DecouverteService, EtatDecouverte, Produit } from './decouverte';
 
@@ -51,7 +52,7 @@ export const PRESENTATIONS: Record<Produit, Presentation> = {
 // reste désactivée tant qu'il n'est pas ouvert, et « Continuer » tant que les deux cases ne sont pas cochées.
 @Component({
   selector: 'app-decouverte-page',
-  imports: [Tunnel],
+  imports: [Tunnel, TauxFondsEuros],
   template: `
     <div class="page decouverte">
       <app-tunnel [produit]="produit" etape="documents">
@@ -66,6 +67,8 @@ export const PRESENTATIONS: Record<Produit, Presentation> = {
           </section>
         }
       </div>
+      <!-- PO 28/11 : taux du fonds en euros et garantie du capital (paramètres). -->
+      <app-taux-fonds-euros [produit]="produit" />
 
       <h2>Documents à lire avant de souscrire</h2>
       @switch (etat()) {

@@ -225,6 +225,9 @@
                   }
                   @if (produit.taux) {
                     <span class="rate">@if (produit.tauxAvant) { {{ produit.tauxAvant }} }<b>{{ produit.taux }}</b> {{ produit.tauxDetail }}</span>
+                    @if (produit.tauxGarantie) {
+                      <span class="rate-garantie" data-test="garantie">{{ produit.tauxGarantie }}</span>
+                    }
                   }
                   <span class="min">{{ produit.minimum }}</span>
                   <div class="foot">

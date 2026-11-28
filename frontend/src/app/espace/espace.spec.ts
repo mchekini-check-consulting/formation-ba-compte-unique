@@ -11,7 +11,7 @@ const ACTIVITE = '/api/backend/connexion/session/activite';
 const COMPTES = '/api/backend/comptes';
 const PROFIL = '/api/backend/profil';
 const PARAMETRES = '/api/backend/catalogue/parametres-publics';
-const PARAMETRES_PUBLICS = { fraisUcPct: { PER: 0.5, AV: 0.65 }, fondsEurosAv: { tauxBrutVisePct: 2.9, dateMiseAJour: '2026-01-01', fraisGestionPct: null } };
+const PARAMETRES_PUBLICS = { fraisUcPct: { PER: 0.5, AV: 0.65 }, fondsEurosAv: { tauxBrutVisePct: 2.9, dateMiseAJour: '2026-01-01', fraisGestionPct: null }, fondsEurosPer: { tauxBrutVisePct: 2.9, dateMiseAJour: '2026-01-01', fraisGestionPct: 0.65 }, mentions: { 'taux-non-garanti': 'Taux non garanti.', 'capital-garanti-fonds-euros': 'Le capital net investi sur le fonds en euros est garanti par l’assureur.' } };
 const COMPTE = {
   id: 1,
   ibanMasque: 'FR76 •••• •••• 0105',
@@ -127,6 +127,11 @@ describe('Espace', () => {
     const { page } = await ouvrir([COMPTE]);
     expect(carte(page).querySelector('.rate')?.textContent?.trim()).toBe('Taux brut visé en 2026 : 2,90 % (mis à jour le 01/01/2026). Taux non garanti.');
     expect(carte(page).textContent).toContain('Frais de gestion détaillés avant signature');
+    // PO 28/11 : garantie du capital sur sa ligne, sous le taux ; carte PER : taux, net de ses frais, garantie.
+    expect(carte(page).querySelector('[data-test="garantie"]')?.textContent).toBe('Le capital net investi sur le fonds en euros est garanti par l’assureur.');
+    const per = [...page.querySelectorAll('#epargne .produit')].find((c) => c.querySelector('h3')?.textContent === 'PER')!;
+    expect(per.querySelector('.rate')?.textContent?.trim()).toBe('Taux brut visé en 2026 : 2,90 % (mis à jour le 01/01/2026), soit 2,25 % net de frais de gestion. Taux non garanti.');
+    expect(per.querySelector('[data-test="garantie"]')).not.toBeNull();
 
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({

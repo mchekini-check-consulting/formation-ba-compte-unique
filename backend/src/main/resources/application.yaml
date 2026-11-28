@@ -142,16 +142,29 @@ app:
       frais-gestion: ${FONDS_EUROS_AV_FRAIS_GESTION:}
       # D7 du PO : taux servi du fonds en euros, non fixé par une story (vide, non affiché).
       taux-servi: ${FONDS_EUROS_AV_TAUX_SERVI:}
-    # D1 du PO : fonds en euros du PER, frais de gestion 0,65 % (PER-09) ; taux visé et servi non fixés (D7).
+    # D1 et décision PO du 28/11/2026 : fonds en euros du PER, taux brut visé et date (mis à jour chaque 1er janvier,
+    # par ce paramètre), frais de gestion de PER-09 ; taux servi non fixé (D7).
     fonds-euros-per:
-      taux-brut-vise: ${FONDS_EUROS_PER_TAUX_BRUT_VISE:}
-      date-mise-a-jour: ${FONDS_EUROS_PER_DATE_MISE_A_JOUR:}
+      taux-brut-vise: ${FONDS_EUROS_PER_TAUX_BRUT_VISE:2.90}
+      date-mise-a-jour: ${FONDS_EUROS_PER_DATE_MISE_A_JOUR:2026-01-01}
       frais-gestion: ${FONDS_EUROS_PER_FRAIS_GESTION:0.65}
       taux-servi: ${FONDS_EUROS_PER_TAUX_SERVI:}
     # Lot 6, D7 du PO : regroupement des catégories du catalogue en familles (Monétaire, Obligations, Diversifiés,
     # Actions, Immobilier, Non coté, Produits structurés), non validé : vide. Format « Catégorie:Famille;... ».
     # Vide : l'écran filtre sur la catégorie d'origine. Le fichier du catalogue n'est jamais modifié.
     familles: ${CATALOGUE_FAMILLES:}
+    # Lot 7 : frais d'entrée, en % (carte publique de l'assurance vie : « Frais d'entrée 0 % »). Vide : non affiché.
+    frais-entree:
+      per: ${CATALOGUE_FRAIS_ENTREE_PER:}
+      av: ${CATALOGUE_FRAIS_ENTREE_AV:0}
+  # Lot 7 (PO, 28/11/2026) : mentions réglementaires, textes proposés par le PO, à valider par la conformité.
+  # Modifiables sans toucher au code (variables MENTION_* de helm.yaml) ; vide : la mention n'est pas affichée.
+  mentions:
+    taux-non-garanti: "${MENTION_TAUX_NON_GARANTI:Taux non garanti.}"
+    perte-capital-uc: "${MENTION_PERTE_CAPITAL_UC:Les unités de compte présentent un risque de perte en capital.}"
+    performances-passees: "${MENTION_PERFORMANCES_PASSEES:Les performances passées ne préjugent pas des performances futures.}"
+    capital-garanti-fonds-euros: "${MENTION_CAPITAL_GARANTI_FONDS_EUROS:Le capital net investi sur le fonds en euros est garanti par l'assureur.}"
+    non-cote: "${MENTION_NON_COTE:Ce support non coté peut être difficile à revendre : le délai de sortie peut être long et sa valeur peut baisser. Le capital investi n'est pas garanti.}"
   virements:
     # CU-147 critère 5 : plafond d'un virement en centimes, à valider avec la conformité. 0 = pas de plafond.
     plafond-centimes: ${VIREMENTS_PLAFOND_CENTIMES:0}
