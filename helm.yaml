@@ -102,6 +102,62 @@ applications:
       # Swagger (.../gateway/backend/swagger-ui.html) en dev et qualif, jamais en preprod ni en prod.
       - key: SWAGGER_ACTIF
         value: {dev: "true", qualif: "true", preprod: "false", prod: "false"}
+      # Lot 3 (PO, 27/11/2026) : un interrupteur par fonctionnalité et par environnement (GET /fonctionnalites).
+      # Livrer une fonctionnalité = passer son interrupteur à "true" ; « false » : bouton « Bientôt ».
+      # Messages (story à créer par le PO).
+      - key: FONCTIONNALITE_MESSAGERIE
+        value: "false"
+      # Ajouter un compte d’une autre banque (story à créer).
+      - key: FONCTIONNALITE_AJOUT_COMPTE_EXTERNE
+        value: "false"
+      # Programmer un virement sur le compte courant (story à créer).
+      - key: FONCTIONNALITE_VIREMENT_PROGRAMME
+        value: "false"
+      # Clôturer mon compte (CU-21).
+      - key: FONCTIONNALITE_CLOTURE_COMPTE
+        value: "false"
+      # Souscrire un LDDS (story à créer).
+      - key: FONCTIONNALITE_LDDS
+        value: "false"
+      # Souscrire un CEL (story à créer).
+      - key: FONCTIONNALITE_CEL
+        value: "false"
+      # Simulateur de crédit (CU-355, autre projet de la banque).
+      - key: FONCTIONNALITE_SIMULATEUR_CREDIT
+        value: "false"
+      # Demande de crédit à la consommation (CU-366, autre projet).
+      - key: FONCTIONNALITE_DEMANDE_CREDIT_CONSO
+        value: "false"
+      # Demande de crédit immobilier (autre projet).
+      - key: FONCTIONNALITE_DEMANDE_CREDIT_IMMO
+        value: "false"
+      # Demande de rachat de crédits (autre projet).
+      - key: FONCTIONNALITE_DEMANDE_RACHAT_CREDITS
+        value: "false"
+      # Simulateur PER (autre projet).
+      - key: FONCTIONNALITE_SIMULATEUR_PER
+        value: "false"
+      # Simulateur assurance vie (autre projet).
+      - key: FONCTIONNALITE_SIMULATEUR_AV
+        value: "false"
+      # Consulter la convention de compte (story à créer).
+      - key: FONCTIONNALITE_DOCUMENT_CONVENTION
+        value: "false"
+      # Consulter le relevé de compte courant (story à créer).
+      - key: FONCTIONNALITE_DOCUMENT_RELEVE
+        value: "false"
+      # Consulter l’attestation de non-détention de Livret A (story à créer).
+      - key: FONCTIONNALITE_DOCUMENT_ATTESTATION_LIVRET_A
+        value: "false"
+      # Contacter mon conseiller (story à créer).
+      - key: FONCTIONNALITE_CONTACT_CONSEILLER
+        value: "false"
+      # Changer mon mot de passe (D2, story à créer par le PO).
+      - key: FONCTIONNALITE_CHANGEMENT_MOT_DE_PASSE
+        value: "false"
+      # D4 : entrée « Outils de test » et pages /test/... en dev et qualif seulement.
+      - key: FONCTIONNALITE_OUTILS_TEST
+        value: {dev: "true", qualif: "true", preprod: "false", prod: "false"}
   - name: gateway
     type: gateway
     # Pas d'image/tag : fourni par la plateforme (petit Traefik autonome),

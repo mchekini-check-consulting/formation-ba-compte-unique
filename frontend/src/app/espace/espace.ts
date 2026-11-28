@@ -7,20 +7,19 @@ import { Compte, ComptesService, formaterDate, libelleStatut, soldeAffichable } 
 import { SuiviSession } from '../session/suivi-session';
 import { LIBELLES_STATUT, ProfilService } from '../profil/profil';
 import { SupportsService, TauxAffiche, tauxFondsEurosAv } from '../supports/supports';
+import { BoutonFonctionnalite } from '../fonctionnalites/bouton-fonctionnalite';
 import { CREDITS, EPARGNE, Produit } from './produits';
 
 type EtatComptes = { lu: false } | { lu: true; erreur: boolean; comptes: Compte[] };
 
-const DUREE_ANNONCE_MS = 3200;
-
 // Espace de la cliente connectée, d'après la maquette « Espace client Hi-Tech Bank » : compte
 // courant (CU-19), tous les produits ouverts à la souscription, déconnexion et fermeture de la
 // session après 10 minutes sans activité (CU-17). Sans session active, retour à la connexion.
-// Les parcours pas encore développés (souscription...) l'annoncent simplement. « Faire un virement »
+// Les parcours pas encore développés sont des boutons « Bientôt » (lot 3, BoutonFonctionnalite). « Faire un virement »
 // ouvre la page /versement (CU-11).
 @Component({
   selector: 'app-espace',
-  imports: [CarteCompte, RouterLink],
+  imports: [BoutonFonctionnalite, CarteCompte, RouterLink],
   templateUrl: './espace.html',
 })
 export class Espace {
@@ -30,7 +29,6 @@ export class Espace {
   private readonly supports = inject(SupportsService);
   private readonly suivi = inject(SuiviSession);
   private readonly etat = signal<EtatComptes>({ lu: false });
-  private minuteurAnnonce: ReturnType<typeof setTimeout> | null = null;
 
   /** CU-24 : taux du fonds en euros de l'assurance vie (paramètres publics) ; absent tant qu'il n'est pas lu. */
   private readonly fondsEurosAv = signal<TauxAffiche | null>(null);
@@ -40,7 +38,6 @@ export class Espace {
   });
   protected readonly credits: Produit[] = CREDITS;
   protected readonly identifiant = signal('');
-  protected readonly annonce = signal('');
   /** CU-10 : statut du profil client (« À compléter »...), vide tant qu'il n'est pas lu. */
   protected readonly statutProfil = signal('');
   protected readonly lu = computed(() => this.etat().lu);
@@ -65,10 +62,7 @@ export class Espace {
   protected readonly cloture = computed(() => this.compte()?.statut === 'CLOTURE');
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => {
-      this.suivi.arreter();
-      if (this.minuteurAnnonce) clearTimeout(this.minuteurAnnonce);
-    });
+    inject(DestroyRef).onDestroy(() => this.suivi.arreter());
     this.suivi.ouvrir().subscribe({
       next: (session) => {
         this.identifiant.set(session.identifiant);
@@ -104,12 +98,6 @@ export class Espace {
     }
   }
 
-  /** Parcours pas encore développé : on l'annonce, sans rien faire d'autre. */
-  protected annoncer(texte: string): void {
-    this.annonce.set(texte);
-    if (this.minuteurAnnonce) clearTimeout(this.minuteurAnnonce);
-    this.minuteurAnnonce = setTimeout(() => this.annonce.set(''), DUREE_ANNONCE_MS);
-  }
 
   private lireComptes(): void {
     this.comptes.mesComptes().subscribe({

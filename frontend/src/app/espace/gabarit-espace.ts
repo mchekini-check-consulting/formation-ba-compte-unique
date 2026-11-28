@@ -1,6 +1,9 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, ActivatedRouteSnapshot, NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { filter, skip } from 'rxjs';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { filter, map, skip } from 'rxjs';
+import { BoutonFonctionnalite } from '../fonctionnalites/bouton-fonctionnalite';
+import { FonctionnalitesService } from '../fonctionnalites/fonctionnalites';
 import { ProfilService } from '../profil/profil';
 import { SuiviSession, formaterRestant } from '../session/suivi-session';
 
@@ -72,15 +75,13 @@ export interface Ariane {
   garderProduit?: boolean;
 }
 
-const DUREE_ANNONCE_MS = 3200;
-
 // Lot 2 : gabarit unique de toutes les pages connectées. En-tête (logo, « Bonjour + prénom » ou l'identifiant
 // à défaut (D8), minuterie de session, Messages, Me déconnecter), même menu latéral, fil d'Ariane et bouton retour,
 // pied de page. La session est suivie ici (CU-17) : chaque changement de page la signale et relance le suivi ;
 // rien de l'espace ne s'affiche avant la réponse du serveur (CU-18).
 @Component({
   selector: 'app-gabarit-espace',
-  imports: [RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [BoutonFonctionnalite, RouterLink, RouterLinkActive, RouterOutlet],
   template: `
     <a class="evitement" href="#contenu" (click)="allerAuContenu($event)">Aller au contenu</a>
     <div class="espace">
@@ -103,6 +104,11 @@ const DUREE_ANNONCE_MS = 3200;
               </ul>
             }
           }
+          @if (outilsTest()) {
+            <!-- D4 : outils de test, seulement si leur interrupteur est activé (dev et qualif). -->
+            <div class="sep">Recette</div>
+            <a routerLink="/test/fonctionnalites" data-test="outils-test"><i></i>Outils de test</a>
+          }
         </nav>
         <a class="cta" routerLink="/espace" fragment="epargne">Souscrire un produit</a>
       </aside>
@@ -122,7 +128,7 @@ const DUREE_ANNONCE_MS = 3200;
                 Fermeture automatique dans <b>{{ temps }}</b>
               </span>
             }
-            <button class="btn o sm" type="button" (click)="annoncer('Messagerie : bientôt disponible.')">Messages</button>
+            <app-bouton-fonctionnalite cle="messagerie" classe="btn o sm" [phraseVisible]="false">Messages</app-bouton-fonctionnalite>
             <button class="btn p sm deconnexion" type="button" (click)="suivi.deconnecter()">Me déconnecter</button>
           </div>
         </div>
@@ -154,9 +160,6 @@ const DUREE_ANNONCE_MS = 3200;
         </footer>
       </main>
 
-      @if (annonce()) {
-        <div class="toast" role="status">{{ annonce() }}</div>
-      }
     </div>
   `,
 })
@@ -165,13 +168,12 @@ export class GabaritEspace {
   private readonly profils = inject(ProfilService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
-  private minuteurAnnonce: ReturnType<typeof setTimeout> | null = null;
 
   protected readonly menu = MENU;
+  protected readonly outilsTest = toSignal(inject(FonctionnalitesService).etats().pipe(map((e) => !!e['outils-test'])), { initialValue: false });
   protected readonly exact = { paths: 'exact', fragment: 'exact', queryParams: 'subset', matrixParams: 'ignored' } as const;
   protected readonly identifiant = signal('');
   protected readonly prenom = signal('');
-  protected readonly annonce = signal('');
   protected readonly ariane = signal<Ariane | null>(null);
   private readonly produit = signal<string | null>(null);
   protected readonly retourParams = computed(() => {
@@ -184,10 +186,7 @@ export class GabaritEspace {
   });
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => {
-      this.suivi.arreter();
-      if (this.minuteurAnnonce) clearTimeout(this.minuteurAnnonce);
-    });
+    inject(DestroyRef).onDestroy(() => this.suivi.arreter());
     this.lirePage();
     this.ouvrir(true);
     // La première fin de navigation est celle qui a ouvert le gabarit (déjà signalée ci-dessus).
@@ -204,12 +203,6 @@ export class GabaritEspace {
     document.getElementById('contenu')?.focus();
   }
 
-  /** Messagerie pas encore développée : annonce (le lot 3 la passe en « Bientôt »). */
-  protected annoncer(texte: string): void {
-    this.annonce.set(texte);
-    if (this.minuteurAnnonce) clearTimeout(this.minuteurAnnonce);
-    this.minuteurAnnonce = setTimeout(() => this.annonce.set(''), DUREE_ANNONCE_MS);
-  }
 
   private ouvrir(premiere: boolean): void {
     this.suivi.ouvrir().subscribe({

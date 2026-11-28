@@ -88,15 +88,15 @@
             <a class="tile" routerLink="/versement">
               <b>Faire un virement</b><span>Virement entrant ou sortant, depuis ou vers votre compte.</span>
             </a>
-            <button class="tile" type="button" (click)="annoncer('Ajout d\'un compte externe : bientôt disponible.')">
+            <app-bouton-fonctionnalite cle="ajout-compte-externe" classe="tile">
               <b>Ajouter un compte</b><span>Un compte d'une autre banque, à votre nom.</span>
-            </button>
-            <button class="tile" type="button" (click)="annoncer('Virement programmé : bientôt disponible.')">
+            </app-bouton-fonctionnalite>
+            <app-bouton-fonctionnalite cle="virement-programme" classe="tile">
               <b>Programmer un virement</b><span>Une épargne automatique, mensuelle ou plus espacée.</span>
-            </button>
-            <button class="tile" type="button" (click)="annoncer('Clôture du compte : bientôt disponible.')">
+            </app-bouton-fonctionnalite>
+            <app-bouton-fonctionnalite cle="cloture-compte" classe="tile">
               <b>Clôturer mon compte</b><span>Le solde est transféré avant la clôture.</span>
-            </button>
+            </app-bouton-fonctionnalite>
           </div>
         </div>
       </section>
@@ -136,9 +136,7 @@
                       <!-- CU-311 / CU-331 : présentation et documents à lire avant de souscrire. -->
                       <a class="btn p sm" routerLink="/decouvrir" [queryParams]="{ produit: produit.nom === 'PER' ? 'PER' : 'AV' }">Souscrire</a>
                     } @else {
-                      <button class="btn p sm" type="button" (click)="annoncer('Souscription ' + produit.nom + ' : bientôt disponible.')">
-                        Souscrire
-                      </button>
+                      <app-bouton-fonctionnalite [cle]="produit.souscription!" classe="btn p sm">Souscrire</app-bouton-fonctionnalite>
                     }
                   </div>
                 </div>
@@ -166,12 +164,8 @@
                   <h3>{{ produit.nom }}</h3>
                   <p>{{ produit.description }}</p>
                   <div class="foot">
-                    <button class="go" type="button" (click)="annoncer('Simulation ' + produit.nom + ' : bientôt disponible.')">
-                      Simuler mon projet →
-                    </button>
-                    <button class="btn p sm" type="button" (click)="annoncer('Demande de ' + produit.nom + ' : bientôt disponible.')">
-                      Faire une demande
-                    </button>
+                    <app-bouton-fonctionnalite cle="simulateur-credit" classe="go">Simuler mon projet →</app-bouton-fonctionnalite>
+                    <app-bouton-fonctionnalite [cle]="produit.demande!" classe="btn p sm">Faire une demande</app-bouton-fonctionnalite>
                   </div>
                 </div>
               </div>
@@ -225,9 +219,9 @@
           <h2>Simulez avant de vous engager</h2>
           <p class="lead">Testez vos projets sans rien modifier. Les hypothèses restent visibles, et les résultats sont indicatifs.</p>
           <div class="sim-row">
-            <div class="sim"><span class="tag t-rose">Crédit</span><h4>Simulateur de crédit</h4><p>Mensualité, coût total et durée, avec le taux et l'assurance utilisés.</p><button class="go" type="button" (click)="annoncer('Simulateur de crédit : bientôt disponible.')">Simuler un crédit →</button></div>
-            <div class="sim"><span class="tag t-violet">Retraite</span><h4>Simulateur PER</h4><p>Capital projeté à la retraite, avec versements mensuels et frais d'entrée de 0 %.</p><button class="go" type="button" (click)="annoncer('Simulateur PER : bientôt disponible.')">Simuler mon PER →</button></div>
-            <div class="sim"><span class="tag t-blue">Placement</span><h4>Simulateur assurance-vie</h4><p>Intérêts du fonds en euros, crédités une fois par an, et effet des frais.</p><button class="go" type="button" (click)="annoncer('Simulateur assurance-vie : bientôt disponible.')">Simuler mon assurance-vie →</button></div>
+            <div class="sim"><span class="tag t-rose">Crédit</span><h4>Simulateur de crédit</h4><p>Mensualité, coût total et durée, avec le taux et l'assurance utilisés.</p><app-bouton-fonctionnalite cle="simulateur-credit" classe="go">Simuler un crédit →</app-bouton-fonctionnalite></div>
+            <div class="sim"><span class="tag t-violet">Retraite</span><h4>Simulateur PER</h4><p>Capital projeté à la retraite, avec versements mensuels et frais d'entrée de 0 %.</p><app-bouton-fonctionnalite cle="simulateur-per" classe="go">Simuler mon PER →</app-bouton-fonctionnalite></div>
+            <div class="sim"><span class="tag t-blue">Placement</span><h4>Simulateur assurance-vie</h4><p>Intérêts du fonds en euros, crédités une fois par an, et effet des frais.</p><app-bouton-fonctionnalite cle="simulateur-av" classe="go">Simuler mon assurance-vie →</app-bouton-fonctionnalite></div>
           </div>
         </div>
       </section>
@@ -239,9 +233,9 @@
           <h2>Vos contrats et relevés</h2>
           <p class="lead">Les documents signés et les récapitulatifs restent consultables, même après la clôture d'un produit.</p>
           <div class="docs">
-            <div class="doc"><div><b>Convention de compte courant</b><span>Signée à l'ouverture de votre compte · horodatage conservé</span></div><button class="btn o sm" type="button" (click)="annoncer('Consultation des documents : bientôt disponible.')">Consulter</button></div>
-            <div class="doc"><div><b>Relevé de compte courant</b><span>Dernier relevé disponible à la fin du mois</span></div><button class="btn o sm" type="button" (click)="annoncer('Consultation des relevés : bientôt disponible.')">Consulter</button></div>
-            <div class="doc"><div><b>Attestation de non-détention de Livret A</b><span>Demandée à l'ouverture d'un Livret A</span></div><button class="btn o sm" type="button" (click)="annoncer('Attestation générée à l\'ouverture d\'un Livret A.')">Consulter</button></div>
+            <div class="doc"><div><b>Convention de compte courant</b><span>Signée à l'ouverture de votre compte · horodatage conservé</span></div><app-bouton-fonctionnalite cle="document-convention" classe="btn o sm">Consulter</app-bouton-fonctionnalite></div>
+            <div class="doc"><div><b>Relevé de compte courant</b><span>Dernier relevé disponible à la fin du mois</span></div><app-bouton-fonctionnalite cle="document-releve" classe="btn o sm">Consulter</app-bouton-fonctionnalite></div>
+            <div class="doc"><div><b>Attestation de non-détention de Livret A</b><span>Demandée à l'ouverture d'un Livret A</span></div><app-bouton-fonctionnalite cle="document-attestation-livret-a" classe="btn o sm">Consulter</app-bouton-fonctionnalite></div>
           </div>
         </div>
       </section>
@@ -254,9 +248,9 @@
           <p class="lead">Les informations de votre dossier sont vérifiées à l'ouverture. Pour les modifier, contactez votre conseiller.</p>
           <div class="cards">
             <div class="card"><div class="body"><span class="tag t-violet">Identité</span><h3>Identifiant {{ identifiant() }}</h3><p>Identité vérifiée à l'ouverture de votre compte.</p></div></div>
-            <div class="card"><div class="body"><span class="tag t-blue">Contact</span><h3>E-mail et mobile</h3><p>Ils servent à vous envoyer vos identifiants et vos codes.</p><div class="foot"><button class="go" type="button" (click)="annoncer('Contact du conseiller : bientôt disponible.')">Contacter mon conseiller →</button></div></div></div>
+            <div class="card"><div class="body"><span class="tag t-blue">Contact</span><h3>E-mail et mobile</h3><p>Ils servent à vous envoyer vos identifiants et vos codes.</p><div class="foot"><app-bouton-fonctionnalite cle="contact-conseiller" classe="go">Contacter mon conseiller →</app-bouton-fonctionnalite></div></div></div>
             <div class="card"><div class="body"><span class="tag t-mint">Placements</span><h3>Mon profil investisseur</h3><p>Requis avant un PER ou une assurance vie.@if (statutProfil()) { Statut : <b class="statut-profil">{{ statutProfil() }}</b>.}</p><div class="foot"><a class="go" routerLink="/profil">Voir mon profil →</a></div></div></div>
-            <div class="card"><div class="body"><span class="tag t-amber">Sécurité</span><h3>Mot de passe et session</h3><p>Session fermée automatiquement après 10 minutes sans activité.</p><div class="foot"><button class="go" type="button" (click)="annoncer('Changement de mot de passe : bientôt disponible.')">Changer mon mot de passe →</button></div></div></div>
+            <div class="card"><div class="body"><span class="tag t-amber">Sécurité</span><h3>Mot de passe et session</h3><p>Session fermée automatiquement après 10 minutes sans activité.</p><div class="foot"><app-bouton-fonctionnalite cle="changement-mot-de-passe" classe="go">Changer mon mot de passe →</app-bouton-fonctionnalite></div></div></div>
           </div>
         </div>
       </section>
@@ -281,8 +275,5 @@
         </div>
       </div>
 
-    @if (annonce()) {
-      <div class="toast" role="status">{{ annonce() }}</div>
-    }
   </div>
 }
