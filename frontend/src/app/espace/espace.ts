@@ -6,7 +6,7 @@ import { CarteCompte } from '../comptes/carte-compte';
 import { Compte, ComptesService, formaterDate, libelleStatut, soldeAffichable } from '../comptes/comptes';
 import { SuiviSession } from '../session/suivi-session';
 import { LIBELLES_STATUT, ProfilService } from '../profil/profil';
-import { SupportsService, TauxAffiche, tauxFondsEurosAv } from '../supports/supports';
+import { SupportsService, TauxAffiche, tauxFondsEurosAv, tauxFondsEurosPer } from '../supports/supports';
 import { BoutonFonctionnalite } from '../fonctionnalites/bouton-fonctionnalite';
 import { GestionService, LIBELLE_MODE, LigneContrat, PROFILS } from '../gestion/gestion';
 import { pourcentage } from '../livret-a/parametres';
@@ -35,11 +35,14 @@ export class Espace {
   private readonly suivi = inject(SuiviSession);
   private readonly etat = signal<EtatComptes>({ lu: false });
 
-  /** CU-24 : taux du fonds en euros de l'assurance vie (paramètres publics) ; absent tant qu'il n'est pas lu. */
-  private readonly fondsEurosAv = signal<TauxAffiche | null>(null);
+  /** CU-24 et PO 28/11 : taux du fonds en euros du PER et de l'assurance vie (paramètres publics), absents tant qu'ils ne sont pas lus. */
+  private readonly fondsEuros = signal<{ PER: TauxAffiche | null; AV: TauxAffiche | null }>({ PER: null, AV: null });
   protected readonly epargne = computed<Produit[]>(() => {
-    const f = this.fondsEurosAv();
-    return EPARGNE.map((p) => (p.nom === 'Assurance-vie' && f ? { ...p, tauxAvant: f.avant, taux: f.taux, tauxDetail: f.detail } : p));
+    const taux = this.fondsEuros();
+    return EPARGNE.map((p) => {
+      const f = p.nom === 'PER' ? taux.PER : p.nom === 'Assurance-vie' ? taux.AV : null;
+      return f ? { ...p, tauxAvant: f.avant, taux: f.taux, tauxDetail: f.detail, tauxGarantie: f.garantie } : p;
+    });
   });
   protected readonly credits: Produit[] = CREDITS;
   /** Lot 4 : contrats PER et assurance vie de la cliente (null tant qu'ils ne sont pas lus). */
@@ -49,7 +52,7 @@ export class Espace {
   protected readonly demandeLivretA = signal<DemandeLivretA | null>(null);
   /** CU-10 : profil validé (true), à compléter ou à revalider (false), pas encore lu (null). */
   protected readonly profilValide = signal<boolean | null>(null);
-  /** PO, lot 4 : frais des unités de compte des nouvelles souscriptions (« 0,65 % »), lus dans le paramètre. */
+  /** PO, lot 4 : frais des unités de compte des nouvelles souscriptions, lus dans le paramètre. */
   private readonly fraisUcPct = signal<Record<string, number>>({});
   protected readonly identifiant = signal('');
   /** CU-10 : statut du profil client (« À compléter »...), vide tant qu'il n'est pas lu. */
@@ -91,7 +94,7 @@ export class Espace {
         });
         this.supports.parametresPublics().subscribe({
           next: (p) => {
-            this.fondsEurosAv.set(tauxFondsEurosAv(p));
+            this.fondsEuros.set({ PER: tauxFondsEurosPer(p), AV: tauxFondsEurosAv(p) });
             this.fraisUcPct.set(p.fraisUcPct ?? {});
           },
           error: () => undefined,
@@ -114,7 +117,7 @@ export class Espace {
     return produit.nom === 'PER' || produit.nom === 'Assurance-vie';
   }
 
-  /** « 0,65 % » pour la carte PER ou assurance vie ; rien pour les autres produits ou sans paramètre. */
+  /** Frais des unités de compte de la carte PER ou assurance vie (paramètre) ; rien pour les autres produits ou sans paramètre. */
   protected fraisUc(produit: Produit): string | null {
     const cle = produit.nom === 'PER' ? 'PER' : produit.nom === 'Assurance-vie' ? 'AV' : null;
     const frais = cle ? this.fraisUcPct()[cle] : undefined;

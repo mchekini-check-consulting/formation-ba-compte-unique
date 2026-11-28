@@ -1,6 +1,8 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, ElementRef, TemplateRef, afterNextRender, computed, inject, input, signal } from '@angular/core';
 import { BoutonFonctionnalite } from '../fonctionnalites/bouton-fonctionnalite';
+import { InfoBulle, Terme } from '../pedagogie/info-bulle';
+import { Mention } from '../pedagogie/mention';
 import { PointVl, SupportEligible, SupportsService } from './supports';
 
 type Colonne = 'nom' | 'categorie' | 'niveauRisque' | 'valeurLiquidative' | 'fraisSupportPct' | 'total';
@@ -19,7 +21,7 @@ const nombre = (valeur: number, decimales: number) =>
 // fiche dans un panneau latéral avec la courbe de la valeur liquidative (catalogue.historique_vl, lecture seule).
 @Component({
   selector: 'app-liste-supports',
-  imports: [BoutonFonctionnalite, NgTemplateOutlet],
+  imports: [BoutonFonctionnalite, NgTemplateOutlet, InfoBulle, Mention],
   template: `
     <div class="liste-supports">
       <section class="ls-filtres" aria-label="Filtres">
@@ -63,6 +65,9 @@ const nombre = (valeur: number, decimales: number) =>
                   @for (c of colonnes; track c.cle) {
                     <th scope="col" [attr.aria-sort]="tri() === c.cle ? (croissant() ? 'ascending' : 'descending') : null">
                       <button type="button" class="ls-tri" (click)="trier(c.cle)">{{ c.libelle }}</button>
+                      @if (c.terme) {
+                        <app-info [terme]="c.terme" />
+                      }
                     </th>
                   }
                   <th scope="col">Label</th>
@@ -147,7 +152,8 @@ const nombre = (valeur: number, decimales: number) =>
         <button type="button" class="ls-fermer" data-test="fermer" (click)="fermer()" aria-label="Fermer la fiche">×</button>
         <h2 id="ls-fiche-titre" tabindex="-1">{{ s.nom }}</h2>
         @if (s.nonCote) {
-          <p class="avis" role="note" data-test="avertissement-non-cote"><strong>Non coté</strong></p>
+          <p class="avis" role="note" data-test="avertissement-non-cote"><strong>Non coté</strong> <app-info terme="non-cote" /></p>
+          <app-mention cle="non-cote" />
         }
         <dl>
           <div><dt>Code ISIN</dt><dd>{{ s.codeIsin }}</dd></div>
@@ -207,6 +213,7 @@ const nombre = (valeur: number, decimales: number) =>
                   </table>
                 </details>
               </figure>
+              <app-mention cle="performances-passees" />
             }
           }
         }
@@ -243,11 +250,11 @@ export class ListeSupports {
   readonly actionLigne = input<TemplateRef<{ $implicit: SupportEligible }> | null>(null);
   readonly libelleAction = input('');
 
-  protected readonly colonnes: { cle: Colonne; libelle: string }[] = [
+  protected readonly colonnes: { cle: Colonne; libelle: string; terme?: Terme }[] = [
     { cle: 'nom', libelle: 'Nom' },
     { cle: 'categorie', libelle: 'Catégorie' },
-    { cle: 'niveauRisque', libelle: 'Risque' },
-    { cle: 'valeurLiquidative', libelle: 'Valeur liquidative' },
+    { cle: 'niveauRisque', libelle: 'Risque', terme: 'niveau-risque' },
+    { cle: 'valeurLiquidative', libelle: 'Valeur liquidative', terme: 'valeur-liquidative' },
     { cle: 'total', libelle: 'Frais annuels' },
   ];
   protected readonly sept = [1, 2, 3, 4, 5, 6, 7];

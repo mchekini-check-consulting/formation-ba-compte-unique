@@ -234,6 +234,9 @@ describe('SouscriptionPage (CU-312, CU-330)', () => {
     );
     await rafraichir();
     expect(page.querySelector('[role="alert"]')?.textContent).toContain('bloquée jusqu\'à 10 h 30');
+    // Lot 7 : le refus, mot pour mot, s'affiche sous le code SMS et lui est relié.
+    expect(page.querySelector('[data-test="erreur-code"]')?.textContent).toBe('Trois codes erronés : la signature est bloquée jusqu\'à 10 h 30.');
+    expect(page.querySelector('[data-test="formulaire-code"] input')?.getAttribute('aria-describedby')).toBe('erreur-code');
   });
 
   it('PO 28/11 : refus du serveur « documents non lus » : retour à l’étape « Mes documents » avec le message (PER-02, AV-02)', async () => {

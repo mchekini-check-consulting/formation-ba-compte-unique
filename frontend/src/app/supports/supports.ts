@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, shareReplay } from 'rxjs';
 import { apiBase } from '../api';
 import { pourcentage } from '../livret-a/parametres';
 
@@ -32,13 +32,17 @@ export interface PointVl {
  * Un paramètre non renseigné vaut null et n'est pas affiché.
  */
 export interface ParametresPublics {
-  /** Frais de gestion annuels du contrat sur les unités de compte, en % ({ PER: 0.5, AV: 0.65 }). */
+  /** Frais de gestion annuels du contrat sur les unités de compte, en %, par produit. */
   fraisUcPct: Record<Produit, number>;
   fondsEurosAv: FondsEuros;
-  /** Lot 6, D1 : fonds en euros du PER (frais 0,65 %, PER-09). */
+  /** Lot 6, D1 et PO 28/11 : fonds en euros du PER (taux, date, frais de PER-09). */
   fondsEurosPer: FondsEuros;
   /** Lot 6, D7 : catégorie du catalogue → famille ; vide tant que le regroupement n'est pas validé. */
   famillesCategories: Record<string, string>;
+  /** Lot 7 : frais d'entrée en % par produit (null : non affiché). */
+  fraisEntreePct?: Record<Produit, number | null>;
+  /** Lot 7 : mentions réglementaires renseignées (taux-non-garanti, perte-capital-uc, performances-passees, non-cote). */
+  mentions?: Record<string, string>;
 }
 
 /** Fonds en euros d'un produit ; un champ null n'est pas affiché (D7 : taux servi non fixé). */
@@ -49,35 +53,48 @@ export interface FondsEuros {
   tauxServiPct: number | null;
 }
 
-/** Taux du fonds en euros affiché sur une carte : « Taux brut visé en 2026 : » <b>2,90 %</b> « (mis à jour le 01/01/2026)… ». */
+/**
+ * Taux du fonds en euros : une ligne pour le taux et sa mention (« Taux brut visé en <année> : » <b>taux</b> « (mis à
+ * jour le …), soit … net de frais de gestion. Taux non garanti. »), la garantie du capital sur la ligne suivante, pour
+ * qu'on ne puisse pas lire « non garanti » comme portant sur le fonds ou le capital (PO, 28/11/2026).
+ */
 export interface TauxAffiche {
   avant: string;
   taux: string;
   detail: string;
+  /** Mention mentions.capital-garanti-fonds-euros ; vide si le paramètre est vide. */
+  garantie: string;
+}
+
+type ParametresTaux = { fondsEurosAv?: Partial<FondsEuros> | null; fondsEurosPer?: Partial<FondsEuros> | null; mentions?: Record<string, string> };
+
+/** CU-24 : fonds en euros de l'assurance vie (net absent tant que ses frais ne sont pas fixés, CU-530). */
+export function tauxFondsEurosAv(p: ParametresTaux | null): TauxAffiche | null {
+  return tauxFondsEuros(p?.fondsEurosAv, p?.mentions);
+}
+
+/** PO 28/11/2026 : fonds en euros du PER (taux, net de ses frais de gestion de PER-09, garantie). */
+export function tauxFondsEurosPer(p: ParametresTaux | null): TauxAffiche | null {
+  return tauxFondsEuros(p?.fondsEurosPer, p?.mentions);
 }
 
 /**
- * CU-24 : taux brut visé du fonds en euros de l'assurance vie et sa date de mise à jour (PO, 27/11/2026 : mis à jour
- * chaque 1er janvier, l'année affichée est celle de cette date). Le net n'est affiché que si les frais du fonds en
- * euros sont fixés (D1). null sans taux.
+ * Même affichage pour le PER et l'assurance vie, tout lu dans les paramètres : taux brut visé et date (mis à jour chaque
+ * 1er janvier, l'année affichée est celle de la date), net = taux brut visé − frais de gestion du fonds en euros
+ * seulement si ces frais sont renseignés, mentions taux-non-garanti et capital-garanti-fonds-euros. null sans taux.
  */
-export function tauxFondsEurosAv(p: { fondsEurosAv?: Partial<FondsEuros> | null } | null): TauxAffiche | null {
-  return tauxFondsEuros(p?.fondsEurosAv);
-}
-
-/** Lot 6 : même affichage pour le fonds en euros d'un produit (PER ou assurance vie). */
-export function tauxFondsEuros(f: Partial<FondsEuros> | null | undefined): TauxAffiche | null {
+export function tauxFondsEuros(f: Partial<FondsEuros> | null | undefined, mentions: Record<string, string> = {}): TauxAffiche | null {
   if (f?.tauxBrutVisePct == null) {
     return null;
   }
   const [annee, mois, jour] = f.dateMiseAJour?.split('-') ?? [];
-  // CU-530 (AV-17) : le net n'apparaît que si les frais du fonds en euros sont renseignés.
-  const net = f.fraisGestionPct == null ? '' : `, soit ${pourcentage(f.tauxBrutVisePct - f.fraisGestionPct)} net de frais de gestion`;
-  // PO 28/11 : « Taux brut visé en 2026 : 2,90 % (mis à jour le 01/01/2026). Taux non garanti. »
+  const net = f.fraisGestionPct == null ? '' : `, soit ${pourcentage(Math.round((f.tauxBrutVisePct - f.fraisGestionPct) * 100) / 100)} net de frais de gestion`;
+  const mentionTaux = mentions['taux-non-garanti'] ?? '';
   return {
     avant: annee ? `Taux brut visé en ${annee} :` : 'Taux brut visé :',
     taux: pourcentage(f.tauxBrutVisePct),
-    detail: `${annee ? `(mis à jour le ${jour}/${mois}/${annee})` : ''}${net}. Taux non garanti.`,
+    detail: `${annee ? `(mis à jour le ${jour}/${mois}/${annee})` : ''}${net}.${mentionTaux ? ` ${mentionTaux}` : ''}`,
+    garantie: mentions['capital-garanti-fonds-euros'] ?? '',
   };
 }
 
@@ -99,8 +116,13 @@ export class SupportsService {
 
   /** Paramètres publics des produits, une seule source (backend), lisible sans session (page publique). */
   parametresPublics(): Observable<ParametresPublics> {
-    return this.http.get<ParametresPublics>(`${apiBase('backend')}/catalogue/parametres-publics`);
+    return this.parametres$;
   }
+
+  // Lot 7 : lus une fois par chargement (plusieurs mentions et cartes sur une même page) ; un échec n'est pas gardé.
+  private readonly parametres$ = this.http
+    .get<ParametresPublics>(`${apiBase('backend')}/catalogue/parametres-publics`)
+    .pipe(shareReplay({ bufferSize: 1, refCount: false }));
 
   lister(produit: Produit): Observable<SupportsDisponibles> {
     // CU-417 : withCredentials pour envoyer le cookie de session au gateway (autre adresse que l'écran) ; sans lui,

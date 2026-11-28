@@ -56,6 +56,18 @@ applications:
       # CU-295 : « Simuler l'expiration du délai » de l'administration fiscale (/test/livret-a/...) en dev et qualif.
       - key: LIVRET_A_SIMULE
         value: {dev: "true", qualif: "true", preprod: "false", prod: "false"}
+      # Lot 7 (PO, 28/11/2026) : mentions réglementaires, textes proposés par le PO, à valider par la conformité.
+      # Modifiables ici sans toucher au code ; une valeur vide retire la mention de l'écran.
+      - key: MENTION_TAUX_NON_GARANTI
+        value: "Taux non garanti."
+      - key: MENTION_CAPITAL_GARANTI_FONDS_EUROS
+        value: "Le capital net investi sur le fonds en euros est garanti par l'assureur."
+      - key: MENTION_PERTE_CAPITAL_UC
+        value: "Les unités de compte présentent un risque de perte en capital."
+      - key: MENTION_PERFORMANCES_PASSEES
+        value: "Les performances passées ne préjugent pas des performances futures."
+      - key: MENTION_NON_COTE
+        value: "Ce support non coté peut être difficile à revendre : le délai de sortie peut être long et sa valeur peut baisser. Le capital investi n'est pas garanti."
       # CU-380 (TECH-12) : date métier modifiable (/test/date-metier) en dev et qualif ; heure réelle de Paris, non modifiable, en preprod et prod.
       - key: DATE_METIER_MODIFIABLE
         value: {dev: "true", qualif: "true", preprod: "false", prod: "false"}

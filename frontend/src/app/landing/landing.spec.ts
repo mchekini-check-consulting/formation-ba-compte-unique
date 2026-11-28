@@ -80,6 +80,8 @@ describe('Landing', () => {
     http.expectOne('/api/backend/catalogue/parametres-publics').flush({
       fraisUcPct: { PER: 0.5, AV: 0.65 },
       fondsEurosAv: { tauxBrutVisePct: 2.9, dateMiseAJour: '2026-01-01', fraisGestionPct: null },
+      mentions: { 'taux-non-garanti': 'Taux non garanti.' },
+      fraisEntreePct: { PER: null, AV: 0 },
     });
     fixture.detectChanges();
     await fixture.whenStable();
@@ -88,17 +90,22 @@ describe('Landing', () => {
     // CU-24 : taux brut visé lu dans le paramètre ; net retiré tant que les frais du fonds en euros ne sont pas fixés.
     expect(page.querySelector('[data-test="taux-fonds-euros-av"]')?.textContent).toBe('Taux brut visé en 2026 : 2,90 % (mis à jour le 01/01/2026). Taux non garanti.');
     expect(page.textContent).not.toContain('net de frais de gestion');
+    // Lot 7 : frais d'entrée lus dans le paramètre (« 0 % », comme le texte d'origine).
+    expect(page.querySelector('[data-test="frais-entree-av"]')?.textContent).toBe('0 %');
   });
 
   it('taux du fonds en euros : année et date tirées du paramètre ; net seulement si les frais sont fixés ; sans date, sans année', () => {
-    const p = (dateMiseAJour: string | null, fraisGestionPct: number | null) => ({ fraisUcPct: { PER: 0.5, AV: 0.65 }, fondsEurosAv: { tauxBrutVisePct: 2.9, dateMiseAJour, fraisGestionPct } });
+    const p = (dateMiseAJour: string | null, fraisGestionPct: number | null) => ({ fraisUcPct: { PER: 0.5, AV: 0.65 }, fondsEurosAv: { tauxBrutVisePct: 2.9, dateMiseAJour, fraisGestionPct }, mentions: { 'taux-non-garanti': 'Taux non garanti.' } });
     expect(tauxFondsEurosAv(p('2027-01-01', 0.6))).toEqual({
       avant: 'Taux brut visé en 2027 :',
       taux: '2,90 %',
       detail: '(mis à jour le 01/01/2027), soit 2,30 % net de frais de gestion. Taux non garanti.',
+      garantie: '',
     });
-    expect(tauxFondsEurosAv(p(null, null))).toEqual({ avant: 'Taux brut visé :', taux: '2,90 %', detail: '. Taux non garanti.' });
+    expect(tauxFondsEurosAv(p(null, null))).toEqual({ avant: 'Taux brut visé :', taux: '2,90 %', detail: '. Taux non garanti.', garantie: '' });
     expect(tauxFondsEurosAv(null)).toBeNull();
+    // Lot 7 : mention « Taux non garanti. » vide (paramètre retiré) : rien n'est ajouté.
+    expect(tauxFondsEurosAv({ fondsEurosAv: { tauxBrutVisePct: 2.9, dateMiseAJour: '2026-01-01', fraisGestionPct: null } })?.detail).toBe('(mis à jour le 01/01/2026).');
   });
 
   // CU-83 : « Me connecter » mène à la page de connexion ; aucun lien vide (« # ») et chaque

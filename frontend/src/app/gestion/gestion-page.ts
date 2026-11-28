@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Tunnel } from '../tunnel/tunnel';
+import { InfoBulle, Terme } from '../pedagogie/info-bulle';
 import { Observable } from 'rxjs';
 import { afficherDate } from '../date-metier-test/date-metier';
 import { euros, eurosAuCentime } from '../livret-a/parametres';
@@ -9,9 +10,9 @@ import { EtatGestion, GestionService, ModeGestion, Produit, ProfilGestion, Verse
 
 type Etat = 'chargement' | 'affiche' | 'indisponible';
 
-export const MODES: { code: ModeGestion; titre: string; texte: string }[] = [
-  { code: 'PILOTEE', titre: 'Gestion pilotée', texte: 'Nous répartissons votre épargne selon votre profil de gestion.' },
-  { code: 'LIBRE', titre: 'Gestion libre', texte: 'Vous choisissez vous-même vos supports.' },
+export const MODES: { code: ModeGestion; titre: string; texte: string; terme?: Terme }[] = [
+  { code: 'PILOTEE', titre: 'Gestion pilotée', texte: 'Nous répartissons votre épargne selon votre profil de gestion.', terme: 'gestion-pilotee' },
+  { code: 'LIBRE', titre: 'Gestion libre', texte: 'Vous choisissez vous-même vos supports.', terme: 'gestion-libre' },
   { code: 'MANDAT', titre: 'Gestion sous mandat', texte: 'Un gérant décide pour vous, dans le cadre de votre profil.' },
 ];
 
@@ -26,7 +27,7 @@ const pourcent = (valeur: number) => `${String(valeur).replace('.', ',')} %`;
 // mandat est sélectionné, avant validation ; les refus viennent du backend avec leur message.
 @Component({
   selector: 'app-gestion-page',
-  imports: [RouterLink, Tunnel],
+  imports: [RouterLink, Tunnel, InfoBulle],
   template: `
     <div class="page gestion">
       <app-tunnel [produit]="produit" etape="gestion" [actif]="dansLeTunnel">
@@ -75,7 +76,7 @@ const pourcent = (valeur: number) => `${String(valeur).replace('.', ',')} %`;
                   @for (m of modes; track m.code) {
                     <label class="option carte-mode" [class.choisie]="mode() === m.code">
                       <input type="radio" name="mode" [value]="m.code" [checked]="mode() === m.code" (change)="mode.set(m.code)" />
-                      <span><strong>{{ m.titre }}</strong><br />{{ m.texte }}</span>
+                      <span><strong>{{ m.titre }}</strong>@if (m.terme) {<app-info [terme]="m.terme" />}<br />{{ m.texte }}</span>
                     </label>
                   }
                 </div>

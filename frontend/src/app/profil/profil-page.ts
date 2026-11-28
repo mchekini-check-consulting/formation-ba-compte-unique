@@ -3,6 +3,7 @@ import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { SuiviSession } from '../session/suivi-session';
 import { Tunnel, pageSuivante } from '../tunnel/tunnel';
+import { InfoBulle } from '../pedagogie/info-bulle';
 import { EtatProfil, LIBELLES_PROFIL, LIBELLES_STATUT, Profil, ProfilService, QUESTIONS, Question, reponsesDe } from './profil';
 
 type Message = { texte: string; erreur: boolean };
@@ -23,7 +24,7 @@ export function formaterJour(date: string): string {
 // des versions avec leur date.
 @Component({
   selector: 'app-profil-page',
-  imports: [Tunnel],
+  imports: [Tunnel, InfoBulle],
   template: `
     <div class="page">
       <app-tunnel [produit]="produit ?? 'PER'" etape="profil" [actif]="produit !== null">
@@ -65,8 +66,11 @@ export function formaterJour(date: string): string {
                     @for (q of groupe.questions; track q.id) {
                       <div class="question">
                         <label [for]="q.id">{{ q.libelle }}</label>
+                        @if (q.id === 'plafondRetraiteEuros') {
+                          <app-info terme="plafond-retraite" />
+                        }
                         @if (q.choix) {
-                          <select [id]="q.id" [name]="q.id" [attr.aria-invalid]="!!erreurs()[q.id]">
+                          <select [id]="q.id" [name]="q.id" [attr.aria-invalid]="!!erreurs()[q.id]" [attr.aria-describedby]="erreurs()[q.id] ? q.id + '-erreur' : null">
                             <option value="">Choisir</option>
                             @for (c of q.choix; track c[0]) {
                               <option [value]="c[0]" [selected]="valeur(q) === c[0]">{{ c[1] }}</option>
@@ -74,13 +78,13 @@ export function formaterJour(date: string): string {
                           </select>
                         } @else {
                           <input type="number" min="0" step="1" [id]="q.id" [name]="q.id" [value]="valeur(q)"
-                            [attr.aria-invalid]="!!erreurs()[q.id]" />
+                            [attr.aria-invalid]="!!erreurs()[q.id]" [attr.aria-describedby]="erreurs()[q.id] ? q.id + '-erreur' : null" />
                         }
                         @if (q.aide) {
                           <small>{{ q.aide }}</small>
                         }
                         @if (erreurs()[q.id]; as erreur) {
-                          <span class="ko">{{ erreur }}</span>
+                          <span class="ko" [id]="q.id + '-erreur'">{{ erreur }}</span>
                         }
                       </div>
                     }

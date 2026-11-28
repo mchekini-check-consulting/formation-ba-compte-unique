@@ -104,6 +104,8 @@
   .card .body { padding: 20px 22px 22px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
   .card .body p { margin: 0; color: var(--muted); font-size: 14.5px; line-height: 1.55; }
   .card .rate { font-size: 13px; color: #00775f; font-weight: 800; }
+  /* PO 28/11 : garantie du capital du fonds en euros, sur sa propre ligne sous le taux. */
+  .card .rate-garantie { display: block; font-size: 12.5px; color: var(--ink); font-weight: 700; margin-top: 2px; }
   .card .rate b { font-size: 22px; letter-spacing: -.01em; }
   .card .note { font-size: 13px; color: var(--muted); font-style: italic; }
   .card .min { font-size: 13px; font-weight: 700; color: var(--navy); }
@@ -196,6 +198,10 @@
   /* Cartes, messages */
   .carte { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 20px; line-height: 1.6; }
   .erreur { color: var(--erreur); font-weight: 700; }
+  /* Lot 7 : message d.erreur placé à côté du champ concerné, mot pour mot, rendu plus visible ; champ en erreur encadré. */
+  .champ-erreur { display: flex; gap: 8px; align-items: flex-start; margin: 6px 0 10px; padding: 8px 12px; border-radius: 10px; background: #fef3f2; border-left: 4px solid var(--erreur); }
+  .champ-erreur::before { content: "!"; flex: none; width: 18px; height: 18px; border-radius: 50%; background: var(--erreur); color: #fff; font-size: 12px; line-height: 18px; text-align: center; }
+  input[aria-invalid="true"], select[aria-invalid="true"] { border-color: var(--erreur) !important; box-shadow: 0 0 0 1px var(--erreur); }
   .succes { color: var(--succes); font-weight: 700; }
   .btn:disabled, .btn[aria-disabled="true"] { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
   /* Lot 4 : synthèse de l'espace (compte courant, livrets, contrats, à faire, actions rapides) */
@@ -295,6 +301,10 @@
   .ma-repartition { margin-bottom: 20px; }
   .euros { margin-bottom: 24px; background: var(--soft); border-left: 4px solid var(--navy); }
   .euros h2 { margin: 6px 0 10px; }
+  /* Taux du fonds en euros : une ligne pour le taux et sa mention, la garantie du capital sur la ligne suivante. */
+  .fe-taux, .fe-garantie { display: block; margin: 0; }
+  .fe-taux { font-size: 15px; }
+  .fe-garantie { margin: 2px 0 12px; font-weight: 700; }
   .euros dl, .ls-fiche dl, .ls-cartes dl { display: grid; gap: 6px; margin: 0; font-size: 14px; }
   .euros dl div, .ls-fiche dl div, .ls-cartes dl div { display: flex; justify-content: space-between; gap: 16px; }
   .euros dt, .ls-fiche dt, .ls-cartes dt { color: var(--muted); }
