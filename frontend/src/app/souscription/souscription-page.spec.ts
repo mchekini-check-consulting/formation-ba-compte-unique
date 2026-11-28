@@ -22,6 +22,7 @@ function etat(modif: Partial<EtatSouscription> = {}): EtatSouscription {
     bloqueeJusquAu: null,
     numeroContrat: null,
     documentsLus: true,
+    profilGestionParDefaut: null,
     ...modif,
   };
 }
@@ -51,10 +52,14 @@ async function ouvrirPage(reponse: EtatSouscription | null, produit: Produit = '
   }
   fixture.detectChanges();
   await fixture.whenStable();
+  // Lot 3 / lot 5 : interrupteurs des boutons « Bientôt » du tunnel (conseiller, versements programmés).
+  const interrupteurs = () => http.match('/api/backend/fonctionnalites').forEach((r) => r.flush({}));
+  interrupteurs();
   const page = fixture.nativeElement as HTMLElement;
   const rafraichir = async () => {
     fixture.detectChanges();
     await fixture.whenStable();
+    interrupteurs();
   };
   return { http, page, rafraichir, base };
 }
@@ -212,7 +217,10 @@ describe('SouscriptionPage (CU-312, CU-330)', () => {
     signature.flush(etat({ produit: 'AV', etape: 'SIGNEE', numeroContrat: 'AV-1A2B3C4D' }));
     await rafraichir();
     expect(page.querySelector('[data-test="signee"]')?.textContent).toContain('AV-1A2B3C4D');
-    expect(page.querySelector('[data-test="signee"] a')?.getAttribute('href')).toBe('/gestion?produit=AV');
+    // Lot 5, étape 5 : confirmation, puis « Choisir mon mode de gestion » (étape 6) et « Voir mon contrat ».
+    expect(page.querySelector('[data-test="choisir-gestion"]')?.getAttribute('href')).toBe('/gestion?produit=AV&tunnel=1');
+    expect(page.querySelector('[data-test="voir-contrat"]')?.getAttribute('href')).toBe('/espace#synthese');
+    expect(page.querySelector('[data-test="etape"]')?.textContent).toContain('Étape 5 sur 6 : Confirmation');
   });
 
   it('code erroné, expiré ou signature bloquée : le message du backend est affiché', async () => {

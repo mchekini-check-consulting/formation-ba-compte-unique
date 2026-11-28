@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.time.OffsetDateTime;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,7 @@ import com.example.compteunique.dossier.Categories.MotifAnnulation;
 import com.example.compteunique.dossier.Dossier;
 import com.example.compteunique.dossier.DossierRepository;
 import com.example.compteunique.logging.Loggable;
+import com.example.compteunique.messagerie.Messagerie;
 
 // CU-12 (US-07) : signature de la convention avec un code reçu par SMS (second facteur).
 // L'écran appelle Docusign (ou son bouchon, CU-89) puis transmet ici l'enveloppe envoyée et le
@@ -32,22 +34,32 @@ public class SignatureService {
 	static final String MOTIF_TENTATIVES = "3 tentatives dépassées";
 	static final String MOTIF_ANNULATION = "Annulation demandée";
 
+	// Code « signature valide » du bouchon Docusign (CU-89, bouchons-identite : DocusignService.CODE_VALIDE).
+	static final String CODE_BOUCHON_DOCUSIGN = "111111";
+	static final String TEXTE_SMS = "Hi-Tech Bank : votre code pour signer votre convention de compte est "
+			+ CODE_BOUCHON_DOCUSIGN + ". Il est valable 5 minutes.";
+
 	private final DossierRepository dossiers;
 	private final SignatureConventionRepository signatures;
 	private final ApplicationEventPublisher evenements;
+	private final Messagerie messagerie;
+	private final boolean smsDuBouchon;
 	private final Clock horloge;
 
 	@Autowired
 	public SignatureService(DossierRepository dossiers, SignatureConventionRepository signatures,
-			ApplicationEventPublisher evenements) {
-		this(dossiers, signatures, evenements, Clock.systemDefaultZone());
+			ApplicationEventPublisher evenements, Messagerie messagerie,
+			@Value("${app.messages.capture}") boolean smsDuBouchon) {
+		this(dossiers, signatures, evenements, messagerie, smsDuBouchon, Clock.systemDefaultZone());
 	}
 
 	SignatureService(DossierRepository dossiers, SignatureConventionRepository signatures,
-			ApplicationEventPublisher evenements, Clock horloge) {
+			ApplicationEventPublisher evenements, Messagerie messagerie, boolean smsDuBouchon, Clock horloge) {
 		this.dossiers = dossiers;
 		this.signatures = signatures;
 		this.evenements = evenements;
+		this.messagerie = messagerie;
+		this.smsDuBouchon = smsDuBouchon;
 		this.horloge = horloge;
 	}
 
@@ -81,6 +93,11 @@ public class SignatureService {
 			signature.relancer(enveloppeId, maintenant);
 		} else {
 			throw new ResponseStatusException(HttpStatus.CONFLICT, "nouveau code impossible");
+		}
+		// Le vrai Docusign envoie lui-même le SMS. En test (MESSAGES_CAPTURE), le bouchon n'envoie rien : le code qu'il
+		// accepte est remis par la messagerie de test, lisible sur /test/sms comme pour le PER et l'assurance vie.
+		if (smsDuBouchon) {
+			messagerie.envoyerSms(dossier.getMobile(), TEXTE_SMS);
 		}
 		return SignatureReponse.de(signature, dossier.getStatut());
 	}

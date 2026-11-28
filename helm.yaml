@@ -164,6 +164,9 @@ applications:
       # Suivre mon contrat : valeur, gains et frais (PER-09, AV-09).
       - key: FONCTIONNALITE_SUIVI_CONTRAT
         value: "false"
+      # Programmer des versements sur un PER ou une assurance vie (PER-13, AV-04).
+      - key: FONCTIONNALITE_VERSEMENTS_PROGRAMMES
+        value: "false"
       # D4 : entrée « Outils de test » et pages /test/... en dev et qualif seulement.
       - key: FONCTIONNALITE_OUTILS_TEST
         value: {dev: "true", qualif: "true", preprod: "false", prod: "false"}

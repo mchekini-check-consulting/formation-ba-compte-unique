@@ -32,6 +32,7 @@ import com.example.compteunique.decouverte.DocumentsProduits;
 import com.example.compteunique.dossier.Dossier;
 import com.example.compteunique.dossier.DossierRepository;
 import com.example.compteunique.gestion.ModeDeGestion;
+import com.example.compteunique.gestion.ProfilGestion;
 import com.example.compteunique.logging.Loggable;
 import com.example.compteunique.profil.ProfilClientService;
 import com.example.compteunique.profil.ProfilClientService.Statut;
@@ -114,7 +115,7 @@ public class SouscriptionService {
 	/** État du parcours, pour reprendre au même endroit. */
 	public record Etat(Produit produit, Statut profil, Etape etape, BigDecimal minimum, BigDecimal montant,
 			String origineFonds, String originePrecision, List<Beneficiaire> beneficiaires, OffsetDateTime codeEnvoyeLe,
-			OffsetDateTime bloqueeJusquAu, String numeroContrat, boolean documentsLus) {
+			OffsetDateTime bloqueeJusquAu, String numeroContrat, boolean documentsLus, ProfilGestion profilGestionParDefaut) {
 	}
 
 	private final CompteService comptes;
@@ -152,17 +153,20 @@ public class SouscriptionService {
 		UUID cliente = comptes.compteCourant(jetonSession).getCustomerId();
 		Statut profil = profils.statut(cliente);
 		boolean documentsLus = documentsLus(cliente, produit);
+		// Lot 5 : « Votre contrat démarrera en gestion pilotée [profil] » (règle de PER-07 / AV-07, module Gestion).
+		ProfilGestion parDefaut = profils.profilValide(cliente).map(ProfilKyc::getProfilInvestisseur)
+				.map(gestion::profilParDefaut).orElse(null);
 		Optional<Souscription> souscription = souscriptions.findByCustomerIdAndProduit(cliente, produit);
 		if (souscription.isEmpty()) {
 			String contratExistant = contratExistant(cliente, produit);
 			return new Etat(produit, profil, contratExistant == null ? Etape.VERSEMENT : Etape.SIGNEE, MINIMUM, null,
-					null, null, List.of(), null, null, contratExistant, documentsLus);
+					null, null, List.of(), null, null, contratExistant, documentsLus, parDefaut);
 		}
 		Souscription s = souscription.get();
 		return new Etat(produit, profil, s.estSignee() ? Etape.SIGNEE : Etape.SIGNATURE, MINIMUM, s.getMontant(),
 				s.getOrigineFonds(), s.getOriginePrecision(),
 				clauses.findBySouscriptionIdOrderByRang(s.getId()).stream().map(Beneficiaire::de).toList(),
-				s.getCodeEnvoyeLe(), s.getBloqueeJusquAu(), s.getNumeroContrat(), documentsLus);
+				s.getCodeEnvoyeLe(), s.getBloqueeJusquAu(), s.getNumeroContrat(), documentsLus, parDefaut);
 	}
 
 	/**

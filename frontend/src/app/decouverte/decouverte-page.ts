@@ -1,5 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Tunnel } from '../tunnel/tunnel';
 import { Observable } from 'rxjs';
 import { CodeDocument, DecouverteService, EtatDecouverte, Produit } from './decouverte';
 
@@ -11,7 +12,8 @@ interface Presentation {
   regles: { titre: string; texte: string }[];
 }
 
-const PRESENTATIONS: Record<Produit, Presentation> = {
+/** Présentation du PER et de l'assurance vie, reprise par la page d'entrée du tunnel (lot 5). */
+export const PRESENTATIONS: Record<Produit, Presentation> = {
   PER: {
     nom: 'le PER',
     accroche: 'Le plan d’épargne retraite prépare vos revenus de demain, avec un avantage fiscal dès aujourd’hui.',
@@ -49,9 +51,10 @@ const PRESENTATIONS: Record<Produit, Presentation> = {
 // reste désactivée tant qu'il n'est pas ouvert, et « Continuer » tant que les deux cases ne sont pas cochées.
 @Component({
   selector: 'app-decouverte-page',
-  imports: [],
+  imports: [Tunnel],
   template: `
     <div class="page decouverte">
+      <app-tunnel [produit]="produit" [etape]="2">
       <h1>Découvrir {{ presentation.nom }}</h1>
       <p class="lead">{{ presentation.accroche }}</p>
 
@@ -106,6 +109,7 @@ const PRESENTATIONS: Record<Produit, Presentation> = {
           </button>
         }
       }
+      </app-tunnel>
     </div>
   `,
   styles: `

@@ -98,6 +98,12 @@ const PAGES_DE_L_ESPACE: Routes = [
     loadComponent: () => import('./supports/supports-page').then((m) => m.SupportsPage),
     data: ariane({ rubrique: 'Épargne et placements', page: 'Supports disponibles', retour: EPARGNE }),
   },
+  // Lot 5 : page d'entrée du tunnel de souscription (?produit=PER|AV) : présentation, frais, « Ouvrir mon PER ».
+  {
+    path: 'produit',
+    loadComponent: () => import('./produit/produit-page').then((m) => m.ProduitPage),
+    data: ariane({ rubrique: 'Épargne et placements', page: 'Présentation du produit', retour: EPARGNE }),
+  },
   // CU-311 / CU-331 : découvrir le PER ou l'assurance vie et lire ses documents avant de souscrire (?produit=PER|AV).
   {
     path: 'decouvrir',

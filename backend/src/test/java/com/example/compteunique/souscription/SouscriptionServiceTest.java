@@ -41,6 +41,7 @@ import com.example.compteunique.decouverte.DocumentsProduits;
 import com.example.compteunique.dossier.Dossier;
 import com.example.compteunique.dossier.DossierRepository;
 import com.example.compteunique.gestion.ModeDeGestion;
+import com.example.compteunique.gestion.ProfilGestion;
 import com.example.compteunique.profil.ProfilClientService;
 import com.example.compteunique.profil.ProfilClientService.Statut;
 import com.example.compteunique.profil.ProfilKyc;
@@ -95,6 +96,7 @@ class SouscriptionServiceTest {
 		when(dossiers.findById(3L)).thenReturn(Optional.of(dossier));
 		when(dateMetier.maintenant()).thenAnswer(appel -> maintenant.get());
 		when(gestion.numeroContrat(any(), any())).thenReturn(Optional.empty());
+		when(gestion.profilParDefaut("EQUILIBRE")).thenReturn(ProfilGestion.EQUILIBRE);
 		when(codes.envoyer(eq(compte), any())).thenAnswer(appel -> CodesSms.hacher(BON_CODE));
 		// Comme la base : refuse une souscription sans montant ni origine (CU-521), attribue l'identifiant.
 		when(souscriptions.saveAndFlush(any())).thenAnswer(appel -> {
@@ -192,6 +194,8 @@ class SouscriptionServiceTest {
 	@DisplayName("PER critère 1 (et CU-521) : profil validé, versement de 500 € enregistré, signature par code SMS : "
 			+ "contrat créé, compte courant débité, versement placé sur le compartiment 1")
 	void souscriptionPer() {
+		// Lot 5 : profil de gestion annoncé avant la signature (règle PER-07 / AV-07 du module Gestion).
+		assertThat(service.etat(JETON, PER).profilGestionParDefaut()).isEqualTo(ProfilGestion.EQUILIBRE);
 		Etat saisi = verser(PER, versement("500", "REVENUS", null));
 		assertThat(saisi.etape()).isEqualTo(Etape.SIGNATURE);
 		assertThat(saisi.montant()).isEqualByComparingTo("500");

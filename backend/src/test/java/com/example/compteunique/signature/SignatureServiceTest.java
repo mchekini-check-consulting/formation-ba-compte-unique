@@ -27,6 +27,7 @@ import com.example.compteunique.dossier.Categories.StatutDossier;
 import com.example.compteunique.dossier.Dossier;
 import com.example.compteunique.dossier.DossierRepository;
 import com.example.compteunique.dossier.ExempleDossier;
+import com.example.compteunique.messagerie.Messagerie;
 
 // CU-12 : un cas de test par critère d'acceptation.
 class SignatureServiceTest {
@@ -38,6 +39,7 @@ class SignatureServiceTest {
 	private final DossierRepository dossiers = mock(DossierRepository.class);
 	private final SignatureConventionRepository signatures = mock(SignatureConventionRepository.class);
 	private final ApplicationEventPublisher evenements = mock(ApplicationEventPublisher.class);
+	private final Messagerie messagerie = mock(Messagerie.class);
 	private Dossier dossier;
 	private SignatureConvention enregistree;
 
@@ -53,7 +55,22 @@ class SignatureServiceTest {
 	}
 
 	private SignatureService service(Duration ecoule) {
-		return new SignatureService(dossiers, signatures, evenements, Clock.fixed(DEBUT.plus(ecoule), PARIS));
+		return new SignatureService(dossiers, signatures, evenements, messagerie, true,
+				Clock.fixed(DEBUT.plus(ecoule), PARIS));
+	}
+
+	@Test
+	void enTestLeCodeDuBouchonDocusignArriveParLaMessagerieDeTest() {
+		maintenant().enveloppeEnvoyee(REF, "env-1");
+		verify(messagerie).envoyerSms(dossier.getMobile(),
+				"Hi-Tech Bank : votre code pour signer votre convention de compte est 111111. Il est valable 5 minutes.");
+	}
+
+	@Test
+	void horsTestAucunSmsNEstEnvoyeParLaBanque() {
+		new SignatureService(dossiers, signatures, evenements, messagerie, false, Clock.fixed(DEBUT, PARIS))
+				.enveloppeEnvoyee(REF, "env-1");
+		verify(messagerie, never()).envoyerSms(any(), any());
 	}
 
 	private SignatureService maintenant() {

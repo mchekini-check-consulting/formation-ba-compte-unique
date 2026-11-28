@@ -3,20 +3,53 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { EtatsFonctionnalites, FonctionnalitesService } from './fonctionnalites';
 
-/** Pages de test (D4), regroupées sous l'entrée « Outils de test » du menu. */
-export const PAGES_DE_TEST = [
-  { lien: '/test/scenarios', libelle: 'Scénarios des bouchons (ouverture de compte, Livret A)' },
-  { lien: '/test/livret-a', libelle: 'Livret A : simulations sur la démarche en cours' },
-  { lien: '/test/virements', libelle: 'Virements : virement entrant, refus de la banque' },
-  { lien: '/test/verification-beneficiaire', libelle: 'Vérification du bénéficiaire (VoP)' },
-  { lien: '/test/contrats', libelle: 'Contrats de test PER et assurance vie' },
-  { lien: '/test/ordres', libelle: 'Ordres et positions de test' },
-  { lien: '/test/catalogue', libelle: 'Catalogue des unités de compte' },
-  { lien: '/test/evenements', libelle: 'Événements Kafka' },
-  { lien: '/test/date-metier', libelle: 'Date métier' },
-  { lien: '/test/emails', libelle: 'E-mails envoyés' },
-  { lien: '/test/sms', libelle: 'SMS envoyés' },
-  { lien: '/test/journal-securite', libelle: 'Journal de sécurité' },
+interface PageDeTest {
+  lien: string;
+  ancre?: string;
+  libelle: string;
+}
+
+/** Pages de test (D4), regroupées sous l'entrée « Outils de test » du menu, dans l'ordre des parcours à recetter. */
+export const PAGES_DE_TEST: { parcours: string; pages: PageDeTest[] }[] = [
+  {
+    parcours: 'Ouverture de compte',
+    pages: [
+      { lien: '/test/scenarios', ancre: 'ouverture-compte', libelle: 'Bouchons de l’ouverture de compte (identité, pièce, selfie, signature)' },
+      { lien: '/test/sms', libelle: 'SMS envoyés : code de signature de la convention (étape 5)' },
+    ],
+  },
+  {
+    parcours: 'Ouverture d’un Livret A',
+    pages: [
+      { lien: '/test/scenarios', ancre: 'livret-a', libelle: 'Bouchons du Livret A (sanctions, pièce, selfie, administration fiscale)' },
+      { lien: '/test/livret-a', libelle: 'Livret A : simulations sur la démarche en cours' },
+    ],
+  },
+  {
+    parcours: 'Virements et bénéficiaires',
+    pages: [
+      { lien: '/test/virements', libelle: 'Virements : virement entrant, refus de la banque' },
+      { lien: '/test/verification-beneficiaire', libelle: 'Vérification du bénéficiaire (VoP)' },
+    ],
+  },
+  {
+    parcours: 'PER et assurance vie',
+    pages: [
+      { lien: '/test/contrats', libelle: 'Contrats de test PER et assurance vie' },
+      { lien: '/test/ordres', libelle: 'Ordres et positions de test' },
+      { lien: '/test/catalogue', libelle: 'Catalogue des unités de compte' },
+    ],
+  },
+  {
+    parcours: 'Transverse',
+    pages: [
+      { lien: '/test/date-metier', libelle: 'Date métier' },
+      { lien: '/test/emails', libelle: 'E-mails envoyés' },
+      { lien: '/test/sms', libelle: 'SMS envoyés' },
+      { lien: '/test/journal-securite', libelle: 'Journal de sécurité' },
+      { lien: '/test/evenements', libelle: 'Événements Kafka' },
+    ],
+  },
 ];
 
 // Lot 3 : page /test/fonctionnalites (dev et qualif) : état de chaque interrupteur de l'environnement, et accès aux
@@ -28,7 +61,17 @@ export const PAGES_DE_TEST = [
     <main class="fonctionnalites-test">
       <a routerLink="/espace">← Mon espace</a>
       <h1>Outils de test</h1>
-      <h2>Interrupteurs des fonctionnalités</h2>
+      <div data-test="pages">
+        @for (g of pages; track g.parcours) {
+          <h2>{{ g.parcours }}</h2>
+          <ul>
+            @for (p of g.pages; track p.libelle) {
+              <li><a [routerLink]="p.lien" [fragment]="p.ancre">{{ p.libelle }}</a></li>
+            }
+          </ul>
+        }
+      </div>
+      <h3>Interrupteurs des fonctionnalités</h3>
       <p>« Disponible » : le bouton mène à la fonctionnalité ; « Bientôt » : bouton désactivé. Réglés dans helm.yaml (FONCTIONNALITE_*).</p>
       <table data-test="interrupteurs">
         <thead><tr><th scope="col">Fonctionnalité</th><th scope="col">État</th></tr></thead>
@@ -40,12 +83,6 @@ export const PAGES_DE_TEST = [
           }
         </tbody>
       </table>
-      <h2>Pages de test</h2>
-      <ul data-test="pages">
-        @for (p of pages; track p.lien) {
-          <li><a [routerLink]="p.lien">{{ p.libelle }}</a></li>
-        }
-      </ul>
     </main>
   `,
   styles: `

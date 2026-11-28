@@ -36,6 +36,8 @@ export interface EtatSouscription {
   numeroContrat: string | null;
   /** PER-02 / AV-02 : les deux documents du produit ont été ouverts et cochés. */
   documentsLus: boolean;
+  /** Lot 5 : profil de gestion pilotée avec lequel le contrat démarrera (règle PER-07 / AV-07), null sans profil validé. */
+  profilGestionParDefaut: 'PRUDENT' | 'EQUILIBRE' | 'DYNAMIQUE' | null;
 }
 
 export interface DemandeVersement {

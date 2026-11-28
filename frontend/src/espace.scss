@@ -217,6 +217,20 @@
   .avis-profil { font-size: 13px; color: #8a5300; background: #fff3dc; border-radius: 10px; padding: 8px 10px; }
   .titre-hero { font-size: 52px; line-height: 1.06; letter-spacing: -.03em; margin: 16px 0 20px; color: #fff; text-wrap: balance; }
 
+  /* Lot 5 : tunnel de souscription (indicateur d'étapes, colonne « Ma souscription ») */
+  .tunnel { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 28px; align-items: start; }
+  .tunnel-etapes { position: sticky; top: 72px; z-index: 2; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 12px 16px; margin-bottom: 16px; }
+  .etape-courante { margin: 0 0 6px; font-weight: 800; color: var(--navy); }
+  .tunnel-etapes ol { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; padding-left: 18px; font-size: 13px; color: var(--muted); }
+  .tunnel-etapes li.faite { color: var(--succes); }
+  .tunnel-etapes li[aria-current="step"] { color: var(--navy); font-weight: 700; }
+  .tunnel-conseiller { margin-top: 24px; }
+  .ma-souscription { position: sticky; top: 72px; background: var(--soft); border: 1px solid var(--line); border-radius: 16px; padding: 18px; }
+  .ma-souscription h2 { margin: 0 0 10px; font-size: 17px; }
+  .ma-souscription dl { margin: 0; display: grid; gap: 10px; font-size: 14px; }
+  .ma-souscription dt { color: var(--muted); }
+  .ma-souscription dd { margin: 0; font-weight: 700; color: var(--ink); }
+
   /* Lot 3 : bouton de fonctionnalité « Bientôt » (désactivé, badge et phrase courte), contraste conservé */
   .bientot { cursor: not-allowed; }
   .bientot:hover { transform: none; box-shadow: none; }
