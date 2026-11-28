@@ -15,9 +15,10 @@ interface Groupe {
 }
 
 /** Bouchons pilotés depuis cette page, dans l'ordre des parcours. */
-export const GROUPES: { parcours: string; groupes: Groupe[] }[] = [
+export const GROUPES: { parcours: string; ancre: string; groupes: Groupe[] }[] = [
   {
     parcours: 'Ouverture de compte',
+    ancre: 'ouverture-compte',
     groupes: [
       { cle: 'ouverture.identite', titre: 'Mon identité : contrôle sanctions et PEP (bouchon US-B7, CUB-70)', liste: CAS_DE_TEST },
       { cle: 'ouverture.piece', titre: 'Ma pièce d’identité : analyse (bouchon Stripe Identity)', liste: SCENARIOS_PIECE },
@@ -26,6 +27,7 @@ export const GROUPES: { parcours: string; groupes: Groupe[] }[] = [
   },
   {
     parcours: 'Ouverture d’un Livret A',
+    ancre: 'livret-a',
     groupes: [
       { cle: 'livret-a.sanctions', titre: 'Contrôle sanctions et PPE (CU-28)', liste: CAS_SANCTIONS },
       { cle: 'livret-a.piece', titre: 'Nouvelle pièce d’identité : analyse (CU-29)', liste: SCENARIOS_PIECE_LIVRET_A },
@@ -51,7 +53,7 @@ export const GROUPES: { parcours: string; groupes: Groupe[] }[] = [
         <a routerLink="/test/virements">Virements</a>.
       </p>
       @for (p of parcours; track p.parcours) {
-        <h2>{{ p.parcours }}</h2>
+        <h2 [id]="p.ancre">{{ p.parcours }}</h2>
         @for (g of p.groupes; track g.cle) {
           <fieldset [attr.data-test]="g.cle">
             <legend>{{ g.titre }}</legend>

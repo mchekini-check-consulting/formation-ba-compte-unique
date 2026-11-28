@@ -103,7 +103,15 @@ describe('Outils de test (D4)', () => {
     const page = fixture.nativeElement as HTMLElement;
     const lignes = [...page.querySelectorAll('[data-test="interrupteurs"] tbody tr')].map((tr) => [...tr.querySelectorAll('td')].map((td) => td.textContent).join(' '));
     expect(lignes).toEqual(['messagerie Bientôt', 'outils-test Disponible']);
-    expect(page.querySelectorAll('[data-test="pages"] a').length).toBe(12);
+    expect(page.querySelectorAll('[data-test="pages"] a').length).toBe(14);
+    expect([...page.querySelectorAll('[data-test="pages"] h2')].map((h) => h.textContent)).toEqual([
+      'Ouverture de compte',
+      'Ouverture d’un Livret A',
+      'Virements et bénéficiaires',
+      'PER et assurance vie',
+      'Transverse',
+    ]);
+    expect(page.querySelector('[data-test="pages"] a')?.getAttribute('href')).toBe('/test/scenarios#ouverture-compte');
   });
 
   it('interrupteurs illisibles (le service renvoie une liste vide) : message', async () => {
