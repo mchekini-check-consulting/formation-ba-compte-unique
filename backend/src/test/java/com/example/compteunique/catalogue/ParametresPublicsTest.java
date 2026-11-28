@@ -44,10 +44,11 @@ class ParametresPublicsTest {
 		var reponse = routes.lire();
 		JsonNode json = JsonMapper.builder().build().valueToTree(reponse.getBody());
 
-		assertThat(champs(json)).containsExactlyInAnyOrder("fraisUcPct", "fondsEurosAv");
+		assertThat(champs(json)).containsExactlyInAnyOrder("fraisUcPct", "fondsEurosAv", "fondsEurosPer",
+				"famillesCategories");
 		assertThat(champs(json.get("fraisUcPct"))).containsExactlyInAnyOrder("PER", "AV");
 		assertThat(champs(json.get("fondsEurosAv"))).containsExactlyInAnyOrder("tauxBrutVisePct", "dateMiseAJour",
-				"fraisGestionPct");
+				"fraisGestionPct", "tauxServiPct");
 		assertThat(json.get("fraisUcPct").get("AV").decimalValue()).isEqualByComparingTo("0.65");
 		assertThat(json.get("fraisUcPct").get("PER").decimalValue()).isEqualByComparingTo("0.50");
 		assertThat(json.get("fondsEurosAv").get("tauxBrutVisePct").decimalValue()).isEqualByComparingTo("2.90");
@@ -63,6 +64,25 @@ class ParametresPublicsTest {
 
 		assertThat(vue.fondsEurosAv().dateMiseAJour()).isEqualTo(LocalDate.of(2026, 8, 1));
 		assertThat(vue.fondsEurosAv().fraisGestionPct()).isEqualByComparingTo("0.60");
+	}
+
+
+	@Test
+	@DisplayName("Lot 6 : fonds en euros du PER (frais 0,65 %, D1), taux servi et familles vides par défaut")
+	void fondsEurosPerEtFamilles() {
+		var vue = new ParametresPublics(eligibles, "2.90", "2026-01-01", "", "", "", "", "0.65", "", "").lire();
+
+		assertThat(vue.fondsEurosPer().fraisGestionPct()).isEqualByComparingTo("0.65");
+		assertThat(vue.fondsEurosPer().tauxBrutVisePct()).isNull();
+		assertThat(vue.fondsEurosAv().tauxServiPct()).isNull();
+		assertThat(vue.famillesCategories()).isEmpty();
+	}
+
+	@Test
+	@DisplayName("Lot 6 : familles renseignées « Catégorie:Famille;... », paires incomplètes ignorées")
+	void familles() {
+		assertThat(ParametresPublics.familles("SCPI:Immobilier; OPCVM actions : Actions;bancal;:x"))
+				.containsOnly(java.util.Map.entry("SCPI", "Immobilier"), java.util.Map.entry("OPCVM actions", "Actions"));
 	}
 
 }

@@ -28,12 +28,14 @@ import com.example.compteunique.profil.ProfilKyc;
 class SupportsControllerTest {
 
 	private static final SupportEligible SCPI = new SupportEligible("QZ0000000751", "SCPI Bureaux Europe", "SCPI", 3,
-			new BigDecimal("1.60"), new BigDecimal("773.32"), LocalDate.of(2026, 11, 1), true, null);
+			new BigDecimal("1.60"), new BigDecimal("773.32"), LocalDate.of(2026, 11, 1), true, null, "Hebdomadaire");
 
 	private final SupportsEligibles eligibles = mock(SupportsEligibles.class);
 	private final ProfilClientService profils = mock(ProfilClientService.class);
 	private final Adequation adequation = mock(Adequation.class);
-	private final SupportsController routes = new SupportsController(eligibles, profils, new SimulationSupports(), adequation);
+	private final CatalogueService catalogue = mock(CatalogueService.class);
+	private final SupportsController routes = new SupportsController(eligibles, profils, new SimulationSupports(), adequation,
+			catalogue);
 
 	private void profil(Statut statut, String profilInvestisseur) {
 		ProfilKyc profil = mock(ProfilKyc.class);
@@ -83,7 +85,7 @@ class SupportsControllerTest {
 			+ "revenue disponible, elle répond normalement")
 	void serviceIndisponibleSimule() {
 		SimulationSupports simulation = new SimulationSupports();
-		SupportsController avecSimulation = new SupportsController(eligibles, profils, simulation, adequation);
+		SupportsController avecSimulation = new SupportsController(eligibles, profils, simulation, adequation, catalogue);
 		profil(Statut.VALIDE, "PRUDENT");
 		when(eligibles.lister(Produit.PER, "PRUDENT")).thenReturn(List.of(SCPI));
 
@@ -119,6 +121,28 @@ class SupportsControllerTest {
 		assertThatThrownBy(() -> routes.supports(null, "PER")).isInstanceOf(ClienteNonConnecteeException.class);
 		assertThat(routes.nonConnectee().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
 		assertThat(routes.sansCompte().getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+	}
+
+
+	@Test
+	@DisplayName("Lot 6 : courbe de la valeur liquidative d'un support, de la plus ancienne à la plus récente")
+	void historique() {
+		profil(Statut.VALIDE, "PRUDENT");
+		when(catalogue.historiqueVl("QZ0000000751")).thenReturn(List.of(
+				new CatalogueService.ValeurLiquidative(LocalDate.of(2026, 11, 2), new BigDecimal("774"), "f2.csv"),
+				new CatalogueService.ValeurLiquidative(LocalDate.of(2026, 11, 1), new BigDecimal("773.32"), "f1.csv")));
+
+		assertThat(routes.historique("jeton", "QZ0000000751")).extracting(SupportsController.PointVl::dateVl)
+				.containsExactly(LocalDate.of(2026, 11, 1), LocalDate.of(2026, 11, 2));
+	}
+
+	@Test
+	@DisplayName("Lot 6 : courbe sans session : 401, rien n'est lu")
+	void historiqueSansSession() {
+		when(profils.etat(null)).thenThrow(new ClienteNonConnecteeException());
+
+		assertThatThrownBy(() -> routes.historique(null, "QZ0000000751")).isInstanceOf(ClienteNonConnecteeException.class);
+		verify(catalogue, never()).historiqueVl("QZ0000000751");
 	}
 
 }

@@ -152,8 +152,8 @@ applications:
       # Contacter mon conseiller (story à créer).
       - key: FONCTIONNALITE_CONTACT_CONSEILLER
         value: "false"
-      # Changer mon mot de passe (D2, story à créer par le PO).
-      - key: FONCTIONNALITE_CHANGEMENT_MOT_DE_PASSE
+      # Changer mon mot de passe (D2, CU-526 SEC-01).
+      - key: FONCTIONNALITE_CHANGER_MOT_DE_PASSE
         value: "false"
       # Verser sur un PER ou une assurance vie (PER-08, AV-03).
       - key: FONCTIONNALITE_VERSEMENT_LIBRE
@@ -166,6 +166,15 @@ applications:
         value: "false"
       # Programmer des versements sur un PER ou une assurance vie (PER-13, AV-04).
       - key: FONCTIONNALITE_VERSEMENTS_PROGRAMMES
+        value: "false"
+      # Lot 6 (D7) : document d'informations par support, sur la fiche d'un support.
+      - key: FONCTIONNALITE_DOCUMENT_SUPPORT
+        value: "false"
+      # CU-525 GL-01 : panneau « Ma répartition » de l'étape « Mes supports » (gestion libre).
+      - key: FONCTIONNALITE_REPARTITION_GESTION_LIBRE
+        value: "false"
+      # PER-12 (CU-319) et AV-08 (CU-339) : boutons « Arbitrer » d'un contrat.
+      - key: FONCTIONNALITE_ARBITRAGE
         value: "false"
       # D4 : entrée « Outils de test » et pages /test/... en dev et qualif seulement.
       - key: FONCTIONNALITE_OUTILS_TEST

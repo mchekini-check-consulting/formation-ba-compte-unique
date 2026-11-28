@@ -5,15 +5,27 @@ import { eurosAuCentime } from '../livret-a/parametres';
 import { PROFILS } from '../gestion/gestion';
 import { EtatSouscription, ORIGINES, Produit, SouscriptionService } from '../souscription/souscription';
 
-/** Lot 5 (PO, 27/11/2026) : étapes du tunnel de souscription, dans l'ordre des stories (D5). */
+/**
+ * Lot 5 (PO, 27/11/2026) : étapes du tunnel de souscription, dans l'ordre des stories (D5). PO 28/11 : l'ordre se
+ * change ici seulement (SOU-02, CU-528, placera plus tard « Ma gestion » avant la signature) ; les écrans désignent
+ * leur étape par sa clé, le numéro et la page suivante se déduisent de cet ordre.
+ */
 export const ETAPES = [
-  'Mon profil',
-  'Mes documents',
-  'Mon versement',
-  'Récapitulatif et signature',
-  'Confirmation',
-  'Ma gestion et mes supports (facultatif)',
+  { cle: 'profil', libelle: 'Mon profil', lien: '/profil' },
+  { cle: 'documents', libelle: 'Mes documents', lien: '/decouvrir' },
+  { cle: 'versement', libelle: 'Mon versement', lien: '/souscrire' },
+  { cle: 'signature', libelle: 'Récapitulatif et signature', lien: '/souscrire' },
+  { cle: 'confirmation', libelle: 'Confirmation', lien: '/souscrire' },
+  { cle: 'gestion', libelle: 'Ma gestion et mes supports (facultatif)', lien: '/gestion' },
 ] as const;
+
+export type CleEtape = (typeof ETAPES)[number]['cle'];
+
+/** Page de l'étape qui suit, dans l'ordre du tunnel (null après la dernière). */
+export function pageSuivante(cle: CleEtape): string | null {
+  const i = ETAPES.findIndex((e) => e.cle === cle);
+  return ETAPES[i + 1]?.lien ?? null;
+}
 
 const PROFIL: Record<EtatSouscription['profil'], string> = { VALIDE: 'Validé', A_COMPLETER: 'À compléter', A_REVALIDER: 'À revalider' };
 
@@ -29,10 +41,10 @@ const PROFIL: Record<EtatSouscription['profil'], string> = { VALIDE: 'Validé', 
       <div class="tunnel">
         <div class="tunnel-principal">
           <nav class="tunnel-etapes" aria-label="Étapes de la souscription">
-            <p class="etape-courante" data-test="etape">Étape {{ etape() }} sur {{ etapes.length }} : {{ etapes[etape() - 1] }}</p>
+            <p class="etape-courante" data-test="etape">Étape {{ numero() }} sur {{ etapes.length }} : {{ etapes[numero() - 1].libelle }}</p>
             <ol>
-              @for (e of etapes; track e; let i = $index) {
-                <li [class.faite]="i + 1 < etape()" [attr.aria-current]="i + 1 === etape() ? 'step' : null">{{ e }}</li>
+              @for (e of etapes; track e.cle; let i = $index) {
+                <li [class.faite]="i + 1 < numero()" [attr.aria-current]="i + 1 === numero() ? 'step' : null">{{ e.libelle }}</li>
               }
             </ol>
           </nav>
@@ -73,7 +85,7 @@ export class Tunnel {
   private readonly service = inject(SouscriptionService);
 
   readonly produit = input.required<Produit>();
-  readonly etape = input.required<number>();
+  readonly etape = input.required<CleEtape>();
   /** Hors tunnel (page ouverte depuis le menu), le contenu s'affiche seul. */
   readonly actif = input(true);
   /** État déjà lu par la page (souscription) ; sinon le tunnel le lit lui-même. */
@@ -82,6 +94,7 @@ export class Tunnel {
   readonly autonome = input(true);
 
   protected readonly etapes = ETAPES;
+  protected readonly numero = computed(() => ETAPES.findIndex((e) => e.cle === this.etape()) + 1);
   private readonly lu = signal<EtatSouscription | null>(null);
 
   constructor() {

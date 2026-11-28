@@ -29,7 +29,7 @@ const pourcent = (valeur: number) => `${String(valeur).replace('.', ',')} %`;
   imports: [RouterLink, Tunnel],
   template: `
     <div class="page gestion">
-      <app-tunnel [produit]="produit" [etape]="6" [actif]="dansLeTunnel">
+      <app-tunnel [produit]="produit" etape="gestion" [actif]="dansLeTunnel">
       <h1>Choisir mon mode de gestion</h1>
       <p class="lead">{{ produit === 'PER' ? 'Plan d’épargne retraite' : 'Assurance vie' }} : changer de mode ou de profil est gratuit.</p>
 
@@ -82,7 +82,7 @@ const pourcent = (valeur: number) => `${String(valeur).replace('.', ',')} %`;
               </fieldset>
               @if (mode() === 'LIBRE') {
                 <!-- Lot 5 : en gestion libre, la cliente choisit ses supports (lot 6). -->
-                <p data-test="vers-supports"><a routerLink="/supports" [queryParams]="{ produit }">Choisir mes supports</a></p>
+                <p data-test="vers-supports"><a routerLink="/supports" [queryParams]="dansLeTunnel ? { produit, tunnel: 1 } : { produit }">Choisir mes supports</a></p>
               }
               @if (mode() !== 'LIBRE') {
                 <label class="profil">
@@ -130,14 +130,20 @@ const pourcent = (valeur: number) => `${String(valeur).replace('.', ',')} %`;
                 @if (contrat.allocationIndisponible) {
                   <p class="erreur">{{ contrat.allocationIndisponible }}</p>
                 } @else {
-                  <table>
-                    <thead><tr><th>Support</th><th>Risque</th><th>Part</th></tr></thead>
+                  <!-- PO 28/11 : la répartition telle qu'elle est enregistrée, une ligne par support, sans regrouper,
+                       arrondir ni masquer ; la barre illustre la part exacte de la ligne. -->
+                  <table data-test="repartition-pilotee">
+                    <thead><tr><th>Support</th><th>Catégorie</th><th>Risque</th><th>Part</th></tr></thead>
                     <tbody>
                       @for (l of contrat.allocation; track l.codeIsin) {
                         <tr>
                           <td>{{ l.nom }} @if (l.nonCote) {<span class="badge">non coté</span>}</td>
+                          <td>{{ l.categorie }}</td>
                           <td>{{ l.niveauRisque }}/7</td>
-                          <td>{{ pourcent(l.partPct) }}</td>
+                          <td class="rp-part">
+                            <span class="rp-piste" aria-hidden="true"><span [style.width.%]="l.partPct"></span></span>
+                            {{ pourcent(l.partPct) }}
+                          </td>
                         </tr>
                       }
                     </tbody>

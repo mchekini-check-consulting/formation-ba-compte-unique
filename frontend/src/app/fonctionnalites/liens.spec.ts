@@ -46,7 +46,7 @@ describe('Liens et boutons des pages connectées (lot 3)', () => {
         expect(pageDefinie(f.lien), cle).toBe(true);
       }
     }
-    expect(SANS_PAGE).toHaveLength(21);
+    expect(SANS_PAGE).toHaveLength(24);
   });
 
   describe('accueil de l’espace', () => {

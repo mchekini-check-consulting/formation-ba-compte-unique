@@ -20,7 +20,7 @@ class AllocationTest {
 
 	static SupportEligible support(String isin, int risque, boolean nonCote) {
 		return new SupportEligible(isin, "Support " + isin, "Catégorie", risque, new BigDecimal("0.50"),
-				BigDecimal.TEN, LocalDate.of(2026, 11, 25), nonCote, null);
+				BigDecimal.TEN, LocalDate.of(2026, 11, 25), nonCote, null, null);
 	}
 
 	static final List<SupportEligible> CATALOGUE = List.of(support("MONETAIRE", 1, false),

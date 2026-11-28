@@ -11,7 +11,7 @@ import { SuiviSession } from '../session/suivi-session';
 import { EtatSouscription, SouscriptionService } from '../souscription/souscription';
 import { SupportsService } from '../supports/supports';
 import { BrouillonSouscription } from './brouillon';
-import { Tunnel } from './tunnel';
+import { CleEtape, ETAPES, Tunnel, pageSuivante } from './tunnel';
 
 const ETAT: EtatSouscription = {
   produit: 'AV',
@@ -34,7 +34,7 @@ const ETAT: EtatSouscription = {
   template: `<app-tunnel produit="AV" [etape]="etape()" [actif]="actif()"><p class="contenu">Contenu</p></app-tunnel>`,
 })
 class Hote {
-  readonly etape = signal(3);
+  readonly etape = signal<CleEtape>('versement');
   readonly actif = signal(true);
 }
 
@@ -185,5 +185,13 @@ describe('ProfilPage dans le tunnel (étape 1)', () => {
     page.querySelector('form')!.dispatchEvent(new Event('submit'));
     await fixture.whenStable();
     expect(navigate).toHaveBeenCalledWith(['/decouvrir'], { queryParams: { produit: 'AV' } });
+  });
+
+  it('PO 28/11 : l’ordre des étapes vient de la liste ETAPES, la page suivante s’en déduit', () => {
+    expect(ETAPES.map((e) => e.cle)).toEqual(['profil', 'documents', 'versement', 'signature', 'confirmation', 'gestion']);
+    expect(pageSuivante('profil')).toBe('/decouvrir');
+    expect(pageSuivante('documents')).toBe('/souscrire');
+    expect(pageSuivante('confirmation')).toBe('/gestion');
+    expect(pageSuivante('gestion')).toBeNull();
   });
 });

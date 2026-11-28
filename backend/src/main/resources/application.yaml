@@ -61,11 +61,14 @@ app:
     document-releve: ${FONCTIONNALITE_DOCUMENT_RELEVE:false}
     document-attestation-livret-a: ${FONCTIONNALITE_DOCUMENT_ATTESTATION_LIVRET_A:false}
     contact-conseiller: ${FONCTIONNALITE_CONTACT_CONSEILLER:false}
-    changement-mot-de-passe: ${FONCTIONNALITE_CHANGEMENT_MOT_DE_PASSE:false}
+    changer-mot-de-passe: ${FONCTIONNALITE_CHANGER_MOT_DE_PASSE:false}
     versement-libre: ${FONCTIONNALITE_VERSEMENT_LIBRE:false}
     operations-contrat: ${FONCTIONNALITE_OPERATIONS_CONTRAT:false}
     suivi-contrat: ${FONCTIONNALITE_SUIVI_CONTRAT:false}
     versements-programmes: ${FONCTIONNALITE_VERSEMENTS_PROGRAMMES:false}
+    document-support: ${FONCTIONNALITE_DOCUMENT_SUPPORT:false}
+    repartition-gestion-libre: ${FONCTIONNALITE_REPARTITION_GESTION_LIBRE:false}
+    arbitrage: ${FONCTIONNALITE_ARBITRAGE:false}
     outils-test: ${FONCTIONNALITE_OUTILS_TEST:true}
   conseiller:
     # CU-9 critère 8 : coordonnées affichées quand une ouverture en ligne est annulée par contrôle.
@@ -137,6 +140,18 @@ app:
       # PO (27/11/2026) : taux mis à jour chaque 1er janvier, par modification de ce paramètre (aucun changement automatique).
       date-mise-a-jour: ${FONDS_EUROS_AV_DATE_MISE_A_JOUR:2026-01-01}
       frais-gestion: ${FONDS_EUROS_AV_FRAIS_GESTION:}
+      # D7 du PO : taux servi du fonds en euros, non fixé par une story (vide, non affiché).
+      taux-servi: ${FONDS_EUROS_AV_TAUX_SERVI:}
+    # D1 du PO : fonds en euros du PER, frais de gestion 0,65 % (PER-09) ; taux visé et servi non fixés (D7).
+    fonds-euros-per:
+      taux-brut-vise: ${FONDS_EUROS_PER_TAUX_BRUT_VISE:}
+      date-mise-a-jour: ${FONDS_EUROS_PER_DATE_MISE_A_JOUR:}
+      frais-gestion: ${FONDS_EUROS_PER_FRAIS_GESTION:0.65}
+      taux-servi: ${FONDS_EUROS_PER_TAUX_SERVI:}
+    # Lot 6, D7 du PO : regroupement des catégories du catalogue en familles (Monétaire, Obligations, Diversifiés,
+    # Actions, Immobilier, Non coté, Produits structurés), non validé : vide. Format « Catégorie:Famille;... ».
+    # Vide : l'écran filtre sur la catégorie d'origine. Le fichier du catalogue n'est jamais modifié.
+    familles: ${CATALOGUE_FAMILLES:}
   virements:
     # CU-147 critère 5 : plafond d'un virement en centimes, à valider avec la conformité. 0 = pas de plafond.
     plafond-centimes: ${VIREMENTS_PLAFOND_CENTIMES:0}

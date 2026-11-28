@@ -17,6 +17,14 @@ export interface SupportEligible {
   dateVl: string;
   nonCote: boolean;
   label: string | null;
+  /** Fréquence de calcul de la valeur liquidative (catalogue), null si absente. */
+  periodiciteVl: string | null;
+}
+
+/** Lot 6 : une valeur liquidative de la courbe d'un support (catalogue.historique_vl, lecture seule). */
+export interface PointVl {
+  dateVl: string;
+  valeur: number;
 }
 
 /**
@@ -26,7 +34,19 @@ export interface SupportEligible {
 export interface ParametresPublics {
   /** Frais de gestion annuels du contrat sur les unités de compte, en % ({ PER: 0.5, AV: 0.65 }). */
   fraisUcPct: Record<Produit, number>;
-  fondsEurosAv: { tauxBrutVisePct: number | null; dateMiseAJour: string | null; fraisGestionPct: number | null };
+  fondsEurosAv: FondsEuros;
+  /** Lot 6, D1 : fonds en euros du PER (frais 0,65 %, PER-09). */
+  fondsEurosPer: FondsEuros;
+  /** Lot 6, D7 : catégorie du catalogue → famille ; vide tant que le regroupement n'est pas validé. */
+  famillesCategories: Record<string, string>;
+}
+
+/** Fonds en euros d'un produit ; un champ null n'est pas affiché (D7 : taux servi non fixé). */
+export interface FondsEuros {
+  tauxBrutVisePct: number | null;
+  dateMiseAJour: string | null;
+  fraisGestionPct: number | null;
+  tauxServiPct: number | null;
 }
 
 /** Taux du fonds en euros affiché sur une carte : « Taux brut visé en 2026 : » <b>2,90 %</b> « (mis à jour le 01/01/2026)… ». */
@@ -41,17 +61,23 @@ export interface TauxAffiche {
  * chaque 1er janvier, l'année affichée est celle de cette date). Le net n'est affiché que si les frais du fonds en
  * euros sont fixés (D1). null sans taux.
  */
-export function tauxFondsEurosAv(p: ParametresPublics | null): TauxAffiche | null {
-  const f = p?.fondsEurosAv;
+export function tauxFondsEurosAv(p: { fondsEurosAv?: Partial<FondsEuros> | null } | null): TauxAffiche | null {
+  return tauxFondsEuros(p?.fondsEurosAv);
+}
+
+/** Lot 6 : même affichage pour le fonds en euros d'un produit (PER ou assurance vie). */
+export function tauxFondsEuros(f: Partial<FondsEuros> | null | undefined): TauxAffiche | null {
   if (f?.tauxBrutVisePct == null) {
     return null;
   }
   const [annee, mois, jour] = f.dateMiseAJour?.split('-') ?? [];
-  const net = f.fraisGestionPct == null ? '' : `, soit ${pourcentage(f.tauxBrutVisePct - f.fraisGestionPct)} net après frais`;
+  // CU-530 (AV-17) : le net n'apparaît que si les frais du fonds en euros sont renseignés.
+  const net = f.fraisGestionPct == null ? '' : `, soit ${pourcentage(f.tauxBrutVisePct - f.fraisGestionPct)} net de frais de gestion`;
+  // PO 28/11 : « Taux brut visé en 2026 : 2,90 % (mis à jour le 01/01/2026). Taux non garanti. »
   return {
     avant: annee ? `Taux brut visé en ${annee} :` : 'Taux brut visé :',
     taux: pourcentage(f.tauxBrutVisePct),
-    detail: `${annee ? `(mis à jour le ${jour}/${mois}/${annee}) ` : ''}sur le fonds en euros${net}, non garanti`,
+    detail: `${annee ? `(mis à jour le ${jour}/${mois}/${annee})` : ''}${net}. Taux non garanti.`,
   };
 }
 
@@ -80,5 +106,10 @@ export class SupportsService {
     // CU-417 : withCredentials pour envoyer le cookie de session au gateway (autre adresse que l'écran) ; sans lui,
     // le backend répond 401 et l'application renvoie vers la connexion, puis vers l'espace.
     return this.http.get<SupportsDisponibles>(this.url, { params: { produit }, withCredentials: true });
+  }
+
+  /** Lot 6 : courbe de la valeur liquidative d'un support, de la plus ancienne à la plus récente. */
+  historique(codeIsin: string): Observable<PointVl[]> {
+    return this.http.get<PointVl[]>(`${this.url}/${encodeURIComponent(codeIsin)}/historique`, { withCredentials: true });
   }
 }

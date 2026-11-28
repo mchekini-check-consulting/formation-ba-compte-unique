@@ -1,19 +1,32 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { Produit, SupportsDisponibles, SupportsService } from './supports';
+import { catchError, of } from 'rxjs';
+import { BoutonFonctionnalite } from '../fonctionnalites/bouton-fonctionnalite';
+import { Tunnel } from '../tunnel/tunnel';
+import { ListeSupports } from './liste-supports';
+import { ParametresPublics, Produit, SupportsDisponibles, SupportsService, tauxFondsEuros } from './supports';
 
 type Etat = 'chargement' | 'affiche' | 'indisponible';
 
 const PRODUITS: Record<Produit, string> = { PER: 'PER', AV: 'assurance vie' };
 
+const pourcent = (taux: number) =>
+  `${taux.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %`;
+
 // CU-412 (CAT-01B) : écran « Supports disponibles » du PER et de l'assurance vie. La liste vient déjà filtrée par le
-// backend (profil, produit, supports actifs) ; l'écran propose seulement les filtres catégorie et niveau de risque.
-// Profil non validé : aucune unité de compte, message et lien vers le questionnaire ; le fonds en euros reste affiché.
+// backend (profil, produit, supports actifs). Lot 6 : le fonds en euros en tête, comme socle du contrat (données
+// existantes et paramètres D1 / D7, un paramètre vide n'est pas affiché), puis la liste commune des unités de compte
+// (tableau ou cartes, tri, recherche, filtres à gauche, fiche). Profil non validé : aucune unité de compte, message et
+// lien vers le questionnaire ; le fonds en euros reste affiché.
 @Component({
   selector: 'app-supports-page',
-  imports: [RouterLink],
+  imports: [RouterLink, ListeSupports, Tunnel, BoutonFonctionnalite],
   template: `
     <div class="page supports">
+      <!-- PO 28/11 : ouverte depuis « Ma gestion » en gestion libre, la page est l'étape « Mes supports » du tunnel, en
+           consultation ; le panneau « Ma répartition » reste en Bientôt (CU-525 GL-01). -->
+      <app-tunnel [produit]="produit()" etape="gestion" [actif]="dansLeTunnel">
       <h1>Supports disponibles — {{ libelle(produit()) }}</h1>
       <div class="onglets" role="group" aria-label="Produit">
         @for (p of produits; track p) {
@@ -33,8 +46,21 @@ const PRODUITS: Record<Produit, string> = { PER: 'PER', AV: 'assurance vie' };
         @case ('affiche') {
           <section class="carte euros" data-test="fonds-euros">
             <span class="tag">Fonds en euros</span>
-            <h2>Fonds en euros</h2>
-            <p>Capital garanti, intérêts crédités une fois par an. Toujours disponible, quel que soit votre profil.</p>
+            <h2>Fonds en euros, le socle de votre contrat</h2>
+            <dl>
+              <div><dt>Garantie</dt><dd>Capital garanti</dd></div>
+              <div><dt>Intérêts</dt><dd>Crédités une fois par an</dd></div>
+              <div><dt>Disponibilité</dt><dd>Toujours disponible, quel que soit votre profil</dd></div>
+              @if (fondsEuros()?.fraisGestionPct != null) {
+                <div data-test="frais-fonds-euros"><dt>Frais de gestion</dt><dd>{{ pourcent(fondsEuros()!.fraisGestionPct!) }} par an</dd></div>
+              }
+              @if (tauxVise(); as t) {
+                <div data-test="taux-vise"><dt>Taux</dt><dd>{{ t.avant }} <strong>{{ t.taux }}</strong> {{ t.detail }}</dd></div>
+              }
+              @if (fondsEuros()?.tauxServiPct != null) {
+                <div data-test="taux-servi"><dt>Taux servi</dt><dd>{{ pourcent(fondsEuros()!.tauxServiPct!) }}</dd></div>
+              }
+            </dl>
           </section>
 
           @if (!donnees()!.profilValide) {
@@ -43,110 +69,45 @@ const PRODUITS: Record<Produit, string> = { PER: 'PER', AV: 'assurance vie' };
               <a routerLink="/profil">Compléter mon questionnaire</a>
             </p>
           } @else {
+            <h2>Unités de compte</h2>
             <p class="frais" data-test="frais-contrat">
               Frais de gestion du contrat sur les unités de compte : <strong>{{ pourcent(donnees()!.fraisContratPct) }} par an</strong>,
               en plus des frais propres à chaque support.
             </p>
-
-            <div class="filtres">
-              <label>Catégorie
-                <select id="categorie" name="categorie" (change)="categorie.set(valeur($event))">
-                  <option value="">Toutes</option>
-                  @for (c of categories(); track c) {
-                    <option [value]="c">{{ c }}</option>
-                  }
-                </select>
-              </label>
-              <label>Niveau de risque
-                <select id="risque" name="risque" (change)="risque.set(valeur($event))">
-                  <option value="">Tous</option>
-                  @for (n of niveaux(); track n) {
-                    <option [value]="n">{{ n }} sur 7</option>
-                  }
-                </select>
-              </label>
-            </div>
-
-            @if (donnees()!.supports.length === 0) {
-              <p class="vide">Aucun support disponible pour votre profil.</p>
-            } @else if (affiches().length === 0) {
-              <p class="vide">Aucun support ne correspond à ces filtres.</p>
-            } @else {
-              <ul class="liste">
-                @for (s of affiches(); track s.codeIsin) {
-                  <li class="carte" data-test="support">
-                    <div class="tags">
-                      <span class="tag">{{ s.categorie }}</span>
-                      <span class="tag risque">Risque {{ s.niveauRisque }}/7</span>
-                      @if (s.nonCote) {
-                        <span class="tag non-cote">Non coté</span>
-                      }
-                      @if (s.label) {
-                        <span class="tag label">{{ s.label }}</span>
-                      }
-                    </div>
-                    <h3>{{ s.nom }}</h3>
-                    <dl>
-                      <div><dt>Valeur liquidative</dt><dd>{{ euros(s.valeurLiquidative) }} au {{ jour(s.dateVl) }}</dd></div>
-                      <div data-test="frais-support"><dt>Frais du support</dt><dd>{{ pourcent(s.fraisSupportPct) }} par an</dd></div>
-                      <div><dt>Frais du contrat</dt><dd>{{ pourcent(donnees()!.fraisContratPct) }} par an</dd></div>
-                    </dl>
-                  </li>
-                }
-              </ul>
-            }
+            <app-liste-supports [supports]="donnees()!.supports" [fraisContratPct]="donnees()!.fraisContratPct" [famillesCategories]="familles()" />
           }
         }
       }
+      @if (dansLeTunnel) {
+        <section class="carte ma-repartition" data-test="ma-repartition" aria-labelledby="titre-ma-repartition">
+          <h2 id="titre-ma-repartition">Ma répartition</h2>
+          <app-bouton-fonctionnalite cle="repartition-gestion-libre" classe="lien">Répartir mes versements entre mes supports</app-bouton-fonctionnalite>
+        </section>
+      }
+      </app-tunnel>
     </div>
-  `,
-  styles: `
-    h2, h3 { margin: 8px 0; color: #0b2545; }
-    h3 { font-size: 17px; }
-    .onglets { display: flex; gap: 8px; margin-bottom: 24px; }
-    .onglets button { padding: 10px 18px; border-radius: 999px; border: 1px solid #0b2545; background: #fff; color: #0b2545; font-weight: 700; cursor: pointer; }
-    .onglets button.actif { background: #0b2545; color: #fff; }
-    .euros { margin-bottom: 20px; background: #f4f6fa; }
-    .liste { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
-    .tags { display: flex; flex-wrap: wrap; gap: 6px; }
-    .tag { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: #eef1f5; color: #5d6887; font-weight: 700; }
-    .tag.risque { background: #fef0c7; color: #93370d; }
-    .tag.non-cote { background: #fee4e2; color: #b42318; }
-    .tag.label { background: #d1fadf; color: #067647; }
-    dl { margin: 8px 0 0; display: grid; gap: 4px; font-size: 14px; }
-    dl div { display: flex; justify-content: space-between; gap: 12px; }
-    dt { color: #5d6887; }
-    dd { margin: 0; font-weight: 700; text-align: right; }
-    .filtres { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
-    label { display: flex; flex-direction: column; gap: 6px; font-weight: 700; font-size: 14px; }
-    .frais { line-height: 1.6; }
-    .avis { padding: 14px 16px; border-radius: 12px; background: #fffaeb; border: 1px solid #fedf89; line-height: 1.6; }
-    .vide { color: #5d6887; }
   `,
 })
 export class SupportsPage {
   private readonly service = inject(SupportsService);
   protected readonly produits: Produit[] = ['PER', 'AV'];
-  protected readonly produit = signal<Produit>(
-    inject(ActivatedRoute).snapshot.queryParamMap.get('produit') === 'PER' ? 'PER' : 'AV',
-  );
+  private readonly route = inject(ActivatedRoute);
+  protected readonly produit = signal<Produit>(this.route.snapshot.queryParamMap.get('produit') === 'PER' ? 'PER' : 'AV');
+  protected readonly dansLeTunnel = this.route.snapshot.queryParamMap.get('tunnel') === '1';
   protected readonly etat = signal<Etat>('chargement');
   protected readonly donnees = signal<SupportsDisponibles | null>(null);
-  protected readonly categorie = signal('');
-  protected readonly risque = signal('');
-  protected readonly categories = computed(() =>
-    [...new Set((this.donnees()?.supports ?? []).map((s) => s.categorie))].sort((a, b) => a.localeCompare(b, 'fr')),
+  /** Sans réponse, aucun paramètre n'est affiché (jamais de valeur écrite en dur). */
+  private readonly parametres = toSignal(
+    this.service.parametresPublics().pipe(catchError(() => of(null as ParametresPublics | null))),
+    { initialValue: null },
   );
-  protected readonly niveaux = computed(() =>
-    [...new Set((this.donnees()?.supports ?? []).map((s) => s.niveauRisque))].sort((a, b) => a - b),
-  );
-  protected readonly affiches = computed(() =>
-    (this.donnees()?.supports ?? []).filter(
-      (s) =>
-        (this.categorie() === '' || s.categorie === this.categorie()) &&
-        (this.risque() === '' || s.niveauRisque === Number(this.risque())),
-    ),
-  );
+  protected readonly fondsEuros = computed(() => {
+    const p = this.parametres();
+    return p ? (this.produit() === 'PER' ? p.fondsEurosPer : p.fondsEurosAv) : null;
+  });
+  protected readonly tauxVise = computed(() => tauxFondsEuros(this.fondsEuros()));
+  protected readonly familles = computed(() => this.parametres()?.famillesCategories ?? {});
+  protected readonly pourcent = pourcent;
 
   constructor() {
     this.charger();
@@ -163,32 +124,8 @@ export class SupportsPage {
     }
   }
 
-  protected valeur(event: Event): string {
-    return (event.target as HTMLSelectElement).value;
-  }
-
-  protected euros(montant: number): string {
-    return `${SupportsPage.nombre(montant, 2)} €`;
-  }
-
-  protected pourcent(taux: number): string {
-    return `${SupportsPage.nombre(taux, 2)} %`;
-  }
-
-  protected jour(date: string): string {
-    return new Date(`${date}T00:00:00`).toLocaleDateString('fr-FR');
-  }
-
-  private static nombre(valeur: number, decimales: number): string {
-    return valeur
-      .toLocaleString('fr-FR', { minimumFractionDigits: decimales, maximumFractionDigits: decimales })
-      .replace(/ | /g, ' ');
-  }
-
   private charger(): void {
     this.etat.set('chargement');
-    this.categorie.set('');
-    this.risque.set('');
     this.service.lister(this.produit()).subscribe({
       next: (donnees) => {
         this.donnees.set(donnees);

@@ -75,7 +75,7 @@ describe('Espace', () => {
     const actions = synthese.querySelector('.actions-contrat')!;
     expect(actions.querySelector('a[href="/gestion?produit=AV"]')?.textContent).toBe('Mon mode de gestion');
     expect(actions.querySelector('a[href="/supports?produit=AV"]')?.textContent).toBe('Supports disponibles');
-    for (const cle of ['versement-libre', 'operations-contrat', 'suivi-contrat']) {
+    for (const cle of ['versement-libre', 'operations-contrat', 'suivi-contrat', 'arbitrage']) {
       expect(actions.querySelector(`[data-fonctionnalite="${cle}"]`)?.getAttribute('data-etat'), cle).toBe('bientot');
     }
     const rapides = synthese.querySelector('.actions-rapides')!;
@@ -125,7 +125,7 @@ describe('Espace', () => {
   it('carte assurance vie : taux brut visé du fonds en euros lu dans le paramètre, sans net (D1)', async () => {
     const carte = (page: HTMLElement) => [...page.querySelectorAll('#epargne .produit')].find((c) => c.textContent?.includes('Assurance-vie'))!;
     const { page } = await ouvrir([COMPTE]);
-    expect(carte(page).querySelector('.rate')?.textContent?.trim()).toBe('Taux brut visé en 2026 : 2,90 % (mis à jour le 01/01/2026) sur le fonds en euros, non garanti');
+    expect(carte(page).querySelector('.rate')?.textContent?.trim()).toBe('Taux brut visé en 2026 : 2,90 % (mis à jour le 01/01/2026). Taux non garanti.');
     expect(carte(page).textContent).toContain('Frais de gestion détaillés avant signature');
 
     TestBed.resetTestingModule();

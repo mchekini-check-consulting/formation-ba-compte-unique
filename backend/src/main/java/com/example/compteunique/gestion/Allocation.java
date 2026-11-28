@@ -27,7 +27,8 @@ public final class Allocation {
 	private static final BigDecimal CENT = new BigDecimal("100");
 
 	/** Un support de l'allocation et sa part, en %. */
-	public record Ligne(String codeIsin, String nom, int niveauRisque, boolean nonCote, BigDecimal partPct) {
+	public record Ligne(String codeIsin, String nom, String categorie, int niveauRisque, boolean nonCote,
+			BigDecimal partPct) {
 	}
 
 	/** Un montant à verser sur un support. */
@@ -86,8 +87,9 @@ public final class Allocation {
 			for (int i = 0; i < parts.size(); i++) {
 				SupportEligible s = poche.supports().get(i);
 				BigDecimal part = parts.get(i);
-				parSupport.merge(s.codeIsin(), new Ligne(s.codeIsin(), s.nom(), s.niveauRisque(), s.nonCote(), part),
-						(a, b) -> new Ligne(a.codeIsin(), a.nom(), a.niveauRisque(), a.nonCote(),
+				parSupport.merge(s.codeIsin(),
+						new Ligne(s.codeIsin(), s.nom(), s.categorie(), s.niveauRisque(), s.nonCote(), part),
+						(a, b) -> new Ligne(a.codeIsin(), a.nom(), a.categorie(), a.niveauRisque(), a.nonCote(),
 								a.partPct().add(b.partPct())));
 			}
 		}

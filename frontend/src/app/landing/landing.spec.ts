@@ -86,8 +86,8 @@ describe('Landing', () => {
     expect(page.querySelector('[data-test="frais-uc-av"]')?.textContent).toBe('0,65 %');
     expect(page.textContent).not.toContain('0,65 % par an sur le fonds en euros');
     // CU-24 : taux brut visé lu dans le paramètre ; net retiré tant que les frais du fonds en euros ne sont pas fixés.
-    expect(page.querySelector('[data-test="taux-fonds-euros-av"]')?.textContent).toBe('Taux brut visé en 2026 : 2,90 % (mis à jour le 01/01/2026) sur le fonds en euros, non garanti');
-    expect(page.textContent).not.toContain('net après frais');
+    expect(page.querySelector('[data-test="taux-fonds-euros-av"]')?.textContent).toBe('Taux brut visé en 2026 : 2,90 % (mis à jour le 01/01/2026). Taux non garanti.');
+    expect(page.textContent).not.toContain('net de frais de gestion');
   });
 
   it('taux du fonds en euros : année et date tirées du paramètre ; net seulement si les frais sont fixés ; sans date, sans année', () => {
@@ -95,9 +95,9 @@ describe('Landing', () => {
     expect(tauxFondsEurosAv(p('2027-01-01', 0.6))).toEqual({
       avant: 'Taux brut visé en 2027 :',
       taux: '2,90 %',
-      detail: '(mis à jour le 01/01/2027) sur le fonds en euros, soit 2,30 % net après frais, non garanti',
+      detail: '(mis à jour le 01/01/2027), soit 2,30 % net de frais de gestion. Taux non garanti.',
     });
-    expect(tauxFondsEurosAv(p(null, null))).toEqual({ avant: 'Taux brut visé :', taux: '2,90 %', detail: 'sur le fonds en euros, non garanti' });
+    expect(tauxFondsEurosAv(p(null, null))).toEqual({ avant: 'Taux brut visé :', taux: '2,90 %', detail: '. Taux non garanti.' });
     expect(tauxFondsEurosAv(null)).toBeNull();
   });
 
