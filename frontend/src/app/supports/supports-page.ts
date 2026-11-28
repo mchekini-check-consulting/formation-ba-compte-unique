@@ -36,6 +36,13 @@ const pourcent = (taux: number) =>
         }
       </div>
 
+      @if (dansLeTunnel) {
+        <section class="carte ma-repartition" data-test="ma-repartition" aria-labelledby="titre-ma-repartition">
+          <h2 id="titre-ma-repartition">Ma répartition</h2>
+          <app-bouton-fonctionnalite cle="repartition-gestion-libre" classe="lien">Répartir mes versements entre mes supports</app-bouton-fonctionnalite>
+        </section>
+      }
+
       @switch (etat()) {
         @case ('chargement') {
           <p>Chargement…</p>
@@ -77,12 +84,6 @@ const pourcent = (taux: number) =>
             <app-liste-supports [supports]="donnees()!.supports" [fraisContratPct]="donnees()!.fraisContratPct" [famillesCategories]="familles()" />
           }
         }
-      }
-      @if (dansLeTunnel) {
-        <section class="carte ma-repartition" data-test="ma-repartition" aria-labelledby="titre-ma-repartition">
-          <h2 id="titre-ma-repartition">Ma répartition</h2>
-          <app-bouton-fonctionnalite cle="repartition-gestion-libre" classe="lien">Répartir mes versements entre mes supports</app-bouton-fonctionnalite>
-        </section>
       }
       </app-tunnel>
     </div>

@@ -4,10 +4,10 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { BoutonFonctionnalite } from '../fonctionnalites/bouton-fonctionnalite';
 import { PROFILS } from '../gestion/gestion';
 import { BrouillonSouscription } from '../tunnel/brouillon';
-import { CleEtape, Tunnel, pageSuivante } from '../tunnel/tunnel';
+import { CleEtape, Tunnel, lienEtape, pageSuivante } from '../tunnel/tunnel';
 import { Observable } from 'rxjs';
 import { eurosAuCentime } from '../livret-a/parametres';
-import { Beneficiaire, EtatSouscription, ORIGINES, OrigineFonds, Produit, SouscriptionService } from './souscription';
+import { Beneficiaire, DOCUMENTS_NON_LUS, EtatSouscription, ORIGINES, OrigineFonds, Produit, SouscriptionService } from './souscription';
 
 type Etat = 'chargement' | 'affiche' | 'indisponible';
 
@@ -342,6 +342,11 @@ export class SouscriptionPage {
       },
       error: (refus: HttpErrorResponse) => {
         this.envoi.set(false);
+        if (refus.error?.message === DOCUMENTS_NON_LUS) {
+          // PO 28/11 : documents non lus, retour à l'étape « Mes documents », avec le message du serveur.
+          void this.router.navigate([lienEtape('documents')], { queryParams: { produit: this.produit }, state: { refus: DOCUMENTS_NON_LUS } });
+          return;
+        }
         this.erreur.set(refus.error?.message ?? 'Votre demande n’a pas pu être enregistrée. Réessayez.');
       },
     });

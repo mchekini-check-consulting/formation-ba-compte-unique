@@ -197,7 +197,7 @@ const pourcent = (valeur: number) => `${String(valeur).replace('.', ',')} %`;
     .profil { display: grid; gap: 4px; font-weight: 700; max-width: 260px; }
     .mandat { padding: 12px; border-radius: 10px; background: #f4f6fa; }
     .mandat p { margin: 0 0 4px; }
-    .badge { margin-left: 6px; padding: 2px 8px; border-radius: 999px; background: #fff4e5; color: #8a4b00; font-size: 12px; font-weight: 700; }
+    .badge { margin-left: 6px; padding: 2px 8px; border-radius: 999px; background: #fff4e5; color: #8a4b00; font-size: 12px; font-weight: 700; white-space: nowrap; }
     .versement { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
     .versement label { display: grid; gap: 4px; font-weight: 700; }
   `,

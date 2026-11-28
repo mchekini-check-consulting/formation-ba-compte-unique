@@ -21,6 +21,11 @@ export const ETAPES = [
 
 export type CleEtape = (typeof ETAPES)[number]['cle'];
 
+/** Page d'une étape du tunnel. */
+export function lienEtape(cle: CleEtape): string {
+  return ETAPES.find((e) => e.cle === cle)!.lien;
+}
+
 /** Page de l'étape qui suit, dans l'ordre du tunnel (null après la dernière). */
 export function pageSuivante(cle: CleEtape): string | null {
   const i = ETAPES.findIndex((e) => e.cle === cle);

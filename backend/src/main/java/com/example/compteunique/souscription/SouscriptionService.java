@@ -71,7 +71,8 @@ public class SouscriptionService {
 	private static final int MONTANT_ECHELLE_MAX = 2;
 
 	// Pas de message dans PER-02 / AV-02 : l'écran renvoie d'abord vers Découvrir ; refus du serveur si l'adresse est forcée.
-	static final String DOCUMENTS_REQUIS = "Ouvrez et lisez les deux documents avant de souscrire.";
+	// PER-02 / AV-02, libellé du PO (28/11/2026).
+	static final String DOCUMENTS_REQUIS = "Vous devez ouvrir et lire les documents d'information avant de souscrire.";
 	static final String PROFIL_REQUIS = "Complétez ou revalidez votre profil investisseur avant de souscrire.";
 	static final Map<Produit, String> MESSAGE_MINIMUM = Map.of(Produit.PER, "Le premier versement minimum est de 100 €",
 			Produit.AV, "Le versement initial minimum est de 100 €");

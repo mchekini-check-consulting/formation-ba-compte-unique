@@ -1,5 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, TemplateRef, computed, inject, input, signal } from '@angular/core';
+import { Component, ElementRef, TemplateRef, afterNextRender, computed, inject, input, signal } from '@angular/core';
 import { BoutonFonctionnalite } from '../fonctionnalites/bouton-fonctionnalite';
 import { PointVl, SupportEligible, SupportsService } from './supports';
 
@@ -22,7 +22,7 @@ const nombre = (valeur: number, decimales: number) =>
   imports: [BoutonFonctionnalite, NgTemplateOutlet],
   template: `
     <div class="liste-supports">
-      <aside class="ls-filtres" aria-label="Filtres">
+      <section class="ls-filtres" aria-label="Filtres">
         <label>Rechercher
           <input id="recherche" type="search" placeholder="Nom ou code ISIN" [value]="recherche()" (input)="recherche.set(valeur($event))" />
         </label>
@@ -43,7 +43,7 @@ const nombre = (valeur: number, decimales: number) =>
           </select>
         </label>
         <p class="ls-compte" role="status">{{ affiches().length }} support(s)</p>
-      </aside>
+      </section>
 
       <div class="ls-contenu">
         <div class="ls-vues" role="group" aria-label="Affichage">
@@ -65,7 +65,6 @@ const nombre = (valeur: number, decimales: number) =>
                       <button type="button" class="ls-tri" (click)="trier(c.cle)">{{ c.libelle }}</button>
                     </th>
                   }
-                  <th scope="col">Frais du contrat</th>
                   <th scope="col">Label</th>
                   @if (actionLigne(); as action) {
                     <th scope="col">{{ libelleAction() }}</th>
@@ -85,9 +84,12 @@ const nombre = (valeur: number, decimales: number) =>
                     <td>{{ famille(s) }}</td>
                     <td><ng-container *ngTemplateOutlet="echelle; context: { $implicit: s.niveauRisque }" /></td>
                     <td>{{ euros(s.valeurLiquidative) }}<br /><span class="ls-isin">au {{ jour(s.dateVl) }}</span></td>
-                    <td data-test="frais-support">{{ pourcent(s.fraisSupportPct) }} par an</td>
-                    <td><strong>{{ pourcent(total(s)) }}</strong></td>
-                    <td>{{ pourcent(fraisContratPct()) }}</td>
+                    <!-- Frais du support, du contrat et leur total annuel, dans une seule colonne (lisible à 1024 px). -->
+                    <td class="ls-frais">
+                      <span data-test="frais-support">Support {{ pourcent(s.fraisSupportPct) }} par an</span>
+                      <span>Contrat {{ pourcent(fraisContratPct()) }}</span>
+                      <strong>Total {{ pourcent(total(s)) }}</strong>
+                    </td>
                     <td>{{ s.label ?? '—' }}</td>
                     @if (actionLigne(); as action) {
                       <td><ng-container *ngTemplateOutlet="action; context: { $implicit: s }" /></td>
@@ -135,13 +137,13 @@ const nombre = (valeur: number, decimales: number) =>
             <i [class]="n <= niveau ? 'r' + niveau : ''"></i>
           }
         </span>
-        <span aria-hidden="true">Risque {{ niveau }}/7</span>
+        <span aria-hidden="true"><span class="sr-only">Risque </span>{{ niveau }}/7</span>
       </span>
     </ng-template>
 
     @if (fiche(); as s) {
       <div class="ls-voile" (click)="fermer()"></div>
-      <aside class="ls-fiche" role="dialog" aria-labelledby="ls-fiche-titre" data-test="fiche" (keydown.escape)="fermer()">
+      <div class="ls-fiche" role="dialog" aria-labelledby="ls-fiche-titre" data-test="fiche" (keydown.escape)="fermer()">
         <button type="button" class="ls-fermer" data-test="fermer" (click)="fermer()" aria-label="Fermer la fiche">×</button>
         <h2 id="ls-fiche-titre" tabindex="-1">{{ s.nom }}</h2>
         @if (s.nonCote) {
@@ -212,12 +214,22 @@ const nombre = (valeur: number, decimales: number) =>
         <p class="ls-document">
           <app-bouton-fonctionnalite cle="document-support" classe="lien">Document d’informations du support</app-bouton-fonctionnalite>
         </p>
-      </aside>
+      </div>
     }
   `,
 })
 export class ListeSupports {
   private readonly service = inject(SupportsService);
+
+  constructor() {
+    // Place étroite (tunnel à 1024 px, avec la colonne « Ma souscription ») : les cartes, lisibles sans défilement.
+    const hote = inject(ElementRef<HTMLElement>).nativeElement as HTMLElement;
+    afterNextRender(() => {
+      if (hote.clientWidth > 0 && hote.clientWidth < 640) {
+        this.vue.set('cartes');
+      }
+    });
+  }
 
   /** Supports déjà filtrés par le service de CAT-01B. */
   readonly supports = input.required<SupportEligible[]>();
@@ -236,8 +248,7 @@ export class ListeSupports {
     { cle: 'categorie', libelle: 'Catégorie' },
     { cle: 'niveauRisque', libelle: 'Risque' },
     { cle: 'valeurLiquidative', libelle: 'Valeur liquidative' },
-    { cle: 'fraisSupportPct', libelle: 'Frais du support' },
-    { cle: 'total', libelle: 'Total annuel' },
+    { cle: 'total', libelle: 'Frais annuels' },
   ];
   protected readonly sept = [1, 2, 3, 4, 5, 6, 7];
   protected readonly explication = EXPLICATION_RISQUE;

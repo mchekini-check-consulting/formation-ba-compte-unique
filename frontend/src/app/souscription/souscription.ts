@@ -6,6 +6,9 @@ import { apiBase } from '../api';
 export type Produit = 'PER' | 'AV';
 export type OrigineFonds = 'REVENUS' | 'EPARGNE' | 'HERITAGE_DONATION' | 'VENTE_BIEN' | 'AUTRE';
 
+/** PER-02 / AV-02 : refus du serveur quand les documents n'ont pas été lus (libellé du PO, 28/11/2026). */
+export const DOCUMENTS_NON_LUS = "Vous devez ouvrir et lire les documents d'information avant de souscrire.";
+
 export const ORIGINES: { code: OrigineFonds; libelle: string }[] = [
   { code: 'REVENUS', libelle: 'Salaire ou revenus' },
   { code: 'EPARGNE', libelle: 'Épargne existante' },

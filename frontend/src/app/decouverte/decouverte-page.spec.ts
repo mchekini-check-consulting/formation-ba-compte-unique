@@ -56,6 +56,13 @@ describe('DecouvertePage (CU-311, CU-331)', () => {
     expect(page.textContent).toContain('Rachat');
   });
 
+  it('PO 28/11 : renvoyée par la souscription faute de documents lus, la cliente voit le message du serveur', async () => {
+    history.replaceState({ refus: "Vous devez ouvrir et lire les documents d'information avant de souscrire." }, '');
+    const { page } = await ouvrirPage(etat(doc('DIC'), doc('FICHE_PRODUIT')));
+    expect(page.querySelector('[role="alert"]')?.textContent).toContain("Vous devez ouvrir et lire les documents d'information avant de souscrire.");
+    history.replaceState(null, '');
+  });
+
   it('la case d’un document pas encore ouvert reste désactivée, comme « Continuer »', async () => {
     const { page } = await ouvrirPage(etat(doc('DIC'), doc('FICHE_PRODUIT')));
     expect(element<HTMLInputElement>(page, 'DIC', 'case')!.disabled).toBe(true);
