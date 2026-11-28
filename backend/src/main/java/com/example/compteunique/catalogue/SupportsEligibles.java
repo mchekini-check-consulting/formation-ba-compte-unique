@@ -35,12 +35,12 @@ public class SupportsEligibles {
 	/** Un support éligible, tel que l'écran l'affiche. Frais du support seulement : ceux du contrat sont à part. */
 	public record SupportEligible(String codeIsin, String nom, String categorie, int niveauRisque,
 			BigDecimal fraisSupportPct, BigDecimal valeurLiquidative, LocalDate dateVl, boolean nonCote,
-			String label) {
+			String label, String periodiciteVl) {
 
 		static SupportEligible de(Support s) {
 			return new SupportEligible(s.getCodeIsin(), s.getNom(), s.getCategorie(), s.getNiveauRisque(),
 					s.getFraisSupportPct(), s.getValeurLiquidative(), s.getDateVl(), !s.isCote(),
-					SANS_LABEL.equalsIgnoreCase(s.getLabel()) ? null : s.getLabel());
+					SANS_LABEL.equalsIgnoreCase(s.getLabel()) ? null : s.getLabel(), s.getPeriodiciteVl());
 		}
 
 	}

@@ -40,7 +40,7 @@ class AdequationTest {
 
 	private static SupportEligible support(String isin, int risque) {
 		return new SupportEligible(isin, "Support " + isin, "OPCVM", risque, BigDecimal.ONE, BigDecimal.TEN,
-				LocalDate.of(2026, 11, 1), false, null);
+				LocalDate.of(2026, 11, 1), false, null, null);
 	}
 
 	@BeforeEach

@@ -22,6 +22,8 @@ export interface LigneContrat {
 export interface LigneAllocation {
   codeIsin: string;
   nom: string;
+  /** Lot 6 : catégorie du catalogue, pour la répartition par catégorie. */
+  categorie: string;
   niveauRisque: number;
   nonCote: boolean;
   partPct: number;

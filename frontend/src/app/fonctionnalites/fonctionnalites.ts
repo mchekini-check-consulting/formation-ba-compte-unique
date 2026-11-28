@@ -40,6 +40,8 @@ export const FONCTIONNALITES = {
   'suivi-contrat': { phrase: 'Suivez la valeur, les gains et les frais de votre contrat : disponible prochainement.' },
   // Lot 5 : versements programmés sur un PER ou une assurance vie (PER-13, AV-04), proposés à l'étape du versement.
   'versements-programmes': { phrase: 'Programmez vos versements sur votre contrat : disponible prochainement.' },
+  // Lot 6 (D7) : document d'informations par support, sur la fiche d'un support.
+  'document-support': { phrase: 'Consultez le document d’informations du support : disponible prochainement.' },
   // D4 : outils de test (dev et qualif), portés par l'entrée « Outils de test » du menu.
   'outils-test': { lien: '/test/fonctionnalites', phrase: 'Outils de test : réservés aux environnements de test.' },
 } satisfies Record<string, Fonctionnalite>;

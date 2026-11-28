@@ -5,7 +5,7 @@ import { Tunnel } from '../tunnel/tunnel';
 import { Observable } from 'rxjs';
 import { afficherDate } from '../date-metier-test/date-metier';
 import { euros, eurosAuCentime } from '../livret-a/parametres';
-import { EtatGestion, GestionService, ModeGestion, Produit, ProfilGestion, Versement, LIBELLE_MODE, PROFILS } from './gestion';
+import { EtatGestion, GestionService, LigneAllocation, ModeGestion, Produit, ProfilGestion, Versement, LIBELLE_MODE, PROFILS } from './gestion';
 
 type Etat = 'chargement' | 'affiche' | 'indisponible';
 
@@ -130,18 +130,32 @@ const pourcent = (valeur: number) => `${String(valeur).replace('.', ',')} %`;
                 @if (contrat.allocationIndisponible) {
                   <p class="erreur">{{ contrat.allocationIndisponible }}</p>
                 } @else {
-                  <table>
-                    <thead><tr><th>Support</th><th>Risque</th><th>Part</th></tr></thead>
-                    <tbody>
-                      @for (l of contrat.allocation; track l.codeIsin) {
-                        <tr>
-                          <td>{{ l.nom }} @if (l.nonCote) {<span class="badge">non coté</span>}</td>
-                          <td>{{ l.niveauRisque }}/7</td>
-                          <td>{{ pourcent(l.partPct) }}</td>
-                        </tr>
-                      }
-                    </tbody>
-                  </table>
+                  <!-- Lot 6 : répartition par catégorie (graphique), puis le détail par support, repliable. -->
+                  <div class="rp-barres" data-test="par-categorie" role="list" aria-label="Répartition par catégorie">
+                    @for (c of parCategorie(contrat.allocation); track c.categorie) {
+                      <div class="rp-ligne" role="listitem">
+                        <span>{{ c.categorie }}</span>
+                        <span class="rp-piste" aria-hidden="true"><span [style.width.%]="c.partPct"></span></span>
+                        <strong>{{ pourcent(c.partPct) }}</strong>
+                      </div>
+                    }
+                  </div>
+                  <details data-test="detail-supports">
+                    <summary>Voir le détail par support</summary>
+                    <table>
+                      <thead><tr><th>Support</th><th>Catégorie</th><th>Risque</th><th>Part</th></tr></thead>
+                      <tbody>
+                        @for (l of contrat.allocation; track l.codeIsin) {
+                          <tr>
+                            <td>{{ l.nom }} @if (l.nonCote) {<span class="badge">non coté</span>}</td>
+                            <td>{{ l.categorie }}</td>
+                            <td>{{ l.niveauRisque }}/7</td>
+                            <td>{{ pourcent(l.partPct) }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </details>
                   <form class="versement" data-test="versement" (submit)="verser($event)">
                     <label>Verser (€) <input name="montant" inputmode="decimal" [value]="montant()" (change)="montant.set(valeur($event))" /></label>
                     <button class="btn o" type="submit" [disabled]="envoi()">Verser selon ma répartition</button>
@@ -232,6 +246,15 @@ export class GestionPage {
       },
       error: () => this.etat.set('indisponible'),
     });
+  }
+
+  /** Lot 6 : parts de l'allocation additionnées par catégorie, de la plus grande à la plus petite. */
+  protected parCategorie(allocation: LigneAllocation[]): { categorie: string; partPct: number }[] {
+    const parts = new Map<string, number>();
+    for (const l of allocation) {
+      parts.set(l.categorie, Math.round(((parts.get(l.categorie) ?? 0) + l.partPct) * 100) / 100);
+    }
+    return [...parts].map(([categorie, partPct]) => ({ categorie, partPct })).sort((a, b) => b.partPct - a.partPct);
   }
 
   protected libelleMode(mode: ModeGestion): string {

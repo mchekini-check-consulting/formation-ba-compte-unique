@@ -1,6 +1,7 @@
 package com.example.compteunique.catalogue;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
@@ -8,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -35,9 +37,11 @@ public class SupportsController {
 	private final ProfilClientService profils;
 	private final SimulationSupports simulation;
 	private final Adequation adequation;
+	private final CatalogueService catalogue;
 
 	public SupportsController(SupportsEligibles eligibles, ProfilClientService profils, SimulationSupports simulation,
-			Adequation adequation) {
+			Adequation adequation, CatalogueService catalogue) {
+		this.catalogue = catalogue;
 		this.eligibles = eligibles;
 		this.adequation = adequation;
 		this.profils = profils;
@@ -69,6 +73,23 @@ public class SupportsController {
 		// CU-348 : rapport d'adéquation de chaque proposition (le profil est présent quand il est validé).
 		adequation.rapporter(etat.profil().orElseThrow().getCustomerId(), choisi, profil, proposes);
 		return new SupportsDisponibles(choisi, true, profil, frais, proposes, null);
+	}
+
+	/** Une valeur liquidative de la courbe d'un support. */
+	public record PointVl(LocalDate dateVl, BigDecimal valeur) {
+	}
+
+	/**
+	 * Lot 6 : courbe de la valeur liquidative d'un support (fiche du support), lue dans catalogue.historique_vl, en
+	 * lecture seule, de la plus ancienne à la plus récente. Session obligatoire, comme la liste des supports.
+	 */
+	@GetMapping("/catalogue/supports/{codeIsin}/historique")
+	public List<PointVl> historique(
+			@CookieValue(name = ConnexionController.COOKIE_SESSION, required = false) String jetonSession,
+			@PathVariable String codeIsin) {
+		profils.etat(jetonSession);
+		return catalogue.historiqueVl(codeIsin).reversed().stream().map(v -> new PointVl(v.dateVl(), v.valeur()))
+				.toList();
 	}
 
 	private static Produit produit(String produit) {

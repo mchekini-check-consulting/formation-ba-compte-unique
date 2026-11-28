@@ -167,6 +167,9 @@ applications:
       # Programmer des versements sur un PER ou une assurance vie (PER-13, AV-04).
       - key: FONCTIONNALITE_VERSEMENTS_PROGRAMMES
         value: "false"
+      # Lot 6 (D7) : document d'informations par support, sur la fiche d'un support.
+      - key: FONCTIONNALITE_DOCUMENT_SUPPORT
+        value: "false"
       # D4 : entrée « Outils de test » et pages /test/... en dev et qualif seulement.
       - key: FONCTIONNALITE_OUTILS_TEST
         value: {dev: "true", qualif: "true", preprod: "false", prod: "false"}

@@ -17,8 +17,8 @@ function contrat(modif: Partial<ContratGestion> = {}): ContratGestion {
     encoursNonCote: 0,
     contraintes: { partMinNonCotePct: 4, partMinFaibleRisquePct: 0, horizonAnnees: null, grilleAValider: false },
     allocation: [
-      { codeIsin: 'NC', nom: 'Non coté', niveauRisque: 6, nonCote: true, partPct: 4 },
-      { codeIsin: 'AC', nom: 'Actions', niveauRisque: 5, nonCote: false, partPct: 96 },
+      { codeIsin: 'NC', nom: 'Non coté', categorie: 'SCPI', niveauRisque: 6, nonCote: true, partPct: 4 },
+      { codeIsin: 'AC', nom: 'Actions', categorie: 'Actions', niveauRisque: 5, nonCote: false, partPct: 96 },
     ],
     allocationIndisponible: null,
     historique: [{ mode: 'PILOTEE', profil: 'EQUILIBRE', horizonAnnees: null, frais: 0, changeLe: '2026-11-26T15:30:00+01:00' }],
@@ -206,8 +206,12 @@ describe('GestionPage (CU-314, CU-338)', () => {
     expect(allocation).toContain('À 15 an(s) de votre retraite');
     expect(allocation).toContain('10 % d’actifs à faible risque');
     expect(allocation).toContain('8 % de non coté');
-    expect(page.querySelector('[data-test="a-valider"]')).not.toBeNull();
+    expect(page.querySelector('[data-test="a-valider"]')?.textContent).toBe('Pourcentages d’exemple, à valider par la conformité.');
     expect(page.querySelector('.badge')?.textContent).toBe('non coté');
+    // Lot 6 : répartition par catégorie (de la plus grande part à la plus petite), détail par support repliable.
+    const categories = [...page.querySelectorAll('[data-test="par-categorie"] .rp-ligne')].map((l) => `${l.querySelector('span')?.textContent} ${l.querySelector('strong')?.textContent}`);
+    expect(categories).toEqual(['Actions 96 %', 'SCPI 4 %']);
+    expect(page.querySelector('[data-test="detail-supports"]')?.tagName).toBe('DETAILS');
   });
 
   it('allocation impossible : le motif est affiché à la place de la répartition', async () => {
