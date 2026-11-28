@@ -1,27 +1,32 @@
 <div class="landing">
-  <aside>
-    <div class="logo">Hi-Tech<span>Bank</span></div>
-    <nav (click)="allerALaRubrique($event)">
-      <a href="#accueil"><i></i>Accueil</a>
+  <!-- Site public (prospect) : barre en haut, lecture en Z (logo, puis actions, puis rubriques) ; l'espace client
+       connecté garde son menu à gauche (gabarit-espace), ce qui distingue les deux d'un coup d'œil. -->
+  <header class="barre-site">
+    <div class="barre-haut">
+      <div class="logo">Hi-Tech<span>Bank</span></div>
+      <div class="top">
+        @if (!parcoursOuvert()) {
+          <a class="btn o" routerLink="/connexion">Me connecter</a>
+        }
+        <a class="btn p cta" href="#parcours" (click)="ouvrirParcours($event)">Ouvrir mon compte</a>
+      </div>
+    </div>
+    <nav aria-label="Rubriques du site" (click)="allerALaRubrique($event)">
+      <a href="#accueil">Accueil</a>
       <div class="sep">Mes produits</div>
-      <a href="#compte"><i></i>Compte courant</a>
-      <a href="#epargne"><i></i>Épargne et placements</a>
-      <a href="#credits"><i></i>Crédits</a>
+      <a href="#compte">Compte courant</a>
+      <a href="#epargne">Épargne et placements</a>
+      <a href="#credits">Crédits</a>
       <div class="sep">Pour aller plus loin</div>
-      <a href="#optimisation"><i></i>Optimisation et conseil</a>
-      <a href="#simulateurs"><i></i>Simulateurs</a>
-      <a href="#patrimoine"><i></i>Mon patrimoine</a>
-      <a href="#bientot"><i></i>Bientôt</a>
+      <a href="#optimisation">Optimisation et conseil</a>
+      <a href="#simulateurs">Simulateurs</a>
+      <a href="#patrimoine">Mon patrimoine</a>
+      <a href="#bientot">Bientôt</a>
     </nav>
-    <a class="cta" href="#parcours" (click)="ouvrirParcours($event)">Ouvrir mon compte</a>
-  </aside>
+  </header>
 
   <main>
     @if (!parcoursOuvert()) {
-      <div class="top">
-        <a class="btn o" routerLink="/connexion">Me connecter</a>
-        <a class="btn p" href="#parcours" (click)="ouvrirParcours($event)">Ouvrir mon compte</a>
-      </div>
 
       <div id="accueil" class="hero">
         <div class="wrap">

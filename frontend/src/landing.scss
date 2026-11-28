@@ -13,25 +13,26 @@ html {
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color: var(--ink);
   background: var(--white);
-  display: grid;
-  grid-template-columns: 248px 1fr;
   min-height: 100vh;
 
   &, * { box-sizing: border-box; }
   a { color: inherit; }
 
-  /* Sidebar */
-  aside { position: sticky; top: 0; height: 100vh; overflow: auto; background: linear-gradient(180deg, #0b2545, #12335f); color: #dfe9fb; padding: 26px 16px; }
-  .logo { font-weight: 800; font-size: 20px; color: #fff; padding: 0 12px 26px; letter-spacing: -.01em; }
+  /* Barre du site public (prospect), en haut ; l'espace client connecté a son menu à gauche. */
+  .barre-site { position: sticky; top: 0; z-index: 10; background: linear-gradient(90deg, #0b2545, #12335f); color: #dfe9fb; box-shadow: 0 6px 18px rgba(11, 37, 69, .18); }
+  .barre-haut { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 44px 10px; }
+  .logo { font-weight: 800; font-size: 22px; color: #fff; letter-spacing: -.01em; }
   .logo span { color: #7fe3cc; }
-  aside nav a { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-radius: 12px; color: #cdd9ee; text-decoration: none; font-size: 14.5px; margin-bottom: 3px; }
-  aside nav a:hover { background: rgba(255, 255, 255, .08); color: #fff; }
-  aside nav a i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; opacity: .6; }
-  aside .sep { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #7f97c4; padding: 18px 14px 6px; }
-  aside .cta { margin-top: 22px; display: block; text-align: center; background: linear-gradient(120deg, var(--mint), #00d4a0); color: var(--navy) !important; font-weight: 800; padding: 14px; border-radius: 14px; text-decoration: none; }
+  .barre-site nav { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; padding: 0 34px 10px; }
+  .barre-site nav a { padding: 8px 9px; border-radius: 10px; color: #cdd9ee; text-decoration: none; font-size: 14.5px; font-weight: 600; }
+  .barre-site nav a:hover { background: rgba(255, 255, 255, .1); color: #fff; }
+  .barre-site nav a:focus-visible, .barre-site .btn:focus-visible { outline: 3px solid #7fe3cc; outline-offset: 2px; }
+  /* Libellés de groupe : remplacés à l'écran par un séparateur, gardés pour les lecteurs d'écran. */
+  .barre-site .sep { width: 1px; height: 20px; margin: 0 6px; background: rgba(205, 217, 238, .35); overflow: hidden; color: transparent; font-size: 0; }
+  .barre-site .btn.cta { background: linear-gradient(120deg, var(--mint), #00d4a0); color: var(--navy); box-shadow: none; font-weight: 800; }
 
   main { min-width: 0; }
-  .top { display: flex; justify-content: flex-end; gap: 10px; padding: 18px 44px; position: sticky; top: 0; background: rgba(255, 255, 255, .9); backdrop-filter: blur(8px); z-index: 5; border-bottom: 1px solid var(--line); }
+  .top { display: flex; align-items: center; gap: 10px; }
   .btn { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-weight: 700; font-size: 15px; padding: 12px 22px; border-radius: 14px; border: 0; cursor: pointer; transition: transform .15s, box-shadow .15s; }
   .btn:hover { transform: translateY(-1px); }
   .btn.p { background: linear-gradient(120deg, var(--blue), var(--blue2)); color: #fff; box-shadow: 0 10px 24px rgba(11, 37, 69, .25); }
@@ -182,9 +183,8 @@ html {
   .mock .row span:last-child { font-weight: 700; }
 
   @media (max-width: 980px) {
-    grid-template-columns: 1fr;
-
-    aside { display: none; }
+    .barre-haut { padding: 12px 20px 8px; }
+    .barre-site nav { padding: 0 8px 8px; }
     .hero .wrap, .feature, .patri, .usecase { grid-template-columns: 1fr; }
     .hero h1 { font-size: 38px; }
     .hero-art { height: 360px; }
@@ -193,7 +193,6 @@ html {
     .opt-grid, .sim-row { grid-template-columns: 1fr; }
     section { padding: 52px 20px; }
     .hero { padding: 60px 20px; }
-    .top { padding: 14px 20px; }
     .dark { padding: 28px 22px; }
     .soon { grid-template-columns: 1fr; }
   }
