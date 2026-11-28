@@ -36,11 +36,11 @@ class InterrupteursHelmTest {
 	}
 
 	@Test
-	@DisplayName("helm.yaml : 21 interrupteurs ; seuls ceux des fonctionnalités livrées peuvent être activés")
+	@DisplayName("helm.yaml : 22 interrupteurs ; seuls ceux des fonctionnalités livrées peuvent être activés")
 	void aucunBoutonBientotActive() throws IOException {
 		Map<String, String> valeurs = interrupteurs();
 
-		assertThat(valeurs).hasSize(21);
+		assertThat(valeurs).hasSize(22);
 		valeurs.forEach((cle, valeur) -> {
 			if (!LIVREES.contains(cle)) {
 				assertThat(valeur).as(cle + " : fonctionnalité sans page, interrupteur à laisser à \"false\"")

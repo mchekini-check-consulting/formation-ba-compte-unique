@@ -1,6 +1,10 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { BoutonFonctionnalite } from '../fonctionnalites/bouton-fonctionnalite';
+import { PROFILS } from '../gestion/gestion';
+import { BrouillonSouscription } from '../tunnel/brouillon';
+import { Tunnel } from '../tunnel/tunnel';
 import { Observable } from 'rxjs';
 import { eurosAuCentime } from '../livret-a/parametres';
 import { Beneficiaire, EtatSouscription, ORIGINES, OrigineFonds, Produit, SouscriptionService } from './souscription';
@@ -49,9 +53,10 @@ const ligneComplete = (l: Ligne) =>
 // puis signature par code SMS (valable 5 minutes ; 3 codes erronés : 30 minutes de blocage). Refus : message du backend.
 @Component({
   selector: 'app-souscription-page',
-  imports: [RouterLink],
+  imports: [BoutonFonctionnalite, RouterLink, Tunnel],
   template: `
     <div class="page souscription">
+      <app-tunnel [produit]="produit" [etape]="etapeTunnel()" [etat]="donnees()" [autonome]="false">
       <h1>{{ textes.titre }}</h1>
 
       @if (message()) {
@@ -70,10 +75,18 @@ const ligneComplete = (l: Ligne) =>
         }
         @case ('affiche') {
           @if (donnees()!.etape === 'SIGNEE') {
+            <!-- Lot 5, étape 5 : confirmation (PER-04, AV-01, TECH-08). -->
             <section class="carte" data-test="signee">
               <h2>Votre contrat est ouvert</h2>
               <p>Contrat n° {{ donnees()!.numeroContrat }}, en gestion pilotée.</p>
-              <a routerLink="/gestion" [queryParams]="{ produit }">Voir ma gestion</a>
+              @if (donnees()!.montant !== null) {
+                <p data-test="investi">Votre versement de {{ eurosAuCentime(donnees()!.montant!) }} sera investi à la prochaine valeur liquidative.</p>
+              }
+              <p>Vos documents : <a routerLink="/decouvrir" [queryParams]="{ produit }">document d’informations clés et fiche produit</a>.</p>
+              <p class="boutons">
+                <a class="btn p" data-test="choisir-gestion" routerLink="/gestion" [queryParams]="{ produit, tunnel: 1 }">Choisir mon mode de gestion</a>
+                <a class="btn o" data-test="voir-contrat" routerLink="/espace" fragment="synthese">Voir mon contrat</a>
+              </p>
             </section>
           } @else if (donnees()!.profil !== 'VALIDE') {
             <p class="carte" data-test="profil-requis">
@@ -129,6 +142,13 @@ const ligneComplete = (l: Ligne) =>
                   }
                 </fieldset>
               }
+              @if (donnees()!.profilGestionParDefaut; as profil) {
+                <!-- Lot 5 (D5) : le contrat naît à la signature, en gestion pilotée ; le mode se choisit juste après. -->
+                <p class="info" data-test="gestion-par-defaut">Votre contrat démarrera en gestion pilotée, profil {{ libelleProfil(profil) }}. Vous pourrez choisir un autre mode de gestion juste après l’ouverture.</p>
+              }
+              <p>
+                <app-bouton-fonctionnalite cle="versements-programmes" classe="lien">Programmer des versements</app-bouton-fonctionnalite>
+              </p>
               <button class="btn p" type="submit" data-test="continuer" [disabled]="!peutContinuer() || envoi()">Continuer</button>
             </form>
           } @else {
@@ -137,7 +157,8 @@ const ligneComplete = (l: Ligne) =>
               <p>{{ textes.versement }} : <strong>{{ eurosAuCentime(donnees()!.montant!) }}</strong>, {{ libelleOrigine() }}.
                 <button class="lien" type="button" data-test="modifier" (click)="modifier()">Modifier</button></p>
               @if (produit === 'AV') {
-                <p data-test="recap-clause">{{ resumeClause() }}</p>
+                <p data-test="recap-clause">{{ resumeClause() }}
+                  <button class="lien" type="button" data-test="modifier-clause" (click)="modifier()">Modifier</button></p>
               }
               <p>Un code à 6 chiffres vous est envoyé par SMS ; il est valable 5 minutes.</p>
               <button class="btn o" type="button" data-test="code" [disabled]="envoi()" (click)="envoyerCode()">
@@ -156,9 +177,12 @@ const ligneComplete = (l: Ligne) =>
           }
         }
       }
+      </app-tunnel>
     </div>
   `,
   styles: `
+    .info { padding: 12px 14px; border-radius: 12px; background: #eef6ff; border: 1px solid #c7defa; }
+    .boutons { display: flex; flex-wrap: wrap; gap: 12px; }
     label { display: grid; gap: 4px; font-weight: 700; }
     .choix { display: flex; gap: 8px; align-items: center; font-weight: 400; }
     .beneficiaire { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; align-items: end;
@@ -168,6 +192,7 @@ const ligneComplete = (l: Ligne) =>
 })
 export class SouscriptionPage {
   private readonly service = inject(SouscriptionService);
+  private readonly brouillons = inject(BrouillonSouscription);
   private readonly router = inject(Router);
   protected readonly produit: Produit =
     inject(ActivatedRoute).snapshot.queryParamMap.get('produit') === 'AV' ? 'AV' : 'PER';
@@ -175,6 +200,11 @@ export class SouscriptionPage {
   protected readonly origines = ORIGINES;
   protected readonly quotesParts = QUOTES_PARTS;
   protected readonly eurosAuCentime = eurosAuCentime;
+  /** Lot 5 : étape du tunnel : 3 versement (ou modification), 4 récapitulatif et signature, 5 confirmation. */
+  protected readonly etapeTunnel = computed(() => {
+    const etape = this.donnees()?.etape;
+    return etape === 'SIGNEE' ? 5 : etape === 'SIGNATURE' && !this.modification() ? 4 : 3;
+  });
   protected readonly etat = signal<Etat>('chargement');
   protected readonly donnees = signal<EtatSouscription | null>(null);
   protected readonly modification = signal(false);
@@ -210,6 +240,11 @@ export class SouscriptionPage {
   });
 
   constructor() {
+    effect(() => {
+      if (this.donnees()?.etape === 'VERSEMENT' || this.modification()) {
+        this.brouillons.garder(this.produit, { montant: this.montant(), origineFonds: this.origineFonds(), precision: this.precision(), lignes: this.lignes() });
+      }
+    });
     this.service.etat(this.produit).subscribe({
       next: (donnees) => {
         if (this.etapeSautee(donnees)) {
@@ -239,6 +274,10 @@ export class SouscriptionPage {
       return true;
     }
     return false;
+  }
+
+  protected libelleProfil(profil: keyof typeof PROFILS): string {
+    return PROFILS[profil];
   }
 
   protected valeur(event: Event): string {
@@ -309,7 +348,14 @@ export class SouscriptionPage {
   private afficher(donnees: EtatSouscription): void {
     this.donnees.set(donnees);
     this.modification.set(false);
-    if (donnees.montant !== null) {
+    const brouillon = this.brouillons.lire(this.produit);
+    if (donnees.etape === 'VERSEMENT' && donnees.montant === null && brouillon) {
+      // D6 : saisie reprise après un retour arrière, tant que la session est ouverte.
+      this.montant.set(brouillon.montant);
+      this.origineFonds.set(brouillon.origineFonds);
+      this.precision.set(brouillon.precision);
+      this.lignes.set(brouillon.lignes);
+    } else if (donnees.montant !== null) {
       this.montant.set(String(donnees.montant).replace('.', ','));
       this.origineFonds.set(donnees.origineFonds);
       this.precision.set(donnees.originePrecision ?? '');

@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { Tunnel } from '../tunnel/tunnel';
 import { Observable } from 'rxjs';
 import { afficherDate } from '../date-metier-test/date-metier';
 import { euros, eurosAuCentime } from '../livret-a/parametres';
@@ -25,9 +26,10 @@ const pourcent = (valeur: number) => `${String(valeur).replace('.', ',')} %`;
 // mandat est sélectionné, avant validation ; les refus viennent du backend avec leur message.
 @Component({
   selector: 'app-gestion-page',
-  imports: [RouterLink],
+  imports: [RouterLink, Tunnel],
   template: `
     <div class="page gestion">
+      <app-tunnel [produit]="produit" [etape]="6" [actif]="dansLeTunnel">
       <h1>Choisir mon mode de gestion</h1>
       <p class="lead">{{ produit === 'PER' ? 'Plan d’épargne retraite' : 'Assurance vie' }} : changer de mode ou de profil est gratuit.</p>
 
@@ -68,13 +70,20 @@ const pourcent = (valeur: number) => `${String(valeur).replace('.', ',')} %`;
               <h2>Mon choix</h2>
               <fieldset>
                 <legend>Mode de gestion</legend>
-                @for (m of modes; track m.code) {
-                  <label class="option">
-                    <input type="radio" name="mode" [value]="m.code" [checked]="mode() === m.code" (change)="mode.set(m.code)" />
-                    <span><strong>{{ m.titre }}</strong> — {{ m.texte }}</span>
-                  </label>
-                }
+                <!-- Lot 5 : trois cartes côte à côte (pilotée, libre, sous mandat). -->
+                <div class="cartes-modes">
+                  @for (m of modes; track m.code) {
+                    <label class="option carte-mode" [class.choisie]="mode() === m.code">
+                      <input type="radio" name="mode" [value]="m.code" [checked]="mode() === m.code" (change)="mode.set(m.code)" />
+                      <span><strong>{{ m.titre }}</strong><br />{{ m.texte }}</span>
+                    </label>
+                  }
+                </div>
               </fieldset>
+              @if (mode() === 'LIBRE') {
+                <!-- Lot 5 : en gestion libre, la cliente choisit ses supports (lot 6). -->
+                <p data-test="vers-supports"><a routerLink="/supports" [queryParams]="{ produit }">Choisir mes supports</a></p>
+              }
               @if (mode() !== 'LIBRE') {
                 <label class="profil">
                   Profil de gestion
@@ -164,14 +173,18 @@ const pourcent = (valeur: number) => `${String(valeur).replace('.', ',')} %`;
           } @else {
             <section class="carte" data-test="sans-contrat">
               <p>Vous n’avez pas encore de contrat {{ nomCourt }}. Votre contrat démarrera en gestion pilotée ; vous pourrez ensuite choisir votre mode de gestion ici.</p>
-              <a class="btn p" data-test="souscrire" routerLink="/decouvrir" [queryParams]="{ produit }">{{ produit === 'PER' ? 'Souscrire mon PER' : 'Souscrire mon assurance vie' }}</a>
+              <a class="btn p" data-test="souscrire" routerLink="/produit" [queryParams]="{ produit }">{{ produit === 'PER' ? 'Souscrire mon PER' : 'Souscrire mon assurance vie' }}</a>
             </section>
           }
         }
       }
+      </app-tunnel>
     </div>
   `,
   styles: `
+    .cartes-modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .carte-mode { display: flex; gap: 8px; align-items: flex-start; padding: 14px; border: 1px solid #d9dee6; border-radius: 14px; background: #fff; cursor: pointer; }
+    .carte-mode.choisie { border-color: #0b2545; box-shadow: 0 0 0 2px #0b2545 inset; }
     h2 { margin: 0 0 8px; font-size: 18px; }
     .lead, .detail { line-height: 1.6; color: #5d6887; }
     .option { display: flex; gap: 8px; align-items: baseline; }
@@ -185,6 +198,8 @@ const pourcent = (valeur: number) => `${String(valeur).replace('.', ',')} %`;
 })
 export class GestionPage {
   private readonly service = inject(GestionService);
+  /** Lot 5 : étape 6 (facultative) du tunnel quand la page est ouverte depuis la confirmation (?tunnel=1). */
+  protected readonly dansLeTunnel = inject(ActivatedRoute).snapshot.queryParamMap.get('tunnel') === '1';
   protected readonly produit: Produit =
     inject(ActivatedRoute).snapshot.queryParamMap.get('produit') === 'PER' ? 'PER' : 'AV';
   protected readonly nomProduit = this.produit === 'PER' ? 'le PER' : 'l’assurance vie';

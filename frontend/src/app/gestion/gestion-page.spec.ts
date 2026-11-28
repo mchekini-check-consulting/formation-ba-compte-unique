@@ -87,13 +87,13 @@ describe('GestionPage (CU-314, CU-338)', () => {
     expect(page.textContent).not.toContain('contrat de test');
     const souscrire = page.querySelector<HTMLAnchorElement>('[data-test="souscrire"]')!;
     expect(souscrire.textContent).toContain('Souscrire mon assurance vie');
-    expect(souscrire.getAttribute('href')).toBe('/decouvrir?produit=AV');
+    expect(souscrire.getAttribute('href')).toBe('/produit?produit=AV');
   });
 
   it('PER sans contrat ni profil validé : lien vers le profil et vers la souscription du PER', async () => {
     const { page } = await ouvrirPage(etat({ produit: 'PER', contrat: null, profilInvestisseur: null }), 'PER');
     expect(page.querySelector('[data-test="profil-requis"] a')?.getAttribute('href')).toBe('/profil');
-    expect(page.querySelector('[data-test="souscrire"]')?.getAttribute('href')).toBe('/decouvrir?produit=PER');
+    expect(page.querySelector('[data-test="souscrire"]')?.getAttribute('href')).toBe('/produit?produit=PER');
   });
 
   it('contrat de test : aucun lien vers les pages de test', async () => {

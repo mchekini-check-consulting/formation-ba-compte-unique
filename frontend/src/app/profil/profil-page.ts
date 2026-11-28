@@ -1,6 +1,8 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { SuiviSession } from '../session/suivi-session';
+import { Tunnel } from '../tunnel/tunnel';
 import { EtatProfil, LIBELLES_PROFIL, LIBELLES_STATUT, Profil, ProfilService, QUESTIONS, Question, reponsesDe } from './profil';
 
 type Message = { texte: string; erreur: boolean };
@@ -21,9 +23,10 @@ export function formaterJour(date: string): string {
 // des versions avec leur date.
 @Component({
   selector: 'app-profil-page',
-  imports: [],
+  imports: [Tunnel],
   template: `
     <div class="page">
+      <app-tunnel [produit]="produit ?? 'PER'" [etape]="1" [actif]="produit !== null">
       <section class="block">
         <div class="wrap">
           <div class="eyebrow">Épargne et placements</div>
@@ -112,6 +115,7 @@ export function formaterJour(date: string): string {
           </div>
         </div>
       </section>
+      </app-tunnel>
     </div>
   `,
   styles: `
@@ -139,6 +143,9 @@ export function formaterJour(date: string): string {
 export class ProfilPage {
   private readonly suivi = inject(SuiviSession);
   private readonly service = inject(ProfilService);
+  private readonly router = inject(Router);
+  /** Lot 5 : étape 1 du tunnel quand le questionnaire est ouvert depuis une souscription (?produit=PER|AV). */
+  protected readonly produit = ((p) => (p === 'PER' || p === 'AV' ? p : null))(inject(ActivatedRoute).snapshot.queryParamMap.get('produit'));
 
   protected readonly groupes = GROUPES;
   protected readonly questions = QUESTIONS;
@@ -186,6 +193,11 @@ export class ProfilPage {
           texte: `Profil validé : ${LIBELLES_PROFIL[profil.profilInvestisseur]}. À revalider avant le ${formaterJour(profil.revaliderLe)}.`,
           erreur: false,
         });
+        // Lot 5 : profil validé dans le tunnel : retour automatique à l'étape 2 (documents).
+        if (this.produit) {
+          void this.router.navigate(['/decouvrir'], { queryParams: { produit: this.produit } });
+          return;
+        }
         this.charger();
       },
       error: (erreur: HttpErrorResponse) => {

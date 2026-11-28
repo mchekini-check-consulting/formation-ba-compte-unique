@@ -158,6 +158,14 @@ public class ModeDeGestion {
 				.toList();
 	}
 
+	/**
+	 * Lot 5 : profil de gestion avec lequel le contrat démarrera en gestion pilotée (PER-04, AV-01 : le moins risqué
+	 * entre « équilibré » et le profil investisseur), annoncé avant la signature. Même règle que {@link #initialiser}.
+	 */
+	public ProfilGestion profilParDefaut(String profilInvestisseur) {
+		return ProfilGestion.parDefaut(profilInvestisseur);
+	}
+
 	/** CU-312 : numéro du contrat de la cliente pour ce produit, vide sans contrat. */
 	@Transactional(readOnly = true)
 	public Optional<String> numeroContrat(UUID customerId, Produit produit) {

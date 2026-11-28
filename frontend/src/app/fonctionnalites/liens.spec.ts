@@ -34,7 +34,7 @@ describe('Liens et boutons des pages connectées (lot 3)', () => {
   it('chaque page de la cliente est reliée au menu (sauf le détail d’un compte, ouvert depuis Mes comptes, et le parcours de souscription)', () => {
     const relies = new Set(MENU.flatMap((r) => (r.lien ? [r.lien] : (r.entrees ?? []))).map((e) => e.lien.replace(/^\//, '')));
     // Parcours : Découvrir puis Souscrire s'ouvrent depuis les cartes « Souscrire » de Produits à souscrire.
-    const horsMenu = ['comptes/:id', 'decouvrir', 'souscrire'];
+    const horsMenu = ['comptes/:id', 'produit', 'decouvrir', 'souscrire'];
     for (const page of PAGES_CLIENTE.filter((p) => !horsMenu.includes(p))) {
       expect(relies.has(page), `/${page}`).toBe(true);
     }
@@ -46,7 +46,7 @@ describe('Liens et boutons des pages connectées (lot 3)', () => {
         expect(pageDefinie(f.lien), cle).toBe(true);
       }
     }
-    expect(SANS_PAGE).toHaveLength(20);
+    expect(SANS_PAGE).toHaveLength(21);
   });
 
   describe('accueil de l’espace', () => {

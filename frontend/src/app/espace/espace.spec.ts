@@ -193,7 +193,7 @@ describe('Espace', () => {
     const liens = Array.from(page.querySelectorAll<HTMLAnchorElement>('#epargne .produit a.btn')).map((a) =>
       a.getAttribute('href'),
     );
-    expect(liens).toEqual(['/livret-a', '/decouvrir?produit=AV', '/decouvrir?produit=PER']);
+    expect(liens).toEqual(['/livret-a', '/produit?produit=AV', '/produit?produit=PER']);
   });
 
   it('les boutons « Faire un virement » (accueil, compte courant, actions rapides) ouvrent la page de virement (CU-11)', async () => {
