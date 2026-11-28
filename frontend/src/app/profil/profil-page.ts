@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { SuiviSession } from '../session/suivi-session';
-import { Tunnel } from '../tunnel/tunnel';
+import { Tunnel, pageSuivante } from '../tunnel/tunnel';
 import { EtatProfil, LIBELLES_PROFIL, LIBELLES_STATUT, Profil, ProfilService, QUESTIONS, Question, reponsesDe } from './profil';
 
 type Message = { texte: string; erreur: boolean };
@@ -26,7 +26,7 @@ export function formaterJour(date: string): string {
   imports: [Tunnel],
   template: `
     <div class="page">
-      <app-tunnel [produit]="produit ?? 'PER'" [etape]="1" [actif]="produit !== null">
+      <app-tunnel [produit]="produit ?? 'PER'" etape="profil" [actif]="produit !== null">
       <section class="block">
         <div class="wrap">
           <div class="eyebrow">Épargne et placements</div>
@@ -195,7 +195,7 @@ export class ProfilPage {
         });
         // Lot 5 : profil validé dans le tunnel : retour automatique à l'étape 2 (documents).
         if (this.produit) {
-          void this.router.navigate(['/decouvrir'], { queryParams: { produit: this.produit } });
+          void this.router.navigate([pageSuivante('profil')], { queryParams: { produit: this.produit } });
           return;
         }
         this.charger();

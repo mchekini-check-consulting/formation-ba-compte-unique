@@ -71,11 +71,13 @@ export function tauxFondsEuros(f: Partial<FondsEuros> | null | undefined): TauxA
     return null;
   }
   const [annee, mois, jour] = f.dateMiseAJour?.split('-') ?? [];
-  const net = f.fraisGestionPct == null ? '' : `, soit ${pourcentage(f.tauxBrutVisePct - f.fraisGestionPct)} net après frais`;
+  // CU-530 (AV-17) : le net n'apparaît que si les frais du fonds en euros sont renseignés.
+  const net = f.fraisGestionPct == null ? '' : `, soit ${pourcentage(f.tauxBrutVisePct - f.fraisGestionPct)} net de frais de gestion`;
+  // PO 28/11 : « Taux brut visé en 2026 : 2,90 % (mis à jour le 01/01/2026). Taux non garanti. »
   return {
     avant: annee ? `Taux brut visé en ${annee} :` : 'Taux brut visé :',
     taux: pourcentage(f.tauxBrutVisePct),
-    detail: `${annee ? `(mis à jour le ${jour}/${mois}/${annee}) ` : ''}sur le fonds en euros${net}, non garanti`,
+    detail: `${annee ? `(mis à jour le ${jour}/${mois}/${annee})` : ''}${net}. Taux non garanti.`,
   };
 }
 

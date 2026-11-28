@@ -1,5 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { Component, TemplateRef, computed, inject, input, signal } from '@angular/core';
 import { BoutonFonctionnalite } from '../fonctionnalites/bouton-fonctionnalite';
 import { PointVl, SupportEligible, SupportsService } from './supports';
 
@@ -67,6 +67,9 @@ const nombre = (valeur: number, decimales: number) =>
                   }
                   <th scope="col">Frais du contrat</th>
                   <th scope="col">Label</th>
+                  @if (actionLigne(); as action) {
+                    <th scope="col">{{ libelleAction() }}</th>
+                  }
                 </tr>
               </thead>
               <tbody>
@@ -86,6 +89,9 @@ const nombre = (valeur: number, decimales: number) =>
                     <td><strong>{{ pourcent(total(s)) }}</strong></td>
                     <td>{{ pourcent(fraisContratPct()) }}</td>
                     <td>{{ s.label ?? '—' }}</td>
+                    @if (actionLigne(); as action) {
+                      <td><ng-container *ngTemplateOutlet="action; context: { $implicit: s }" /></td>
+                    }
                   </tr>
                 }
               </tbody>
@@ -112,6 +118,9 @@ const nombre = (valeur: number, decimales: number) =>
                   <div><dt>Frais du contrat</dt><dd>{{ pourcent(fraisContratPct()) }} par an</dd></div>
                   <div><dt>Total annuel</dt><dd>{{ pourcent(total(s)) }}</dd></div>
                 </dl>
+                @if (actionLigne(); as action) {
+                  <ng-container *ngTemplateOutlet="action; context: { $implicit: s }" />
+                }
               </li>
             }
           </ul>
@@ -215,6 +224,12 @@ export class ListeSupports {
   readonly fraisContratPct = input.required<number>();
   /** D7 : catégorie → famille ; vide tant que le regroupement n'est pas validé (filtre sur la catégorie d'origine). */
   readonly famillesCategories = input<Record<string, string>>({});
+  /**
+   * PO 28/11 : emplacement d'une action par support (plus tard, la sélection avec un pourcentage ou un montant de
+   * GL-01, CU-525, ou la liste « Vers » des arbitrages) ; absent : la liste est en consultation seule.
+   */
+  readonly actionLigne = input<TemplateRef<{ $implicit: SupportEligible }> | null>(null);
+  readonly libelleAction = input('');
 
   protected readonly colonnes: { cle: Colonne; libelle: string }[] = [
     { cle: 'nom', libelle: 'Nom' },

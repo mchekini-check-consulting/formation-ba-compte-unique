@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Tunnel } from '../tunnel/tunnel';
+import { Tunnel, pageSuivante } from '../tunnel/tunnel';
 import { Observable } from 'rxjs';
 import { CodeDocument, DecouverteService, EtatDecouverte, Produit } from './decouverte';
 
@@ -54,7 +54,7 @@ export const PRESENTATIONS: Record<Produit, Presentation> = {
   imports: [Tunnel],
   template: `
     <div class="page decouverte">
-      <app-tunnel [produit]="produit" [etape]="2">
+      <app-tunnel [produit]="produit" etape="documents">
       <h1>Découvrir {{ presentation.nom }}</h1>
       <p class="lead">{{ presentation.accroche }}</p>
 
@@ -159,7 +159,7 @@ export class DecouvertePage {
 
   // CU-312 et CU-330 : étape suivante, la souscription du produit (PER-04, AV-01).
   protected continuer(): void {
-    void this.router.navigate(['/souscrire'], { queryParams: { produit: this.produit } });
+    void this.router.navigate([pageSuivante('documents')], { queryParams: { produit: this.produit } });
   }
 
   private envoyer(

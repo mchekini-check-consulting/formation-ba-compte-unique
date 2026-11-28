@@ -4,7 +4,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { BoutonFonctionnalite } from '../fonctionnalites/bouton-fonctionnalite';
 import { PROFILS } from '../gestion/gestion';
 import { BrouillonSouscription } from '../tunnel/brouillon';
-import { Tunnel } from '../tunnel/tunnel';
+import { CleEtape, Tunnel, pageSuivante } from '../tunnel/tunnel';
 import { Observable } from 'rxjs';
 import { eurosAuCentime } from '../livret-a/parametres';
 import { Beneficiaire, EtatSouscription, ORIGINES, OrigineFonds, Produit, SouscriptionService } from './souscription';
@@ -84,7 +84,7 @@ const ligneComplete = (l: Ligne) =>
               }
               <p>Vos documents : <a routerLink="/decouvrir" [queryParams]="{ produit }">document d’informations clés et fiche produit</a>.</p>
               <p class="boutons">
-                <a class="btn p" data-test="choisir-gestion" routerLink="/gestion" [queryParams]="{ produit, tunnel: 1 }">Choisir mon mode de gestion</a>
+                <a class="btn p" data-test="choisir-gestion" [routerLink]="apresConfirmation" [queryParams]="{ produit, tunnel: 1 }">Choisir mon mode de gestion</a>
                 <a class="btn o" data-test="voir-contrat" routerLink="/espace" fragment="synthese">Voir mon contrat</a>
               </p>
             </section>
@@ -200,11 +200,13 @@ export class SouscriptionPage {
   protected readonly origines = ORIGINES;
   protected readonly quotesParts = QUOTES_PARTS;
   protected readonly eurosAuCentime = eurosAuCentime;
-  /** Lot 5 : étape du tunnel : 3 versement (ou modification), 4 récapitulatif et signature, 5 confirmation. */
-  protected readonly etapeTunnel = computed(() => {
+  /** Lot 5 : étape du tunnel : versement (ou modification), récapitulatif et signature, confirmation. */
+  protected readonly etapeTunnel = computed<CleEtape>(() => {
     const etape = this.donnees()?.etape;
-    return etape === 'SIGNEE' ? 5 : etape === 'SIGNATURE' && !this.modification() ? 4 : 3;
+    return etape === 'SIGNEE' ? 'confirmation' : etape === 'SIGNATURE' && !this.modification() ? 'signature' : 'versement';
   });
+  /** Page de l'étape qui suit la confirmation (aujourd'hui « Ma gestion »), selon l'ordre du tunnel. */
+  protected readonly apresConfirmation = pageSuivante('confirmation');
   protected readonly etat = signal<Etat>('chargement');
   protected readonly donnees = signal<EtatSouscription | null>(null);
   protected readonly modification = signal(false);

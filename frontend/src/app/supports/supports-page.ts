@@ -2,6 +2,8 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { catchError, of } from 'rxjs';
+import { BoutonFonctionnalite } from '../fonctionnalites/bouton-fonctionnalite';
+import { Tunnel } from '../tunnel/tunnel';
 import { ListeSupports } from './liste-supports';
 import { ParametresPublics, Produit, SupportsDisponibles, SupportsService, tauxFondsEuros } from './supports';
 
@@ -19,9 +21,12 @@ const pourcent = (taux: number) =>
 // lien vers le questionnaire ; le fonds en euros reste affiché.
 @Component({
   selector: 'app-supports-page',
-  imports: [RouterLink, ListeSupports],
+  imports: [RouterLink, ListeSupports, Tunnel, BoutonFonctionnalite],
   template: `
     <div class="page supports">
+      <!-- PO 28/11 : ouverte depuis « Ma gestion » en gestion libre, la page est l'étape « Mes supports » du tunnel, en
+           consultation ; le panneau « Ma répartition » reste en Bientôt (CU-525 GL-01). -->
+      <app-tunnel [produit]="produit()" etape="gestion" [actif]="dansLeTunnel">
       <h1>Supports disponibles — {{ libelle(produit()) }}</h1>
       <div class="onglets" role="group" aria-label="Produit">
         @for (p of produits; track p) {
@@ -73,15 +78,22 @@ const pourcent = (taux: number) =>
           }
         }
       }
+      @if (dansLeTunnel) {
+        <section class="carte ma-repartition" data-test="ma-repartition" aria-labelledby="titre-ma-repartition">
+          <h2 id="titre-ma-repartition">Ma répartition</h2>
+          <app-bouton-fonctionnalite cle="repartition-gestion-libre" classe="lien">Répartir mes versements entre mes supports</app-bouton-fonctionnalite>
+        </section>
+      }
+      </app-tunnel>
     </div>
   `,
 })
 export class SupportsPage {
   private readonly service = inject(SupportsService);
   protected readonly produits: Produit[] = ['PER', 'AV'];
-  protected readonly produit = signal<Produit>(
-    inject(ActivatedRoute).snapshot.queryParamMap.get('produit') === 'PER' ? 'PER' : 'AV',
-  );
+  private readonly route = inject(ActivatedRoute);
+  protected readonly produit = signal<Produit>(this.route.snapshot.queryParamMap.get('produit') === 'PER' ? 'PER' : 'AV');
+  protected readonly dansLeTunnel = this.route.snapshot.queryParamMap.get('tunnel') === '1';
   protected readonly etat = signal<Etat>('chargement');
   protected readonly donnees = signal<SupportsDisponibles | null>(null);
   /** Sans réponse, aucun paramètre n'est affiché (jamais de valeur écrite en dur). */

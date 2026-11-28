@@ -348,10 +348,8 @@
   .ls-courbe td, .ls-courbe th { padding: 4px 6px; border-bottom: 1px solid var(--line); text-align: left; }
   .ls-document { margin-top: 20px; }
 
-  /* Lot 6 : répartition de la gestion pilotée par catégorie (barres horizontales, une teinte). */
-  .rp-barres { display: grid; gap: 8px; margin: 12px 0; }
-  .rp-ligne { display: grid; grid-template-columns: minmax(120px, 200px) 1fr 64px; gap: 10px; align-items: center; font-size: 14px; }
-  .rp-piste { height: 12px; background: var(--soft); border-radius: 4px; overflow: hidden; }
+  /* Lot 6 : part de chaque ligne de la gestion pilotée (barre exacte, sans regroupement). */
+  .rp-part { white-space: nowrap; }
+  .rp-piste { display: inline-block; width: 80px; height: 10px; margin-right: 8px; vertical-align: middle; background: var(--soft); border-radius: 4px; overflow: hidden; }
   .rp-piste span { display: block; height: 100%; background: var(--navy); border-radius: 0 4px 4px 0; }
-  .rp-ligne strong { text-align: right; }
 }

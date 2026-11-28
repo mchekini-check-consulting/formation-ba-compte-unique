@@ -33,7 +33,8 @@ export const FONCTIONNALITES = {
   'document-releve': { phrase: 'Consultez vos relevés en ligne : disponible prochainement.' },
   'document-attestation-livret-a': { phrase: 'Consultez votre attestation en ligne : disponible prochainement.' },
   'contact-conseiller': { phrase: 'Écrivez à votre conseiller depuis votre espace : disponible prochainement.' },
-  'changement-mot-de-passe': { phrase: 'Changez votre mot de passe depuis votre espace : disponible prochainement.' },
+  // CU-526 SEC-01 (PO 28/11).
+  'changer-mot-de-passe': { phrase: 'Changez votre mot de passe depuis votre espace : disponible prochainement.' },
   // Lot 4 : actions d'un contrat PER ou assurance vie et action rapide « Verser ».
   'versement-libre': { phrase: 'Versez sur votre PER ou votre assurance vie : disponible prochainement.' },
   'operations-contrat': { phrase: 'Suivez les opérations de votre contrat : disponible prochainement.' },
@@ -42,6 +43,10 @@ export const FONCTIONNALITES = {
   'versements-programmes': { phrase: 'Programmez vos versements sur votre contrat : disponible prochainement.' },
   // Lot 6 (D7) : document d'informations par support, sur la fiche d'un support.
   'document-support': { phrase: 'Consultez le document d’informations du support : disponible prochainement.' },
+  // CU-525 GL-01 (PO 28/11) : panneau « Ma répartition » de l'étape « Mes supports », en gestion libre.
+  'repartition-gestion-libre': { phrase: 'Répartissez vos versements entre les supports de votre choix : disponible prochainement.' },
+  // PER-12 (CU-319) et AV-08 (CU-339) : arbitrer entre fonds en euros et unités de compte.
+  arbitrage: { phrase: 'Arbitrez entre fonds en euros et unités de compte : disponible prochainement.' },
   // D4 : outils de test (dev et qualif), portés par l'entrée « Outils de test » du menu.
   'outils-test': { lien: '/test/fonctionnalites', phrase: 'Outils de test : réservés aux environnements de test.' },
 } satisfies Record<string, Fonctionnalite>;

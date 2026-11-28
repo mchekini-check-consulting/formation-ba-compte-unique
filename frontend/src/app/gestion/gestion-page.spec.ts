@@ -208,10 +208,10 @@ describe('GestionPage (CU-314, CU-338)', () => {
     expect(allocation).toContain('8 % de non coté');
     expect(page.querySelector('[data-test="a-valider"]')?.textContent).toBe('Pourcentages d’exemple, à valider par la conformité.');
     expect(page.querySelector('.badge')?.textContent).toBe('non coté');
-    // Lot 6 : répartition par catégorie (de la plus grande part à la plus petite), détail par support repliable.
-    const categories = [...page.querySelectorAll('[data-test="par-categorie"] .rp-ligne')].map((l) => `${l.querySelector('span')?.textContent} ${l.querySelector('strong')?.textContent}`);
-    expect(categories).toEqual(['Actions 96 %', 'SCPI 4 %']);
-    expect(page.querySelector('[data-test="detail-supports"]')?.tagName).toBe('DETAILS');
+    // PO 28/11 : répartition telle qu'enregistrée, une ligne par support, sans regroupement ni arrondi, rien de replié.
+    const lignes = [...page.querySelectorAll('[data-test="repartition-pilotee"] tbody tr')].map((l) => [...l.querySelectorAll('td')].map((td) => td.textContent?.replace(/\s+/g, ' ').trim()).join(' | '));
+    expect(lignes).toEqual(['Non coté non coté | SCPI | 6/7 | 4 %', 'Actions | Actions | 5/7 | 96 %']);
+    expect(page.querySelector('[data-test="allocation"] details')).toBeNull();
   });
 
   it('allocation impossible : le motif est affiché à la place de la répartition', async () => {

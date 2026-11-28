@@ -54,7 +54,7 @@ function reponse(supports: SupportEligible[], autres: Partial<SupportsDisponible
   };
 }
 
-function creer(produit: string | null = null) {
+function creer(produit: string | null = null, autres: Record<string, string> = {}) {
   TestBed.configureTestingModule({
     imports: [SupportsPage],
     providers: [
@@ -62,7 +62,7 @@ function creer(produit: string | null = null) {
       provideHttpClient(),
       provideHttpClientTesting(),
       { provide: FonctionnalitesService, useValue: { etats: () => of({}) } },
-      { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap(produit ? { produit } : {}) } } },
+      { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({ ...(produit ? { produit } : {}), ...autres }) } } },
     ],
   });
   return TestBed.createComponent(SupportsPage);
@@ -265,5 +265,20 @@ describe('SupportsPage (CU-412)', () => {
       await fixture.whenStable();
       expect(page.querySelector('[data-test="courbe-vide"]')).not.toBeNull();
     });
+  });
+
+  it('PO 28/11 : ouverte depuis le tunnel (gestion libre), la page est l’étape « Mes supports » avec « Ma répartition » en Bientôt (CU-525)', async () => {
+    const fixture = creer('AV', { tunnel: '1' });
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne(PARAMETRES).flush(PARAMS);
+    http.expectOne(`${URL}?produit=AV`).flush(reponse([SCPI]));
+    await fixture.whenStable();
+    http.expectOne('/api/backend/souscriptions/av').flush(null, { status: 404, statusText: 'Non trouvé' });
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    expect(page.querySelector('[data-test="etape"]')?.textContent).toContain('Ma gestion et mes supports');
+    const panneau = page.querySelector('[data-test="ma-repartition"]')!;
+    expect(panneau.querySelector('[data-fonctionnalite="repartition-gestion-libre"]')?.getAttribute('aria-disabled')).toBe('true');
+    expect(page.querySelector('input[type="number"], [data-test="valider"]')).toBeNull();
   });
 });

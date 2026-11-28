@@ -73,6 +73,7 @@
                         <app-bouton-fonctionnalite cle="versement-libre" classe="lien" [phraseVisible]="false">Verser</app-bouton-fonctionnalite>
                         <app-bouton-fonctionnalite cle="operations-contrat" classe="lien" [phraseVisible]="false">Mes opérations</app-bouton-fonctionnalite>
                         <app-bouton-fonctionnalite cle="suivi-contrat" classe="lien" [phraseVisible]="false">Suivre mon contrat</app-bouton-fonctionnalite>
+                        <app-bouton-fonctionnalite cle="arbitrage" classe="lien" [phraseVisible]="false">Arbitrer</app-bouton-fonctionnalite>
                       </td>
                     </tr>
                   }
@@ -349,7 +350,7 @@
             <div class="card"><div class="body"><span class="tag t-violet">Identité</span><h3>Identifiant {{ identifiant() }}</h3><p>Identité vérifiée à l'ouverture de votre compte.</p></div></div>
             <div class="card"><div class="body"><span class="tag t-blue">Contact</span><h3>E-mail et mobile</h3><p>Ils servent à vous envoyer vos identifiants et vos codes.</p><div class="foot"><app-bouton-fonctionnalite cle="contact-conseiller" classe="go">Contacter mon conseiller →</app-bouton-fonctionnalite></div></div></div>
             <div class="card"><div class="body"><span class="tag t-mint">Placements</span><h3>Mon profil investisseur</h3><p>Requis avant un PER ou une assurance vie.@if (statutProfil()) { Statut : <b class="statut-profil">{{ statutProfil() }}</b>.}</p><div class="foot"><a class="go" routerLink="/profil">Voir mon profil →</a></div></div></div>
-            <div class="card"><div class="body"><span class="tag t-amber">Sécurité</span><h3>Mot de passe et session</h3><p>Session fermée automatiquement après 10 minutes sans activité.</p><div class="foot"><app-bouton-fonctionnalite cle="changement-mot-de-passe" classe="go">Changer mon mot de passe →</app-bouton-fonctionnalite></div></div></div>
+            <div class="card"><div class="body"><span class="tag t-amber">Sécurité</span><h3>Mot de passe et session</h3><p>Session fermée automatiquement après 10 minutes sans activité.</p><div class="foot"><app-bouton-fonctionnalite cle="changer-mot-de-passe" classe="go">Changer mon mot de passe →</app-bouton-fonctionnalite></div></div></div>
           </div>
         </div>
       </section>
