@@ -202,6 +202,7 @@
   .bientot { cursor: not-allowed; }
   .bientot:hover { transform: none; box-shadow: none; }
   .badge-bientot { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 999px; background: #fff3dc; color: #8a5300; font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; vertical-align: middle; }
+  .tile .badge-bientot { align-self: flex-start; margin: 4px 0 0; }
   .phrase-bientot { font-size: 12.5px; color: var(--muted); line-height: 1.4; }
 
   .lien { border: 0; background: none; padding: 0; color: var(--navy); text-decoration: underline; cursor: pointer; font: inherit; }
